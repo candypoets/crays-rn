@@ -30,6 +30,21 @@ describe('DiscoverHandoffScreen', () => {
     expect(screen.getByText('Verified room')).toBeOnTheScreen();
   });
 
+  it('exposes the development Test Room without Bluetooth when its signed manifest is online', () => {
+    const onOpenTestRoom = jest.fn();
+    render(<DiscoverHandoffScreen mode="map" onChangeMode={jest.fn()} onOpenTestRoom={onOpenTestRoom} testRoom={{ loading: false, room: { ...room, id: 'crays-test-room', name: 'Crays Test Room' } }} />);
+    expect(screen.getByTestId('dev-test-room-card')).toBeOnTheScreen();
+    expect(screen.getByText(/Bluetooth is not required/)).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('open-test-room'));
+    expect(onOpenTestRoom).toHaveBeenCalledWith(expect.objectContaining({ id: 'crays-test-room' }));
+  });
+
+  it('shows the exact recovery command while the development Test Room is offline', () => {
+    render(<DiscoverHandoffScreen mode="map" onChangeMode={jest.fn()} testRoom={{ error: 'offline', loading: false }} />);
+    expect(screen.getByText(/npm run test-room/)).toBeOnTheScreen();
+    expect(screen.getByTestId('open-test-room')).toBeDisabled();
+  });
+
   it('explains Nearby before permission', () => {
     const onChangeMode = jest.fn();
     render(<DiscoverHandoffScreen mode="nearby" onChangeMode={onChangeMode} />);

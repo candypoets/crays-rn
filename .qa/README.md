@@ -109,3 +109,16 @@ signed room fixture and the app's relay-derived projections after UI exercise.
 Join privacy uses separate identities. `qa-11-join-quiet.mjs` proves zero
 presence writes; `qa-11-join-visible.mjs` proves exactly one signed visible
 presence with selected intent, context, stable replacement key, and expiry.
+
+## Long-running development Test Room
+
+`npm run test-room` provisions the same real signed fixture family but keeps it
+available behind a stable port until stopped. This is the manual-development
+counterpart to the short-lived per-scenario relays; it is not a mock store.
+The Android emulator connects to `ws://10.0.2.2:8787`. Use
+`npm run test-room:stop` for scoped cleanup.
+
+The executable lifecycle is `.qa/qa-test-room.mjs` with
+`maestro/flows/test-room.yaml`. It proves Discover card availability, remote
+entry without Bluetooth, quiet join, fixture rendering, manifest consumption,
+signature validity, zero presence writes, and exact relay teardown.

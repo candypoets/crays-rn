@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { RoomDescriptor } from '@/rooms/types';
 import { RoomPreviewScreen } from '@/screens/discovery/RoomPreviewScreen';
@@ -9,10 +9,14 @@ const room: RoomDescriptor = { id: 'skyline', name: 'The Skyline Room', about: '
 
 describe('RoomPreviewScreen', () => {
   it('shows identity, verification, utility, and explicit entry', () => {
-    render(<RoomPreviewScreen room={room} />);
+    const onEnter = jest.fn();
+    render(<RoomPreviewScreen onEnter={onEnter} room={room} />);
     expect(screen.getByText('The Skyline Room')).toBeOnTheScreen();
     expect(screen.getByText('Verified room')).toBeOnTheScreen();
     expect(screen.getByTestId('enter-room-button')).toBeEnabled();
+    expect(screen.getByText(/do not require Bluetooth/)).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('enter-room-button'));
+    expect(onEnter).toHaveBeenCalledTimes(1);
   });
 
   it('disables entry for a closed room', () => {

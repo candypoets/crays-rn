@@ -34,6 +34,12 @@ does not ship a fake place list or pretend retry can reach a nonexistent
 service. Direct relay links and GATT manifests continue through the implemented
 signature validator.
 
+Development builds also render a fixed **Crays Test Room** card. It subscribes
+to the real local signed relay fixture at the platform-specific port-8787
+address and remains disabled with an exact recovery command while that relay is
+offline. This card and subscription are absent from release builds; they are
+not a substitute for D-001 or a fabricated production listing.
+
 Accessibility: Map/Nearby are real tabs with selected state; room cards have a
 single descriptive action; verification is text plus icon; 48dp targets and
 large-text wrapping are required.
@@ -47,7 +53,9 @@ owns a fresh gated relay, issuer-authorized people, full fixture family,
 Maestro, independent signature/query verification, app-consumption log proof,
 relay deletion and Docker-volume deletion.
 
-Required paths: cold account → empty Map; Nearby → rationale; direct fresh
+Required paths: cold account → empty Map; development Test Room online →
+preview → quiet join without Bluetooth; Test Room offline → disabled recovery
+copy; release build → no Test Room; Nearby → rationale; direct fresh
 manifest → preview; stale/wrong signer → no card; relay unavailable → retry
 copy while Messages/Me remain; relaunch of direct link; repeated tap does not
 change active room; no permissions before rationale.

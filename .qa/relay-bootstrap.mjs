@@ -19,9 +19,12 @@ import {
 
 const keys = loadKeys();
 const run = Date.now().toString(36);
-const name = `Crays QA Skyline ${run}`;
-const roomId = `skyline-${run}`;
-const domainLabel = `craysqa-room-${run}`;
+const roomDisplayName = process.env.CRAYS_TEST_ROOM_NAME || 'The Skyline Room';
+const name = process.env.CRAYS_TEST_ROOM_NAME ? `${roomDisplayName} ${run}` : `Crays QA Skyline ${run}`;
+const roomId = process.env.CRAYS_TEST_ROOM_ID || `skyline-${run}`;
+const domainLabel = process.env.CRAYS_TEST_ROOM_DOMAIN || `craysqa-room-${run}`;
+const fixtureTtlSeconds = Math.min(604_800, Math.max(3_600, Number(process.env.CRAYS_TEST_ROOM_TTL_SECONDS || 86_400)));
+if (!Number.isFinite(fixtureTtlSeconds)) throw new Error('CRAYS_TEST_ROOM_TTL_SECONDS must be a number');
 
 await requireCoordinator();
 const created = await createRelay(
@@ -76,7 +79,7 @@ if (!invite) throw new Error('invite service did not mint a token before timeout
 assert(typeof invite.token === 'string' && invite.token.includes('.'), 'real invite service minted a signed token');
 const publish = (event, label) => publishUntilStored(pool, relay.relay_url, event, label);
 const profile = signEvent(
-  { kind: 0, content: JSON.stringify({ name: 'The Skyline Room', about: 'Rooftop jazz, drinks and late-night company.' }) },
+  { kind: 0, content: JSON.stringify({ name: roomDisplayName, about: 'Rooftop jazz, drinks and late-night company.' }) },
   keys.admin.priv,
 );
 await publish(profile, 'venue kind-0 round-trips after the write gate is ready');
@@ -103,14 +106,14 @@ for (const user of authorizedUsers) {
 }
 await sleep(2500);
 
-const expires = nowSeconds() + 86_400;
+const expires = nowSeconds() + fixtureTtlSeconds;
 const manifest = signEvent(
   {
     kind: 30078,
     tags: [
       ['d', `life.crays/room/v1/${roomId}`],
       ['schema', 'life.crays/room/v1'],
-      ['name', 'The Skyline Room'],
+      ['name', roomDisplayName],
       ['about', 'Rooftop jazz, cocktails and a view over the city.'],
       ['relay', relay.relay_url],
       ['operator', keys.admin.pub],
@@ -151,7 +154,7 @@ for (let index = 0; index < fixtureUsers.length; index += 1) {
         ['h', roomId],
         ['visibility', 'visible'],
         ['intent', index === 0 ? 'Open to chat' : 'Enjoying the room'],
-        ['expiration', String(nowSeconds() + 3600)],
+        ['expiration', String(nowSeconds() + Math.min(fixtureTtlSeconds, 86_400))],
       ],
     },
     user.priv,
@@ -161,7 +164,7 @@ for (let index = 0; index < fixtureUsers.length; index += 1) {
 }
 
 const incomingMessageId = `incoming-${run}`;
-const incomingPlaintext = JSON.stringify({ schema: 'life.crays/dm/v1', messageId: incomingMessageId, messageType: 'message-request', text: 'Want to hear the second set?', roomId, roomName: 'The Skyline Room' });
+const incomingPlaintext = JSON.stringify({ schema: 'life.crays/dm/v1', messageId: incomingMessageId, messageType: 'message-request', text: 'Want to hear the second set?', roomId, roomName: roomDisplayName });
 const incomingDirectMessage = signEvent({ kind: 4, content: nip04.encrypt(fixtureUsers[1].priv, fixtureUsers[0].pub, incomingPlaintext), tags: [['p', fixtureUsers[0].pub]] }, fixtureUsers[1].priv);
 await publish(incomingDirectMessage, 'incoming Jonas NIP-04 direct-message request');
 

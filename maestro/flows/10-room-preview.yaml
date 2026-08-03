@@ -13,4 +13,12 @@ appId: life.crays
 - assertVisible: "Inside this room"
 - assertVisible:
     id: "enter-room-button"
+- tapOn:
+    id: "enter-room-button"
+- extendedWaitUntil:
+    visible:
+      id: "join-privacy-screen"
+    timeout: 15000
+- assertNotVisible:
+    id: "bluetooth-rationale-screen"
 - takeScreenshot: 10-room-preview-relay

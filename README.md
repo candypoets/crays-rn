@@ -40,6 +40,29 @@ Start Metro without `CI=1`. The shared launch flow clears development-client
 state, connects to `exp://localhost:8085`, dismisses optional development UI,
 and waits up to three minutes for a cold bundle.
 
+## Development Test Room
+
+For a room that is always discoverable during local development, keep this in
+a second terminal while the Nuts coordinator is running on port 7798:
+
+```sh
+npm run test-room
+```
+
+Discover will show **Crays Test Room** after its signed manifest arrives. Open
+it and choose quiet entry; Bluetooth range is not involved. The command uses a
+real isolated Nuts relay and removes it when stopped. Stop it with Ctrl-C or
+`npm run test-room:stop`.
+
+The Android emulator and iOS simulator work with the defaults. For a physical
+device, start Metro with a LAN-reachable host address:
+
+```sh
+EXPO_PUBLIC_CRAYS_TEST_RELAY_URL=ws://192.168.1.20:8787 npm run start
+```
+
+The card and its relay subscription exist only in development builds.
+
 ## Verification
 
 ```sh

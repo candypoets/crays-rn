@@ -20,6 +20,8 @@
     "qa:relay:bootstrap": "node .qa/relay-bootstrap.mjs",
     "qa:relay:verify": "node .qa/relay-verify.mjs",
     "qa:relay:teardown": "node .qa/relay-teardown.mjs",
+    "test-room": "node .qa/test-room.mjs",
+    "test-room:stop": "node .qa/test-room-stop.mjs",
     "doctor": "npx expo-doctor"
   },
   "dependencies": {

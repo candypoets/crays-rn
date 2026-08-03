@@ -20,10 +20,16 @@ type Props = {
   onChangeMode: (mode: 'map' | 'nearby') => void;
   room?: RoomDescriptor | null;
   onOpenRoom?: (room: RoomDescriptor) => void;
+  onOpenTestRoom?: (room: RoomDescriptor) => void;
   searchUnavailable?: boolean;
+  testRoom?: {
+    error?: string | null;
+    loading: boolean;
+    room?: RoomDescriptor | null;
+  };
 };
 
-export function DiscoverHandoffScreen({ accountReady = true, error, loading = false, mode, onChangeMode, onOpenRoom, room, searchUnavailable = false }: Props) {
+export function DiscoverHandoffScreen({ accountReady = true, error, loading = false, mode, onChangeMode, onOpenRoom, onOpenTestRoom, room, searchUnavailable = false, testRoom }: Props) {
   return (
     <AppShell testID="discover-screen">
       <View className="pt-2">
@@ -47,6 +53,10 @@ export function DiscoverHandoffScreen({ accountReady = true, error, loading = fa
           );
         })}
       </View>
+      {testRoom ? <View className="mt-6 overflow-hidden rounded-[24px] border border-primary/30 bg-primary/10" testID="dev-test-room-card">
+        <View className="flex-row items-start p-5"><View className="h-12 w-12 items-center justify-center rounded-2xl bg-primary/15"><Ionicons color={colors.accent} name="flask-outline" size={25} /></View><View className="ml-4 min-w-0 flex-1"><Text className="text-xs font-black uppercase tracking-[2px] text-primary">Development test mode</Text><Text className="mt-1 text-xl font-black text-base-content">{testRoom.room?.name || 'Crays Test Room'}</Text><Text className="mt-2 text-sm leading-5 text-muted">{testRoom.room ? 'Signed room fixture is online. Bluetooth is not required.' : testRoom.loading ? 'Connecting to the local signed test relay…' : 'Test relay is offline. Run npm run test-room in another terminal.'}</Text>{testRoom.error && !testRoom.room ? <Text className="mt-2 text-xs font-bold text-warning">No verified manifest received yet.</Text> : null}</View></View>
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: !testRoom.room }} className="min-h-14 items-center justify-center bg-primary px-5 disabled:bg-base-300" disabled={!testRoom.room} onPress={() => testRoom.room && onOpenTestRoom?.(testRoom.room)} testID="open-test-room"><Text className={`font-black ${testRoom.room ? 'text-white' : 'text-muted'}`}>{testRoom.room ? 'Open test room' : 'Waiting for test relay'}</Text></Pressable>
+      </View> : null}
       {loading ? (
         <View className="min-h-64 items-center justify-center" testID="discover-loading"><ActivityIndicator color={colors.primary} size="large" /><Text className="mt-4 text-base text-muted">Checking the room signature…</Text></View>
       ) : room ? (
