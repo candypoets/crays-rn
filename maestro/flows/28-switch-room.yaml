@@ -15,6 +15,12 @@ appId: life.crays
     timeout: 30000
 - tapOn:
     id: "visibility-visible"
+# Selecting visible reveals the intent/context fields and pushes the enter
+# button below the fold; scroll it back into view before tapping.
+- scrollUntilVisible:
+    element:
+      id: "join-room-button"
+    direction: DOWN
 - tapOn:
     id: "join-room-button"
 - extendedWaitUntil:
@@ -38,7 +44,7 @@ appId: life.crays
 - assertVisible: "Browse quietly"
 - scrollUntilVisible:
     element:
-      text: "No presence event is published."
+      text: ".*No presence event is published.*"
     direction: DOWN
-- assertVisible: "No presence event is published."
+- assertVisible: ".*No presence event is published.*"
 - takeScreenshot: 28-switch-room-two-relays

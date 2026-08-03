@@ -1,0 +1,30 @@
+appId: life.crays
+---
+# Negative path for docs/screens/20b-tickets.md ("an RSVP write that times out
+# or is rejected must not appear"): the QA identity holds no membership badge
+# for this relay (bootstrap ran with CRAYS_QA_PREAUTHORIZE=0 and a
+# non-fixture user index), so the badge-gated write policy rejects the RSVP.
+# The app must surface its error state and the rejected RSVP must never enter
+# the durable ticket archive.
+- runFlow: seed-and-join.yaml
+- openLink: "crays:///event?id=${EVENT_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "event-screen"
+    timeout: 30000
+- assertVisible: "Rooftop Jazz"
+- tapOn:
+    id: "event-rsvp"
+- extendedWaitUntil:
+    visible: "The room (rejected|did not confirm) this action.*"
+    timeout: 30000
+- assertVisible: "The room (rejected|did not confirm) this action.*"
+- assertNotVisible: "Going · RSVP sent"
+- openLink: "crays:///tickets"
+- extendedWaitUntil:
+    visible:
+      id: "tickets-screen"
+    timeout: 30000
+- assertVisible: "No upcoming tickets"
+- assertNotVisible: "Rooftop Jazz"
+- takeScreenshot: 20d-rsvp-rejected

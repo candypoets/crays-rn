@@ -17,12 +17,18 @@ export type CommunityInfo = {
   required_badge: string;
 };
 
+// A preview is a *decoded* invite, never a verified one. The issuer contract
+// (strfry-badge-node/crates/invite, mirroring nuts-cash) signs tokens as
+// HMAC-SHA256 over the base64url claims with a server-only INVITE_SECRET; the
+// secret is not exposed by /community/info or any other endpoint, so the
+// client cannot verify the signature. Only the /redeem round trip — which
+// re-verifies the HMAC and republishes a kind 8 award signed by the published
+// badge_issuer — proves an invite is genuine.
 export type InvitePreview = {
   claims: InviteClaims;
   community: CommunityInfo;
   serviceUrl: string;
 };
-
 export type InviteHandoff = {
   serviceUrl: string;
   token: string;
@@ -44,6 +50,14 @@ function decodeBase64Url(value: string): string {
   return globalThis.atob(padded);
 }
 
+/**
+ * Decodes and structurally validates invite claims. This is deliberately NOT
+ * signature verification: the token signature is HMAC-SHA256 keyed by the
+ * issuer's server-only INVITE_SECRET (see InvitePreview), which the client
+ * cannot know. Tampered nonce/badge/max claims therefore pass this check; they
+ * are only rejected by the issuer at /redeem time. Preview copy must not claim
+ * the invite is "verified" before redemption succeeds.
+ */
 export function decodeInviteToken(token: string, now = Math.floor(Date.now() / 1000)): InviteClaims {
   const parts = token.split('.');
   if (parts.length !== 2 || !parts[0] || !parts[1]) throw new Error('This invite link is incomplete.');

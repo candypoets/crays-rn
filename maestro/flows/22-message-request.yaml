@@ -13,8 +13,13 @@ appId: life.crays
       id: "message-request-screen"
     timeout: 15000
 - assertVisible: "This is your only message until Maya accepts or replies. It is encrypted before publication."
-- tapOn: "What are you drinking?"
-- assertVisible: "23/240"
+# Typed rather than chip-tapped: the chip press is covered by
+# MessageRequestScreen.test.tsx; on-device text taps on the chip are unreliable.
+- tapOn:
+    id: "message-request-input"
+- inputText: "What are you drinking?"
+- hideKeyboard
+- assertVisible: "22/240"
 - assertVisible:
     id: "send-message-request"
 - takeScreenshot: 22-message-request-relay

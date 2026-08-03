@@ -65,6 +65,7 @@ try {
   const fixtureNsec = loadKeys().users[qaUserIndex].nsec;
   run(process.env.MAESTRO_CLI || 'maestro', [
     'test',
+    ...(process.env.ANDROID_SERIAL ? ['--device', process.env.ANDROID_SERIAL] : []),
     '-e', `QA_NSEC=${fixtureNsec}`,
     'maestro/flows/test-room.yaml',
   ]);

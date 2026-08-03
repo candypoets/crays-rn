@@ -4,7 +4,7 @@
 
 One detail component serves self-orders and gifts. It derives product, recipient, reference, amount, and status from a kind-8 award plus its trusted kind-30009 definition and latest matching kind-37237 status (`e`, `a`, `p`, and exactly one `order`/`event` context). UI maps `pending → Sent`, `accepted → Accepted`, `processing → Preparing`, `ready → Ready`, `fulfilled → Served`, and `cancelled → Cancelled`; “Delivered” is forbidden for venue fulfillment. Receipt and refund fields remain pending until a real payment reference exists.
 
-States include implicit pending, every status transition, same-second deterministic tie handling, legacy status read, missing definition, revoked/expired award, relay offline, confirming venue, refund pending/refunded, support unavailable, and no order. Duplicate pay is never shown during uncertainty.
+States include implicit pending, every status transition, same-second deterministic tie handling, legacy status read, missing definition, revoked/expired award, relay offline, confirming venue, refund pending/refunded, support unavailable, and no order. Duplicate pay is never shown during uncertainty. A route `ref` that matches no projected order renders the “Order unavailable” state; the route never substitutes another order.
 
 ## Complete QA strategy
 

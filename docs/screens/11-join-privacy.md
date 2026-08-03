@@ -59,7 +59,9 @@ also a seeded visible guest:
   window.
 
 Explicit leave and relay switching remain independently verified by screens 21
-and 28. The long-running Test Room scenario additionally proves hidden-handoff
+and 28. `.qa/qa-11c-join-relay-unavailable.mjs` covers the dead-relay path:
+joining against an unreachable relay renders the unverified-room error state
+and the enter action stays inert. The long-running Test Room scenario additionally proves hidden-handoff
 redemption produced exactly one real issuer-signed, 24-hour kind-8 badge for an
 identity that was not pre-authorized. Component/fake-clock coverage owns automatic local expiry; a future BLE
 gateway harness must additionally force credential-renewal loss and verify the

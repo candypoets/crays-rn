@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { verifyEvent } from 'nostr-tools';
 
+import { QA_PROFILE_NAME } from './flow-fixtures.mjs';
 import { parseMarkers, readLogcat, readQaState } from './qa-entry-lib.mjs';
 
 const identityOnly = process.argv.includes('--identity-only');
@@ -35,8 +36,8 @@ if (!verifyEvent(event)) throw new Error('The onboarding kind-0 signature is inv
 if (!/^[0-9a-f]{64}$/.test(event.pubkey)) throw new Error('Profile pubkey is not 32-byte hex');
 
 const content = JSON.parse(event.content);
-if (content.name !== 'QA Alex' || content.display_name !== 'QA Alex') {
-  throw new Error(`Expected QA Alex profile content, received ${event.content}`);
+if (content.name !== QA_PROFILE_NAME || content.display_name !== QA_PROFILE_NAME) {
+  throw new Error(`Expected ${QA_PROFILE_NAME} profile content, received ${event.content}`);
 }
 if (profileRecord.relayCount !== 0) {
   throw new Error(`Onboarding opened ${profileRecord.relayCount} relay connection(s)`);

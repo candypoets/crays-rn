@@ -31,7 +31,8 @@ export function bootstrapEntryQa(scenario) {
 
 export function runMaestro(flow) {
   const maestro = process.env.MAESTRO_CLI || 'maestro';
-  run(maestro, ['test', flow]);
+  const deviceArgs = process.env.ANDROID_SERIAL ? ['--device', process.env.ANDROID_SERIAL] : [];
+  run(maestro, ['test', ...deviceArgs, flow]);
 }
 
 export function readLogcat() {

@@ -9,7 +9,9 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "Verified room"
     timeout: 15000
-- assertVisible: "Rooftop jazz"
+# ${QA_ROOM_ABOUT} comes from .qa/flow-fixtures.mjs (ROOM_ABOUT, seeded into the
+# manifest by relay-bootstrap.mjs); standalone runs need -e QA_ROOM_ABOUT=...
+- assertVisible: ${QA_ROOM_ABOUT}
 - assertVisible: "Inside this room"
 - assertVisible:
     id: "enter-room-button"

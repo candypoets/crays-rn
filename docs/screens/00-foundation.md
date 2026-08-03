@@ -17,8 +17,11 @@ The route must prove that:
 - no default public relay is contacted before a feature owns a justified relay
   set.
 
-The current startup surface is Screen 06. The old `FoundationScreen` remains a
-unit-tested diagnostic component, but it is not routed in the product.
+The current startup surface is Screen 06. `FoundationScreen` is no longer a
+routed screen; the root layout's `RuntimeGate` renders it when the native
+Nostr engine reports `unavailable` or `error`, so an integration failure
+surfaces as this explicit state instead of a blank app. When the engine is
+`ready` the gate renders the normal provider tree and entry router.
 
 ## Nostr and relay behavior
 

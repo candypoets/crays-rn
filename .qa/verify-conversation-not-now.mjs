@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-import { assert, makePool, readState } from './relay-lib.mjs';
+import { assert, makePool, readState, settleBeforeAbsence } from './relay-lib.mjs';
 
 const state = readState();
+await settleBeforeAbsence('Not now publishes no reply or report');
 const pool = makePool();
 const replies = await pool.querySync([state.relay_url], { kinds: [4], authors: [state.qa_pubkey], '#p': [state.fixture_pubkeys[1]], limit: 20 });
 const reports = await pool.querySync([state.relay_url], { kinds: [1984], authors: [state.qa_pubkey], '#p': [state.fixture_pubkeys[1]], limit: 20 });

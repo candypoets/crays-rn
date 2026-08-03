@@ -10,9 +10,28 @@ appId: life.crays
 - assertNotVisible: "Continue with Apple"
 - assertNotVisible: "Continue with Google"
 - takeScreenshot: 06b-account-access
+# The existing-account action is implemented (screen 09): it opens the
+# returning-login screen via router.replace, so Back returns to the cold
+# welcome; re-enter account access from there.
 - tapOn:
     id: "existing-account-button"
-- assertVisible: ".*Existing-account recovery is the next entry slice.*"
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 15000
+- assertVisible: "Pick up where you left off."
+- tapOn:
+    id: "back-button"
+- extendedWaitUntil:
+    visible:
+      id: "cold-welcome-screen"
+    timeout: 15000
+- tapOn:
+    id: "create-account-button"
+- extendedWaitUntil:
+    visible:
+      id: "account-access-screen"
+    timeout: 15000
 - doubleTapOn:
     id: "create-on-device-button"
 - extendedWaitUntil:

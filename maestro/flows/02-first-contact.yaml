@@ -13,6 +13,7 @@ appId: life.crays
     element:
       id: "person-report"
     direction: DOWN
+    centerElement: true
 - tapOn:
     id: "person-report"
 - extendedWaitUntil:

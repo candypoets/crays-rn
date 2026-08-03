@@ -4,7 +4,7 @@
 
 The screen reads an operator-authored kind 31922/31923 from the selected room and shows start/end, location, summary, capacity, and price. A free RSVP publishes signed kind 31925 with exact `a`, `d`, and textual status; it never publishes presence. Paid ticket acquisition stays disabled until payment rails exist. Successful free RSVP exposes a white presentation surface, but valid entry still requires the future short-lived kind-27236 contract.
 
-States include free/paid, going/interested/declined, full/waitlist, member-gated, expired/cancelled, event replaced, relay rejection, offline, signer missing, RSVP retry, and ticket owned. Repeated actions must replace rather than multiply user RSVP state.
+States include free/paid, going/interested/declined, full/waitlist, member-gated, expired/cancelled, event replaced, relay rejection, offline, signer missing, RSVP retry, and ticket owned. Repeated actions must replace rather than multiply user RSVP state. A route `id` that matches no projected event renders an explicit “Event unavailable” state with a back action; the route never substitutes the first projected event, so an RSVP can only ever be signed for the addressed event.
 
 ## Complete QA strategy
 

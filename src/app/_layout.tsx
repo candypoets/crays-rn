@@ -7,14 +7,15 @@ import { useEffect, useState, type PropsWithChildren } from 'react';
 import { AppState, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { getNostrRuntime } from '@/nostr/manager';
+import { getNostrRuntime, type NostrRuntimeStatus } from '@/nostr/manager';
+import { FoundationScreen } from '@/screens/FoundationScreen';
 import { CartProvider } from '@/commerce/Cart';
 import { RoomDataProvider } from '@/rooms/RoomData';
 import { RoomSessionProvider } from '@/session/RoomSession';
 import { SafetyProvider } from '@/safety/Safety';
 
 function RuntimeGate({ children }: PropsWithChildren) {
-  const [ready, setReady] = useState(false);
+  const [runtimeStatus, setRuntimeStatus] = useState<NostrRuntimeStatus | null>(null);
 
   useEffect(() => {
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -22,8 +23,8 @@ function RuntimeGate({ children }: PropsWithChildren) {
     const scheduleReady = () => {
       if (settleTimer) clearTimeout(settleTimer);
       settleTimer = setTimeout(() => {
-        getNostrRuntime();
-        setReady(true);
+        const runtime = getNostrRuntime();
+        setRuntimeStatus(runtime.status);
       }, 500);
     };
 
@@ -42,7 +43,7 @@ function RuntimeGate({ children }: PropsWithChildren) {
     };
   }, []);
 
-  if (!ready) {
+  if (!runtimeStatus) {
     return (
       <View className="flex-1 items-center justify-center bg-base-100" testID="runtime-gate">
         <Text className="text-3xl font-black tracking-[8px] text-base-content">CRAYS</Text>
@@ -51,6 +52,11 @@ function RuntimeGate({ children }: PropsWithChildren) {
         </Text>
       </View>
     );
+  }
+
+  // A failed native engine is an explicit screen, never a silently broken app.
+  if (runtimeStatus !== 'ready') {
+    return <FoundationScreen engineStatus={runtimeStatus} />;
   }
 
   return children;

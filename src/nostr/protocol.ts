@@ -13,48 +13,19 @@ export const CRAYS_PROTOCOL = {
   profileKind: 0,
   badgeAwardKind: 8,
   badgeDefinitionKind: 30009,
+  eventDeletionKind: 5,
   presentationKind: 27236,
   orderStatusKind: 37237,
   legacyOrderStatusKind: 27237,
   calendarKinds: [31922, 31923] as const,
   rsvpKind: 31925,
-  walletKind: 17375,
-  walletTokenKind: 7375,
-  walletHistoryKind: 7376,
 } as const;
 
 export const pilotD = {
   room: (roomId: string) => `${CRAYS_PROTOCOL.appNamespace}/room/v1/${roomId}`,
   presence: (roomId: string, pubkey: string) =>
     `${CRAYS_PROTOCOL.appNamespace}/presence/v1/${roomId}/${pubkey}`,
-  credential: (roomId: string, nonce: string) =>
-    `${CRAYS_PROTOCOL.appNamespace}/credential/v1/${roomId}/${nonce}`,
 } as const;
-
-export function encryptedMessageRequestTemplate({
-  recipientPubkey,
-  roomId,
-  encryptedContent,
-  expiresAt,
-}: {
-  recipientPubkey: string;
-  roomId: string;
-  encryptedContent: string;
-  expiresAt: number;
-}): EventTemplate {
-  return {
-    kind: CRAYS_PROTOCOL.roomActivityKind,
-    created_at: Math.floor(Date.now() / 1000),
-    content: encryptedContent,
-    tags: [
-      ['p', recipientPubkey],
-      ['h', roomId],
-      ['type', 'message-request'],
-      ['schema', 'life.crays/message-request/v1'],
-      ['expiration', String(expiresAt)],
-    ],
-  };
-}
 
 export type PresenceVisibility = 'visible' | 'quiet';
 export type PresenceIntent = 'social' | 'business' | 'dating' | 'curious';

@@ -27,7 +27,7 @@ appId: life.crays
     id: "finish-account-button"
 - extendedWaitUntil:
     visible:
-      id: "discover-handoff-screen"
+      id: "discover-screen"
     timeout: 30000
 - assertVisible: "Discover rooms"
 - assertVisible: "ACCOUNT READY"

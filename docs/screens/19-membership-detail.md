@@ -4,7 +4,7 @@
 
 Detail distinguishes an available offer from owned access. Ownership requires a kind-8 award for the definition and local pubkey, signed by the award issuer in the room manifest. The white scanner card contains a real holder-signed kind-27236 payload with a 90-second expiry and 60-second refresh. Memberships and passes use a fresh `use:` fulfillment context. Staff activity remains relay truth; renewal/payment remains off and nothing auto-charges.
 
-States: Active, Action needed, Paused, Expires soon, Expired, Revoked, Cancelled; pass Available/Exhausted; QR refreshing/offline/expired; no activity; and offer-only. Status always appears in text.
+States: Active, Action needed, Paused, Expires soon, Expired, Revoked, Cancelled; pass Available/Exhausted; QR refreshing/offline/expired; no activity; and offer-only. Status always appears in text. A route `awardId` that matches no owned award renders the offer-only state; another identity's or another award's record is never substituted.
 
 ## Complete QA strategy
 

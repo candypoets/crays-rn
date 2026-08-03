@@ -1,13 +1,13 @@
 appId: life.crays
 ---
 - runFlow: seed-and-join.yaml
-- openLink: "crays:///membership-offer"
+- openLink: "crays:///membership-offer?id=${MEMBERSHIP_DEFINITION_ID}"
 - extendedWaitUntil:
     visible:
       id: "membership-offer-screen"
     timeout: 15000
 - assertVisible: "Skyline Regular"
-- assertVisible: "€24.00"
+- assertVisible: "€24.00 / monthly"
 - assertVisible: "Membership checkout not configured"
 - assertVisible: "No membership, charge, or renewal is created.*"
 - takeScreenshot: 18-membership-offer-relay

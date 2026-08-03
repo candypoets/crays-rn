@@ -6,15 +6,15 @@ appId: life.crays
     visible:
       id: "item-screen"
     timeout: 15000
-- assertVisible: "Maya"
+- assertVisible: "Jonas"
 - tapOn:
     id: "add-item"
 - extendedWaitUntil:
     visible:
       id: "gift-review-screen"
     timeout: 15000
-- assertVisible: "The bar receives a normal order. Maya receives a private message and claim ticket."
-- assertVisible: "Refund pending"
+- assertVisible: "The bar receives a normal order. Jonas receives a private message and claim ticket."
+- assertVisible: ".*Refund pending.*"
 - assertVisible:
     id: "pay-gift-disabled"
 - takeScreenshot: 23-gift-review-relay

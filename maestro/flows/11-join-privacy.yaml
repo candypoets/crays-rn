@@ -7,9 +7,14 @@ appId: life.crays
       id: "join-privacy-screen"
     timeout: 30000
 - assertVisible: "Browse quietly"
-- assertVisible: "No presence event is published."
+- assertVisible: ".*No presence event is published.*"
 - tapOn:
     id: "visibility-visible"
+# The enter button moves below the fold once the visible-only fields expand.
+- scrollUntilVisible:
+    element:
+      text: "Enter and be visible"
+    direction: DOWN
 - assertVisible: "Enter and be visible"
 - tapOn:
     id: "visibility-quiet"

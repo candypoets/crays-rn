@@ -1,5 +1,8 @@
 appId: life.crays
 ---
+# ${QA_JOIN_INTENT} and ${QA_JOIN_CONTEXT} are supplied by
+# .qa/relay-screen-scenario.mjs from .qa/flow-fixtures.mjs; standalone runs
+# need `-e QA_JOIN_INTENT=... -e QA_JOIN_CONTEXT=...`.
 - runFlow: launch.yaml
 - openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
 - extendedWaitUntil:
@@ -16,10 +19,10 @@ appId: life.crays
 - tapOn:
     id: "visibility-visible"
 - tapOn:
-    id: "intent-business"
+    id: "intent-${QA_JOIN_INTENT}"
 - tapOn:
     id: "join-context-input"
-- inputText: "Here for the founders meetup"
+- inputText: "${QA_JOIN_CONTEXT}"
 - pressKey: ENTER
 - scrollUntilVisible:
     element:
@@ -40,6 +43,6 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "Maya QA"
     timeout: 15000
-- assertVisible: "business"
-- assertVisible: "Here for the founders meetup"
+- assertVisible: "${QA_JOIN_INTENT}"
+- assertVisible: "${QA_JOIN_CONTEXT}"
 - takeScreenshot: 11-join-visible-presence

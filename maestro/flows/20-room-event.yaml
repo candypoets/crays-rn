@@ -1,7 +1,7 @@
 appId: life.crays
 ---
 - runFlow: seed-and-join.yaml
-- openLink: "crays:///event"
+- openLink: "crays:///event?id=${EVENT_ID}"
 - extendedWaitUntil:
     visible:
       id: "event-screen"

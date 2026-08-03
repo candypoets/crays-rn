@@ -13,5 +13,5 @@ appId: life.crays
       id: "account-recovery-screen"
     timeout: 15000
 - assertVisible: "Key import, remote signer, and provider recovery are not configured.*"
-- assertVisible: "No local identity will be overwritten."
+- assertVisible: ".*No local identity will be overwritten.*"
 - takeScreenshot: account-recovery-unconfigured

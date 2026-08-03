@@ -13,10 +13,16 @@ describe('RoomPreviewScreen', () => {
     render(<RoomPreviewScreen onEnter={onEnter} room={room} />);
     expect(screen.getByText('The Skyline Room')).toBeOnTheScreen();
     expect(screen.getByText('Verified room')).toBeOnTheScreen();
+    expect(screen.getByText('Rooftop jazz.')).toBeOnTheScreen();
     expect(screen.getByTestId('enter-room-button')).toBeEnabled();
     expect(screen.getByText(/do not require Bluetooth/)).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId('enter-room-button'));
     expect(onEnter).toHaveBeenCalledTimes(1);
+  });
+
+  it('never fabricates an event title or schedule the manifest does not carry', () => {
+    render(<RoomPreviewScreen room={room} />);
+    expect(screen.queryByText(/Tonight · Doors/)).toBeNull();
   });
 
   it('disables entry for a closed room', () => {

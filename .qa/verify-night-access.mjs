@@ -1,19 +1,25 @@
 #!/usr/bin/env node
 import { verifyEvent } from 'nostr-tools';
 
-import { assert, makePool, readState } from './relay-lib.mjs';
+import { assert, makePool, queryUntil, readState } from './relay-lib.mjs';
 
 const state = readState();
 const claims = JSON.parse(Buffer.from(state.invite_token.split('.')[0], 'base64url').toString('utf8'));
 const issuer = state.required_badge.split(':')[1];
 const pool = makePool();
-const awards = await pool.querySync([state.relay_url], {
-  kinds: [8],
-  authors: [issuer],
-  '#a': [state.required_badge],
-  '#p': [state.qa_pubkey],
-  limit: 20,
-});
+const { events: awards } = await queryUntil(
+  pool,
+  state.relay_url,
+  {
+    kinds: [8],
+    authors: [issuer],
+    '#a': [state.required_badge],
+    '#p': [state.qa_pubkey],
+    limit: 20,
+  },
+  (events) => events.length >= 1,
+  'entry redeemed a night-access badge for the app identity',
+);
 pool.close([state.relay_url]);
 const tag = (event, name) => event.tags.find((value) => value[0] === name)?.[1];
 assert(awards.length === 1, 'entry redeemed exactly one night-access badge for the app identity');

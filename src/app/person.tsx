@@ -5,6 +5,7 @@ import { ensureLocalIdentity } from '@/account/account';
 import { loadLocalMessages, type LocalMessage } from '@/messages/store';
 import { venueReportTemplate } from '@/nostr/protocol';
 import { publishEvent } from '@/nostr/publish';
+import { relayUrlFor } from '@/rooms/relayUrl';
 import { useRoomData } from '@/rooms/RoomData';
 import { useSafety } from '@/safety/Safety';
 import { FirstContactScreen } from '@/screens/room/FirstContactScreen';
@@ -18,7 +19,7 @@ export default function PersonRoute() {
   const [contact, setContact] = useState<LocalMessage | null>(null);
   const [reporting, setReporting] = useState(false);
   const [safetyNotice, setSafetyNotice] = useState<string | null>(null);
-  useEffect(() => { loadLocalMessages().then((messages) => setContact(messages.find((message) => message.recipientPubkey === pubkey) || null)); }, [pubkey]);
+  useEffect(() => { loadLocalMessages().then((messages) => setContact(messages.find((message) => message.recipientPubkey === pubkey) || null)).catch((cause) => setSafetyNotice(cause instanceof Error ? cause.message : 'Saved conversation state could not be read on this device.')); }, [pubkey]);
   if (!hydrated) return null;
   if (!activeRoom) return <Redirect href="/discover" />;
   const person = people.find((value) => value.pubkey === pubkey);
@@ -35,7 +36,7 @@ export default function PersonRoute() {
       onBlock={() => void applyBlock('global')}
       onHideInRoom={() => void applyBlock('venue')}
       onMessage={() => router.push({ pathname: contact ? '/conversation' as never : '/message-request' as never, params: { pubkey: person.pubkey } })}
-      onReport={() => void (async () => { if (reporting) return; setReporting(true); setSafetyNotice(null); try { await ensureLocalIdentity(); await publishEvent(venueReportTemplate(person.pubkey, activeRoom.id, 'other'), [activeRoom.connectionRelayUrl || activeRoom.relayUrl], 'profile_report'); setSafetyNotice('Report sent to this venue.'); } catch (cause) { setSafetyNotice(cause instanceof Error ? cause.message : 'The venue did not confirm this report.'); } finally { setReporting(false); } })()}
+      onReport={() => void (async () => { if (reporting) return; setReporting(true); setSafetyNotice(null); try { await ensureLocalIdentity(); await publishEvent(venueReportTemplate(person.pubkey, activeRoom.id, 'other'), [relayUrlFor(activeRoom)], 'profile_report'); setSafetyNotice('Report sent to this venue.'); } catch (cause) { setSafetyNotice(cause instanceof Error ? cause.message : 'The venue did not confirm this report.'); } finally { setReporting(false); } })()}
       onSendDrink={() => router.push({ pathname: '/gift-select' as never, params: { pubkey: person.pubkey } })}
       person={person}
       reporting={reporting}

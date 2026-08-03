@@ -1,5 +1,8 @@
 appId: life.crays
 ---
+# ${QA_MESSAGE_REQUEST_TEXT} is supplied by .qa/relay-screen-scenario.mjs from
+# .qa/flow-fixtures.mjs; standalone runs need `-e` overrides. The "22/240"
+# counter assertion assumes the default 22-character fixture text.
 - runFlow: seed-and-join.yaml
 - tapOn: "Jonas"
 - extendedWaitUntil:
@@ -14,7 +17,7 @@ appId: life.crays
     timeout: 15000
 - tapOn:
     id: "message-request-input"
-- inputText: "What are you drinking?"
+- inputText: "${QA_MESSAGE_REQUEST_TEXT}"
 - hideKeyboard
 - assertVisible: "22/240"
 - tapOn:
@@ -22,15 +25,16 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "Request sent"
     timeout: 15000
-- tapOn:
-    id: "tab-messages"
+# The person screen is pushed over the tab shell, so the tab bar is not
+# reachable here; deep-link to the messages tab instead of navigating back.
+- openLink: "crays:///messages"
 - extendedWaitUntil:
     visible:
       id: "messages-screen"
     timeout: 15000
 - assertVisible: "Jonas"
 - assertVisible: "waiting"
-- assertVisible: "What are you drinking?"
+- assertVisible: "${QA_MESSAGE_REQUEST_TEXT}"
 - tapOn:
     id: "tab-room"
 - tapOn: "Jonas"

@@ -1,14 +1,17 @@
 #!/usr/bin/env node
 import { verifyEvent } from 'nostr-tools';
-import { assert, makePool, nowSeconds, readState } from './relay-lib.mjs';
+import { assert, makePool, nowSeconds, queryUntil, readState } from './relay-lib.mjs';
 
 const state = readState();
 if (!state?.relay_url) throw new Error('run .qa/relay-bootstrap.mjs first');
 const pool = makePool();
-const events = await pool.querySync([state.relay_url], {
-  kinds: [0, 1, 8, 78, 30009, 30078, 31923, 37237],
-  limit: 200,
-});
+const { events } = await queryUntil(
+  pool,
+  state.relay_url,
+  { kinds: [0, 1, 8, 78, 30009, 30078, 31923, 37237], limit: 200 },
+  (polled) => polled.length >= 15,
+  'fixture family remains queryable',
+);
 pool.close([state.relay_url]);
 
 assert(events.length >= 15, 'fixture family remains queryable');

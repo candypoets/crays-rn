@@ -38,7 +38,7 @@ type RoomScreenProps = {
 
 function ActionPill({ icon, label, onPress, testID }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; testID: string }) {
   return (
-    <Pressable className="min-h-12 flex-row items-center gap-2 rounded-full border border-base-300 bg-base-200 px-4" onPress={onPress} testID={testID}>
+    <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center gap-2 rounded-full border border-base-300 bg-base-200 px-4" onPress={onPress} testID={testID}>
       <Ionicons color={colors.accent} name={icon} size={18} />
       <Text className="text-sm font-bold text-base-content">{label}</Text>
     </Pressable>
@@ -92,7 +92,6 @@ function PersonCard({ index, onPress, person }: { index: number; onPress: () => 
         <View className="h-12 w-12 items-center justify-center rounded-full bg-primary/15">
           <Text className="text-lg font-black text-primary">{person.name.slice(0, 1).toUpperCase()}</Text>
         </View>
-        <View className="h-3 w-3 rounded-full bg-success" />
       </View>
       <View>
         <Text numberOfLines={1} className="text-xl font-extrabold text-base-content">{person.name}</Text>
@@ -150,6 +149,7 @@ function FeedView(props: Pick<RoomScreenProps, 'composer' | 'composerError' | 'c
           <Text className="text-xs text-muted">{props.composer.length}/500</Text>
           <Pressable
             accessibilityRole="button"
+            accessibilityState={{ disabled: Boolean(props.composerLoading) || !props.composer.trim() }}
             className="min-h-12 min-w-24 items-center justify-center rounded-full bg-primary px-5 disabled:opacity-40"
             disabled={props.composerLoading || !props.composer.trim()}
             onPress={props.onPublish}
@@ -169,15 +169,15 @@ function FeedView(props: Pick<RoomScreenProps, 'composer' | 'composerError' | 'c
           return (
             <View className={`rounded-[24px] border p-5 ${post.announcement ? 'border-primary/40 bg-primary/10' : 'border-base-300 bg-base-200'}`} key={post.id} testID={`post-${post.id}`}>
               <View className="flex-row items-center justify-between">
-                <Pressable onPress={() => props.onOpenPerson(post.pubkey)}>
+                <Pressable accessibilityLabel={`Open profile of ${profile?.name || 'room guest'}`} accessibilityRole="button" onPress={() => props.onOpenPerson(post.pubkey)}>
                   <Text className="font-extrabold text-base-content">{profile?.name || 'Room guest'}</Text>
                 </Pressable>
                 {post.announcement ? <Text className="text-xs font-black uppercase tracking-[1px] text-primary">Announcement</Text> : null}
               </View>
               <Text className="mt-3 text-base leading-6 text-base-content">{post.content}</Text>
               <View className="mt-4 flex-row gap-5">
-                <Pressable onPress={() => props.onOpenPerson(post.pubkey)}><Text className="text-sm font-bold text-primary">Message</Text></Pressable>
-                <Pressable accessibilityLabel={`Report post by ${profile?.name || 'room guest'}`} disabled={props.reportingPostId === post.id} onPress={() => props.onReportPost(post)} testID={`report-post-${post.id}`}><Text className="text-sm font-bold text-muted">{props.reportingPostId === post.id ? 'Reporting…' : 'Report'}</Text></Pressable>
+                <Pressable accessibilityLabel={`Message ${profile?.name || 'room guest'}`} accessibilityRole="button" onPress={() => props.onOpenPerson(post.pubkey)}><Text className="text-sm font-bold text-primary">Message</Text></Pressable>
+                <Pressable accessibilityLabel={`Report post by ${profile?.name || 'room guest'}`} accessibilityRole="button" accessibilityState={{ disabled: props.reportingPostId === post.id }} disabled={props.reportingPostId === post.id} onPress={() => props.onReportPost(post)} testID={`report-post-${post.id}`}><Text className="text-sm font-bold text-muted">{props.reportingPostId === post.id ? 'Reporting…' : 'Report'}</Text></Pressable>
               </View>
             </View>
           );

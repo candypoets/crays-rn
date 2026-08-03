@@ -2,7 +2,7 @@ import { extractTagValue, extractTagValues, type ParsedEvent, type RequestObject
 import { useSubscription as subscribeToNostr } from '@candypoets/nipworker/hooks';
 import { isEoce, isParsedEvent } from '@candypoets/nipworker/utils';
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
 
 import { CRAYS_PROTOCOL } from '@/nostr/protocol';
@@ -126,6 +126,10 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   const [revocations, setRevocations] = useState<Map<string, string>>(new Map());
   const [archivedOrders, setArchivedOrders] = useState<RoomOrder[]>([]);
   const [archivedEntitlements, setArchivedEntitlements] = useState<RoomEntitlement[]>([]);
+  // Refs mirror the archive state so persistence effects can compute the next
+  // snapshot without a read inside a state updater (updaters must stay pure).
+  const archivedOrdersRef = useRef<RoomOrder[]>([]);
+  const archivedEntitlementsRef = useRef<RoomEntitlement[]>([]);
   const [projectionNow, setProjectionNow] = useState(() => Math.floor(Date.now() / 1000));
 
   useEffect(() => {
@@ -135,11 +139,15 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     ]).then(([orderValue, entitlementValue]) => {
       try {
         const parsed = JSON.parse(orderValue || '[]') as RoomOrder[];
-        setArchivedOrders(parsed.filter((item) => item?.id && item?.product?.address).slice(0, 200));
+        const next = parsed.filter((item) => item?.id && item?.product?.address).slice(0, 200);
+        archivedOrdersRef.current = next;
+        setArchivedOrders(next);
       } catch { /* Invalid cache is ignored; relay truth can rebuild it. */ }
       try {
         const parsed = JSON.parse(entitlementValue || '[]') as RoomEntitlement[];
-        setArchivedEntitlements(parsed.filter((item) => item?.awardId && item?.badgeAddress && item?.relayUrl).slice(0, 200));
+        const next = parsed.filter((item) => item?.awardId && item?.badgeAddress && item?.relayUrl).slice(0, 200);
+        archivedEntitlementsRef.current = next;
+        setArchivedEntitlements(next);
       } catch { /* Invalid cache is ignored; relay truth can rebuild it. */ }
     });
   }, []);
@@ -191,7 +199,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
         setConnected(true);
         setLoading(false);
 
-        if (event.kind() === 8 && viewerPubkey) {
+        if (event.kind() === CRAYS_PROTOCOL.badgeAwardKind && viewerPubkey) {
           const id = event.id() ?? '';
           const address = extractTagValue(event, 'a') ?? '';
           const recipientPubkey = extractTagValue(event, 'p') ?? '';
@@ -209,7 +217,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        if (event.kind() === 5 && activeRoom.awardIssuerPubkey && event.pubkey() === activeRoom.awardIssuerPubkey) {
+        if (event.kind() === CRAYS_PROTOCOL.eventDeletionKind && activeRoom.awardIssuerPubkey && event.pubkey() === activeRoom.awardIssuerPubkey) {
           const issuer = event.pubkey() ?? '';
           for (const awardId of extractTagValues(event, 'e')) {
             setRevocations((current) => new Map(current).set(awardId, issuer));
@@ -217,7 +225,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        if ((event.kind() === 37237 || event.kind() === 27237) && viewerPubkey) {
+        if ((event.kind() === CRAYS_PROTOCOL.orderStatusKind || event.kind() === CRAYS_PROTOCOL.legacyOrderStatusKind) && viewerPubkey) {
           const id = event.id() ?? '';
           const awardId = extractTagValue(event, 'e') ?? '';
           const address = extractTagValue(event, 'a') ?? '';
@@ -280,6 +288,10 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
             if (previous?.id === entitlementDefinition.id) return current;
             return new Map(current).set(entitlementDefinition.address, entitlementDefinition);
           });
+          // Membership definitions are also projected into the offer list by
+          // projectMembershipOffer below, so they must fall through; every
+          // other entitlement type is fully handled here.
+          if (entitlementDefinition.type !== 'membership') return;
         }
 
         const membership = projectMembershipOffer(event, activeRoom.operatorPubkey);
@@ -303,11 +315,11 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       ['feed', { kinds: [CRAYS_PROTOCOL.roomFeedKind], tags: { '#h': [activeRoom.id] }, relays: [relayUrl], limit: 100, noCache: true }],
       ['catalog', { kinds: [CRAYS_PROTOCOL.badgeDefinitionKind], authors: [activeRoom.operatorPubkey], relays: [relayUrl], limit: 200, noCache: true }],
       ['events', { kinds: [...CRAYS_PROTOCOL.calendarKinds], authors: [activeRoom.operatorPubkey], relays: [relayUrl], limit: 100, noCache: true }],
-      ...(activeRoom.awardIssuerPubkey ? [['revocations', { kinds: [5], authors: [activeRoom.awardIssuerPubkey], relays: [relayUrl], limit: 200, noCache: true }] as [string, RequestObject]] : []),
+      ...(activeRoom.awardIssuerPubkey ? [['revocations', { kinds: [CRAYS_PROTOCOL.eventDeletionKind], authors: [activeRoom.awardIssuerPubkey], relays: [relayUrl], limit: 200, noCache: true }] as [string, RequestObject]] : []),
     ];
     if (viewerPubkey) subscriptions.push(
-      ['awards', { kinds: [8], tags: { '#p': [viewerPubkey] }, relays: [relayUrl], limit: 200, noCache: true }],
-      ['statuses', { kinds: [37237, 27237], tags: { '#p': [viewerPubkey] }, relays: [relayUrl], limit: 200, noCache: true }],
+      ['awards', { kinds: [CRAYS_PROTOCOL.badgeAwardKind], tags: { '#p': [viewerPubkey] }, relays: [relayUrl], limit: 200, noCache: true }],
+      ['statuses', { kinds: [CRAYS_PROTOCOL.orderStatusKind, CRAYS_PROTOCOL.legacyOrderStatusKind], tags: { '#p': [viewerPubkey] }, relays: [relayUrl], limit: 200, noCache: true }],
     );
     const unsubscribes = subscriptions.map(([family, filter]) => subscribeToNostr(
       `room_${family}_${activeRoom.id}`,
@@ -355,12 +367,12 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!liveOrders.length) return;
     // Persist a signed-event projection for durable navigation; relay reconnect revalidates it.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setArchivedOrders((current) => {
-      const next = [...liveOrders, ...current.filter((item) => !liveOrders.some((live) => live.id === item.id))].slice(0, 200);
-      void SecureStore.setItemAsync(ORDER_ARCHIVE_KEY, JSON.stringify(next));
-      return next;
-    });
+    // The merge and the SecureStore write happen outside the state updater:
+    // updaters must be pure because StrictMode double-invokes them.
+    const next = [...liveOrders, ...archivedOrdersRef.current.filter((item) => !liveOrders.some((live) => live.id === item.id))].slice(0, 200);
+    archivedOrdersRef.current = next;
+    void SecureStore.setItemAsync(ORDER_ARCHIVE_KEY, JSON.stringify(next));
+    setArchivedOrders(next);
   }, [liveOrders]);
 
   const orders = useMemo(() => [...liveOrders, ...archivedOrders.filter((item) => !liveOrders.some((live) => live.id === item.id))].sort((a, b) => b.updatedAt - a.updatedAt), [archivedOrders, liveOrders]);
@@ -379,12 +391,12 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     if (!liveEntitlements.length) return;
     // Persist a signed-event projection for durable navigation; relay reconnect revalidates it.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setArchivedEntitlements((current) => {
-      const next = [...liveEntitlements, ...current.filter((item) => !liveEntitlements.some((live) => live.awardId === item.awardId))].slice(0, 200);
-      void SecureStore.setItemAsync(ENTITLEMENT_ARCHIVE_KEY, JSON.stringify(next));
-      return next;
-    });
+    // The merge and the SecureStore write happen outside the state updater:
+    // updaters must be pure because StrictMode double-invokes them.
+    const next = [...liveEntitlements, ...archivedEntitlementsRef.current.filter((item) => !liveEntitlements.some((live) => live.awardId === item.awardId))].slice(0, 200);
+    archivedEntitlementsRef.current = next;
+    void SecureStore.setItemAsync(ENTITLEMENT_ARCHIVE_KEY, JSON.stringify(next));
+    setArchivedEntitlements(next);
   }, [liveEntitlements]);
 
   const entitlements = useMemo(

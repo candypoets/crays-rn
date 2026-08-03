@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { ensureLocalIdentity } from '@/account/account';
 import { createNip04MessageTemplate } from '@/messages/nip04';
 import { publishEvent } from '@/nostr/publish';
+import { relayUrlFor } from '@/rooms/relayUrl';
 import { useRoomData } from '@/rooms/RoomData';
 import { MessageRequestScreen } from '@/screens/messages/MessageRequestScreen';
 import { loadLocalMessages, saveLocalMessage } from '@/messages/store';
@@ -37,7 +38,7 @@ export default function MessageRequestRoute() {
       if (existing?.state === 'accepted') { router.replace({ pathname: '/conversation', params: { pubkey: person.pubkey } } as never); return; }
       await ensureLocalIdentity();
       const messageId = Crypto.randomUUID();
-      const relayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;
+      const relayUrl = relayUrlFor(activeRoom);
       const { template } = createNip04MessageTemplate({ messageId, messageType: 'message-request', recipientPubkey: person.pubkey, roomId: activeRoom.id, roomName: activeRoom.name, text: plaintext });
       await publishEvent(template, [relayUrl], 'nip04_message_request');
       await saveLocalMessage({

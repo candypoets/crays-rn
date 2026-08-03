@@ -1,6 +1,14 @@
 #!/usr/bin/env node
 import { nip04 } from 'nostr-tools';
 import {
+  FIXTURE_EVENT_TITLE,
+  FIXTURE_MEMBERSHIP_NAME,
+  FIXTURE_PEOPLE,
+  FIXTURE_PRODUCTS,
+  ROOM_ABOUT,
+  ROOM_DISPLAY_NAME,
+} from './flow-fixtures.mjs';
+import {
   assert,
   createRelay,
   emulatorUrl,
@@ -19,7 +27,7 @@ import {
 
 const keys = loadKeys();
 const run = Date.now().toString(36);
-const roomDisplayName = process.env.CRAYS_TEST_ROOM_NAME || 'The Skyline Room';
+const roomDisplayName = process.env.CRAYS_TEST_ROOM_NAME || ROOM_DISPLAY_NAME;
 const name = process.env.CRAYS_TEST_ROOM_NAME ? `${roomDisplayName} ${run}` : `Crays QA Skyline ${run}`;
 const roomId = process.env.CRAYS_TEST_ROOM_ID || `skyline-${run}`;
 const domainLabel = process.env.CRAYS_TEST_ROOM_DOMAIN || `craysqa-room-${run}`;
@@ -44,6 +52,7 @@ writeState({
   id: created.id,
   name,
   room_id: roomId,
+  room_name: roomDisplayName,
   domain: relay.domain,
   relay_url: relay.relay_url,
   emulator_relay_url: emulatorUrl(relay.relay_url),
@@ -121,7 +130,7 @@ const manifest = signEvent(
       ['d', `life.crays/room/v1/${roomId}`],
       ['schema', 'life.crays/room/v1'],
       ['name', roomDisplayName],
-      ['about', 'Rooftop jazz, cocktails and a view over the city.'],
+      ['about', ROOM_ABOUT],
       ['relay', relay.relay_url],
       ['operator', keys.admin.pub],
       ['award_issuer', requiredBadge.split(':')[1]],
@@ -138,11 +147,7 @@ const manifest = signEvent(
 );
 await publish(manifest, 'versioned room manifest');
 
-const people = [
-  ['Maya', 'Here for the jazz'],
-  ['Jonas', 'Ask me about the view'],
-  ['Lea', 'Trying the Negroni'],
-];
+const people = FIXTURE_PEOPLE;
 const profileIds = [];
 const presenceIds = [];
 for (let index = 0; index < fixtureUsers.length; index += 1) {
@@ -182,11 +187,7 @@ const feedEvents = [
 ];
 for (const [index, event] of feedEvents.entries()) await publish(event, `room feed event ${index + 1}`);
 
-const products = [
-  ['mezcal-negroni', 'Mezcal Negroni', 'Smoky, bitter, orange', '12.00', 'Cocktails', 'drink'],
-  ['rooftop-lager', 'Rooftop Lager', 'Crisp local lager', '7.00', 'Beer', 'drink'],
-  ['marinated-olives', 'Marinated olives', 'Citrus and rosemary', '6.00', 'Snacks', 'food'],
-];
+const products = FIXTURE_PRODUCTS;
 const definitionIds = [];
 const productAddresses = [];
 for (const [position, [d, productName, description, price, section, productKind]] of products.entries()) {
@@ -236,7 +237,7 @@ const membership = signEvent(
     kind: 30009,
     tags: [
       ['d', `skyline-regular-${run}`], ['type', 'membership'], ['t', 'membership'], ['t', 'sellable'],
-      ['name', 'Skyline Regular'], ['description', 'Member nights, one monthly cocktail, and priority booking.'],
+      ['name', FIXTURE_MEMBERSHIP_NAME], ['description', 'Member nights, one monthly cocktail, and priority booking.'],
       ['price', '24.00', 'EUR'], ['billing', 'monthly'], ['availability', 'available'], ['position', '10'],
     ],
   },
@@ -285,7 +286,7 @@ const calendarEvent = signEvent(
   {
     kind: 31923,
     tags: [
-      ['d', eventD], ['title', 'Rooftop Jazz'], ['start', String(nowSeconds() + 1800)],
+      ['d', eventD], ['title', FIXTURE_EVENT_TITLE], ['start', String(nowSeconds() + 1800)],
       ['end', String(nowSeconds() + 10_800)], ['location', 'Roof stage'],
       ['summary', 'Live jazz under the stars with the city skyline as your backdrop.'],
       ['capacity', '18'], ['price', '0.00', 'EUR'], ['r', relay.relay_url],
@@ -324,6 +325,7 @@ writeState({
   id: created.id,
   name,
   room_id: roomId,
+  room_name: roomDisplayName,
   domain: relay.domain,
   relay_url: relay.relay_url,
   emulator_relay_url: emulatorUrl(relay.relay_url),
@@ -338,6 +340,7 @@ writeState({
   definition_ids: [...definitionIds, membership.id, passDefinition.id, eventAccessDefinition.id],
   event_id: calendarEvent.id,
   event_address: `31923:${keys.admin.pub}:${eventD}`,
+  membership_definition_id: membership.id,
   order_award_id: orderAward.id,
   order_status_id: orderStatus.id,
   membership_award_id: membershipAward.id,

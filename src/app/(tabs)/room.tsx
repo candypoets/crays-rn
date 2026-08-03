@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ensureLocalIdentity } from '@/account/account';
 import { publishEvent } from '@/nostr/publish';
 import { roomFeedTemplate, venueReportTemplate } from '@/nostr/protocol';
+import { relayUrlFor } from '@/rooms/relayUrl';
 import { useRoomData } from '@/rooms/RoomData';
 import { RoomScreen, type RoomView } from '@/screens/room/RoomScreen';
 import { useRoomSession } from '@/session/RoomSession';
@@ -37,7 +38,7 @@ export default function RoomRoute() {
           content,
           Math.min(activeRoom.expiresAt, Math.floor(activeRoom.leaveAt / 1000)),
         ),
-        [activeRoom.connectionRelayUrl || activeRoom.relayUrl],
+        [relayUrlFor(activeRoom)],
         'room_post',
       );
       setComposer('');
@@ -53,7 +54,7 @@ export default function RoomRoute() {
     setReportingPostId(post.id); setReportNotice(null);
     try {
       await ensureLocalIdentity();
-      await publishEvent(venueReportTemplate(post.pubkey, activeRoom.id, 'other', post.id), [activeRoom.connectionRelayUrl || activeRoom.relayUrl], 'feed_report');
+      await publishEvent(venueReportTemplate(post.pubkey, activeRoom.id, 'other', post.id), [relayUrlFor(activeRoom)], 'feed_report');
       setReportNotice('Report sent to this venue. The post remains visible unless you block its author.');
     } catch (cause) { setReportNotice(cause instanceof Error ? cause.message : 'The venue did not confirm this report.'); }
     finally { setReportingPostId(null); }

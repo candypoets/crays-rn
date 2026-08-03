@@ -57,6 +57,8 @@ export function useRoomManifest(relayUrl?: string, roomId?: string): ManifestSta
             relays: [relayUrl],
             limit: 10,
             noCache: true,
+            // Live RequestObject field: nipworker 0.97.11 forwards it to the
+            // worker (distinct from the subscription-level closeOnEose below).
             closeOnEOSE: true,
           }],
           (message) => {

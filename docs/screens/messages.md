@@ -6,7 +6,7 @@ Messages is globally reachable and stores a protected local projection only afte
 
 Conversation distinguishes outgoing **Waiting** from incoming **Request**; the sender cannot accept their own request. It subscribes to inbound and outbound kind-4 filters through nipworker and reads `Kind4Parsed.decryptedContent()` directly from the FlatBuffer callback. Accept publishes an encrypted `message-acceptance` envelope before unlocking the composer. Every reply publishes an encrypted `message` envelope referencing the prior stable message id. Block is immediately local and suppresses subsequently received messages from that person. Report publishes standard kind 1984 to the active venue relay.
 
-States: empty, outbound waiting, inbound requested, accepted, blocked, relay unavailable/rejected, report confirmed/rejected, no active venue, deleted local record, corrupt storage, and recipient no longer visible. A blocked person cannot be requested or messaged again on that device.
+States: empty, outbound waiting, inbound requested, accepted, blocked, relay unavailable/rejected, report confirmed/rejected, no active venue, deleted local record, corrupt storage, and recipient no longer visible. A blocked person cannot be requested or messaged again on that device. Setup failure on Messages home (identity, relay archive, or kind-4 subscription) surfaces an inline error banner above the archive instead of masquerading as “No conversations yet”. A conversation deep link whose pubkey matches no retained record renders a not-found state with a back action; it never spins indefinitely or opens another person's thread.
 
 ## Complete QA strategy
 

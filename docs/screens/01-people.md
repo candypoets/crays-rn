@@ -10,7 +10,7 @@ Entry requires a persisted `ActiveRoom`. With no active room, route to Discover.
 
 - Header: signed room name, connection state, Menu, My night, and Leave.
 - Local switch: People and Room feed. It changes only the active-room view.
-- Roster: display name, intent, optional context, and live dot in deterministic accessible order.
+- Roster: display name, intent, and optional context in deterministic accessible order. No per-person "online" dot is rendered; roster membership is the only presence signal and it is already textual.
 - Cards may form a loose coaster-like constellation, but the semantic order is alphabetical and tap targets remain at least 44 points.
 - The visible count counts current, non-expired, explicitly visible presence projections only.
 - Tapping a person opens screen 02 with their relay-derived public key; no name is used as identity.
@@ -41,7 +41,7 @@ The versioned kind-78 format is a Crays pilot contract, not a standardized NIP. 
 
 ## Accessibility and privacy
 
-Name, intent, and context are text; the live dot is supplementary. Reading order is predictable despite the organic visual layout. No exact distance, table number, follower count, profile-open count, or non-room activity is rendered. Quiet mode is never visually treated as degraded access.
+Name, intent, and context are text. Reading order is predictable despite the organic visual layout. No exact distance, table number, follower count, profile-open count, or non-room activity is rendered. Quiet mode is never visually treated as degraded access.
 
 ## QA strategy
 

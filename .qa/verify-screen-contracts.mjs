@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const root = resolve(new URL('..', import.meta.url).pathname);
@@ -47,19 +47,113 @@ const contracts = [
   ['settings.md', 'settings.yaml', 'qa-settings.mjs'],
 ];
 
+// Negative-path scenarios that harden an existing screen spec rather than
+// adding a new one (the owning doc is noted for traceability). They get the
+// same runner/flow/launch checks as screen contracts.
+const additionalScenarios = [
+  ['08b-invite-accepted.md', '08b-invite-redeemed-twice.yaml', 'qa-08b-invite-redeemed-twice.mjs'],
+  ['20b-tickets.md', '20d-rsvp-rejected.yaml', 'qa-20d-rsvp-rejected.mjs'],
+  ['11-join-privacy.md', '11c-join-relay-unavailable.yaml', 'qa-11c-join-relay-unavailable.mjs'],
+];
+
+// Screen spec -> jest test that covers it, by existing naming conventions.
+const screenTests = {
+  '00-foundation.md': 'src/screens/__tests__/FoundationScreen.test.tsx',
+  '01-people.md': 'src/screens/room/__tests__/RoomScreen.test.tsx',
+  '02-first-contact.md': 'src/screens/room/__tests__/FirstContactScreen.test.tsx',
+  '03-room-feed.md': 'src/screens/room/__tests__/RoomScreen.test.tsx',
+  '04-gift-select.md': 'src/screens/commerce/__tests__/CommerceScreens.test.tsx',
+  '05-my-night.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '06-cold-welcome.md': 'src/screens/onboarding/__tests__/ColdWelcomeScreen.test.tsx',
+  '06b-account-access.md': 'src/screens/onboarding/__tests__/AccountAccessScreen.test.tsx',
+  '07-account-setup.md': 'src/screens/onboarding/__tests__/ProfileSetupScreen.test.tsx',
+  '07b-account-recovery.md': 'src/screens/onboarding/__tests__/RecoveryScreen.test.tsx',
+  '08-invite-preview.md': 'src/screens/onboarding/__tests__/InviteScreens.test.tsx',
+  '08b-invite-accepted.md': 'src/screens/onboarding/__tests__/InviteScreens.test.tsx',
+  '09-returning-login.md': 'src/screens/onboarding/__tests__/InviteScreens.test.tsx',
+  '10-room-preview.md': 'src/screens/discovery/__tests__/RoomPreviewScreen.test.tsx',
+  '10b-bluetooth-rationale.md': 'src/screens/discovery/__tests__/BluetoothRationaleScreen.test.tsx',
+  '11-join-privacy.md': 'src/screens/discovery/__tests__/JoinPrivacyScreen.test.tsx',
+  '12-menu.md': 'src/screens/commerce/__tests__/CommerceScreens.test.tsx',
+  '13-item.md': 'src/screens/commerce/__tests__/CommerceScreens.test.tsx',
+  '14-review-pay.md': 'src/screens/commerce/__tests__/CommerceScreens.test.tsx',
+  '15-order-detail.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '16-me.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '17-orders.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '18-membership-offer.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '19-membership-detail.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '20-room-event.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '20b-tickets.md': 'src/screens/durable/__tests__/TicketScreens.test.tsx',
+  '20c-ticket-detail.md': 'src/screens/durable/__tests__/TicketScreens.test.tsx',
+  '21-room-ended.md': 'src/screens/room/__tests__/LeaveAndSwitchScreens.test.tsx',
+  '22-message-request.md': 'src/screens/messages/__tests__/MessageRequestScreen.test.tsx',
+  '23-gift-review.md': 'src/screens/commerce/__tests__/CommerceScreens.test.tsx',
+  '24-payment-methods.md': 'src/screens/commerce/__tests__/CommerceScreens.test.tsx',
+  '25-wallet.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '26-add-funds.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  '27-discover.md': 'src/discovery/__tests__/blePointer.test.ts',
+  '28-switch-room.md': 'src/screens/room/__tests__/LeaveAndSwitchScreens.test.tsx',
+  'memberships.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
+  'messages.md': 'src/screens/messages/__tests__/MessagesScreens.test.tsx',
+  'primary-tabs.md': 'src/navigation/__tests__/primaryTabs.test.ts',
+  'settings.md': 'src/screens/settings/__tests__/SettingsScreen.test.tsx',
+};
+
+// Known exceptions: routing glue with no dedicated screen component. Warn,
+// do not fail; remove entries as real coverage lands.
+const testExemptions = new Set(['entry-router.md']);
+
 const documented = readdirSync(resolve(root, 'docs/screens')).filter((name) => name.endsWith('.md')).sort();
 const registered = contracts.map(([doc]) => doc).sort();
 if (JSON.stringify(documented) !== JSON.stringify(registered)) {
   throw new Error(`Screen contract registry mismatch.\nDocumented: ${documented.join(', ')}\nRegistered: ${registered.join(', ')}`);
 }
 
-for (const [doc, flow, runner] of contracts) {
-  const files = [
-    resolve(root, 'docs/screens', doc),
-    resolve(root, 'maestro/flows', flow),
-    resolve(root, '.qa', runner),
-  ];
-  for (const file of files) if (!existsSync(file)) throw new Error(`Missing screen contract artifact: ${file}`);
+const allScenarios = [...contracts, ...additionalScenarios];
+for (const [doc, flow, runner] of allScenarios) {
+  const flowPath = resolve(root, 'maestro/flows', flow);
+  const runnerPath = resolve(root, '.qa', runner);
+  for (const file of [resolve(root, 'docs/screens', doc), flowPath, runnerPath]) {
+    if (!existsSync(file)) throw new Error(`Missing screen contract artifact: ${file}`);
+  }
+
+  // The runner must reference its registered flow, and every flow it
+  // references must exist.
+  const runnerSource = readFileSync(runnerPath, 'utf8');
+  const referenced = [...runnerSource.matchAll(/maestro\/flows\/[\w.-]+\.yaml/g)].map((match) => match[0].replace('maestro/flows/', ''));
+  if (!referenced.includes(flow)) throw new Error(`${runner} does not reference its registered flow maestro/flows/${flow}`);
+  for (const name of referenced) {
+    if (!existsSync(resolve(root, 'maestro/flows', name))) throw new Error(`${runner} references missing maestro/flows/${name}`);
+  }
 }
 
-console.log(`CRAYS SCREEN CONTRACTS PASS: ${contracts.length} specs each have a Maestro flow and named .qa lifecycle`);
+// Every contract flow must reach the shared launch (transitively) so all
+// scenarios share Metro/dev-client startup.
+const flowDir = resolve(root, 'maestro/flows');
+const runFlowTargets = (name) => {
+  const source = readFileSync(resolve(flowDir, name), 'utf8');
+  return [...source.matchAll(/runFlow:\s*([\w./-]+\.yaml)/g)].map((match) => match[1]);
+};
+const reachesLaunch = (name, seen = new Set()) => {
+  if (name === 'launch.yaml') return true;
+  if (seen.has(name)) return false;
+  seen.add(name);
+  return runFlowTargets(name).some((target) => reachesLaunch(target.replace(/^.*\//, ''), seen));
+};
+for (const [, flow] of allScenarios) {
+  if (!reachesLaunch(flow)) throw new Error(`maestro/flows/${flow} does not run the shared maestro/flows/launch.yaml startup (directly or transitively)`);
+}
+
+// Every screen spec needs at least one jest test file.
+const warnings = [];
+for (const [doc] of contracts) {
+  const testFile = screenTests[doc];
+  if (!testFile) {
+    if (testExemptions.has(doc)) { warnings.push(`no jest test mapped for ${doc} (warn-listed exception)`); continue; }
+    throw new Error(`No jest test mapping for ${doc}; add one to screenTests in .qa/verify-screen-contracts.mjs`);
+  }
+  if (!existsSync(resolve(root, testFile))) throw new Error(`Mapped jest test for ${doc} is missing: ${testFile}`);
+}
+
+for (const warning of warnings) console.log(`warn - ${warning}`);
+console.log(`CRAYS SCREEN CONTRACTS PASS: ${contracts.length} specs and ${additionalScenarios.length} extra scenarios each have a Maestro flow (launch-linked), a referencing .qa runner, and mapped jest coverage`);

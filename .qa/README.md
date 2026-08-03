@@ -18,8 +18,52 @@ Every scenario follows the same lifecycle:
 
 `npm run qa:contracts` is the fast structural gate: every file under
 `docs/screens/` must be registered with an existing Maestro flow and a named
-`.qa` lifecycle runner. This catches a newly added screen spec that has no
+`.qa` lifecycle runner. It also fails when a runner does not reference its
+registered flow (or references a missing one), when a flow does not reach the
+shared `maestro/flows/launch.yaml` startup transitively, or when a screen has
+no mapped jest test (`screenTests` in `verify-screen-contracts.mjs`;
+`entry-router.md` is a warn-listed exception). Scenarios that harden an
+existing spec rather than add a screen are registered in
+`additionalScenarios`. This catches a newly added screen spec that has no
 executable QA scaffold before device tests begin.
+
+## Verifier conventions
+
+- Positive relay verifiers poll with `queryUntil` (default 15s) from
+  `relay-lib.mjs`; a one-shot `querySync` flakes whenever relay propagation
+  lags a confirmed write.
+- Negative (absence) verifiers call `settleBeforeAbsence` (4s) before
+  querying, so a lagging write cannot produce a false pass.
+- Strings shared between flows and verifiers live in `flow-fixtures.mjs`.
+  `relay-screen-scenario.mjs` passes them to flows as `QA_*` Maestro env
+  vars; flows using them require the harness or explicit `-e` overrides when
+  run standalone. The entry flows are launched without env overrides and keep
+  their literals; the owning flow for each constant is named in
+  `flow-fixtures.mjs`.
+- Logcat consumption verifiers (`verify-manifest-consumed`,
+  `verify-room-consumed`, `verify-order-consumed`) independently query the
+  relay for the underlying events and their seeded content first; the logcat
+  `__DEV__` marker check only complements that proof.
+- A failed teardown prints the leaked relay name and the exact `--sweep`
+  recovery command; a passing scenario keeps its PASS, while a scenario that
+  already failed still exits non-zero.
+
+## Negative-path scenarios
+
+- `qa-08b-invite-redeemed-twice.mjs` redeems the same invite token twice
+  through the public UI. Per `redeemInvite` in `src/invites/invites.ts` the
+  correct behavior is idempotent reuse of the stored nonce/account
+  redemption; the verifier requires exactly one relay award for the nonce and
+  exactly one redemption marker.
+- `qa-20d-rsvp-rejected.mjs` runs the RSVP flow with an app identity that
+  holds no membership badge (`CRAYS_QA_PREAUTHORIZE=0`, user index 3), so the
+  badge-gated relay rejects the write. The flow asserts the event error
+  state and the empty Tickets archive; the verifier proves the relay stored
+  no kind-31925 and no confirmed-RSVP marker was logged, so nothing entered
+  the durable archive.
+- `qa-11c-join-relay-unavailable.mjs` points join-room at a dead relay URL
+  and asserts the manifest error state renders instead of a hang. It
+  provisions no relay, so it has nothing to tear down.
 
 ## Entry and cold signup
 
@@ -48,6 +92,10 @@ development client installed:
 ```sh
 MAESTRO_CLI=$HOME/.maestro/bin/maestro node .qa/qa-cold-signup.mjs
 ```
+
+On hosts with several emulators attached, export `ANDROID_SERIAL=<serial>` to
+pin every harness `adb` call and pass `--device` to Maestro; without it both
+refuse to guess when more than one device is present.
 
 The entry harness clears exactly `life.crays` during teardown and removes
 `/tmp/qa-crays-entry.json`. Maestro screenshots remain available for diagnosis.

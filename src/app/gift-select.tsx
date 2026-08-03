@@ -1,7 +1,8 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 
-import { useAcceptedConversation } from '@/messages/useAcceptedConversation';
+import { hasAcceptedConversation, loadLocalMessages } from '@/messages/store';
 import { useRoomData } from '@/rooms/RoomData';
 import { GiftSelectScreen } from '@/screens/commerce/GiftSelectScreen';
 import { useRoomSession } from '@/session/RoomSession';
@@ -10,7 +11,16 @@ export default function GiftSelectRoute() {
   const { pubkey } = useLocalSearchParams<{ pubkey?: string }>();
   const { activeRoom, hydrated } = useRoomSession();
   const { people, products } = useRoomData();
-  const accepted = useAcceptedConversation(pubkey);
+  const [accepted, setAccepted] = useState<boolean | null>(null);
+  useEffect(() => {
+    let active = true;
+    if (pubkey) {
+      loadLocalMessages()
+        .then((messages) => { if (active) setAccepted(hasAcceptedConversation(messages, pubkey)); })
+        .catch(() => { if (active) setAccepted(false); });
+    }
+    return () => { active = false; };
+  }, [pubkey]);
   if (!hydrated) return null;
   if (!activeRoom) return <Redirect href="/discover" />;
   const person = people.find((value) => value.pubkey === pubkey);

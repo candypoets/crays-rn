@@ -102,6 +102,51 @@ export function makePool() {
   return new SimplePool();
 }
 
+export const DEFAULT_QUERY_TIMEOUT_MS = 15_000;
+export const ABSENCE_SETTLE_MS = 4_000;
+
+/**
+ * Poll a relay filter until `until(events)` returns a truthy value. Positive
+ * verifiers must use this instead of a single querySync: relays can lag a
+ * confirmed write by a few seconds, and one-shot queries flake the suite.
+ * Returns { events, result } from the successful poll.
+ */
+export async function queryUntil(pool, relayUrl, filter, until, label, timeoutMs = DEFAULT_QUERY_TIMEOUT_MS, intervalMs = 750) {
+  const deadline = Date.now() + timeoutMs;
+  let events = [];
+  for (;;) {
+    events = await pool.querySync([relayUrl], filter);
+    const result = until(events);
+    if (result) return { events, result };
+    if (Date.now() >= deadline) break;
+    await sleep(intervalMs);
+  }
+  throw new Error(`relay condition not met within ${timeoutMs}ms: ${label} (last poll saw ${events.length} event(s))`);
+}
+
+/**
+ * Negative verifiers must wait before asserting ABSENCE: a lagging write that
+ * has not propagated yet would otherwise produce a false pass.
+ */
+export async function settleBeforeAbsence(label) {
+  await sleep(ABSENCE_SETTLE_MS);
+  console.log(`ok - settled ${ABSENCE_SETTLE_MS}ms before absence check so a lagging write cannot fake it: ${label}`);
+}
+
+/**
+ * Surface a failed teardown loudly: a scenario may pass while leaking the
+ * provisioned relay and its docker volume. Printed with the relay name and
+ * the exact recovery command so the leak is actionable.
+ */
+export function warnTeardownLeak(scenario, state, error) {
+  const relay = state?.name ? `${state.name} (id ${state.id})` : 'unknown relay (state file missing)';
+  console.error(`\n*** QA TEARDOWN FAILED for ${scenario} ***`);
+  console.error(`*** leaked relay: ${relay}`);
+  console.error(`*** cause: ${String(error?.message || error).split('\n')[0]}`);
+  console.error('*** recover once no other QA run is live with: node .qa/relay-teardown.mjs --sweep');
+  console.error('*** the scenario result above still stands; this warning only covers infrastructure cleanup\n');
+}
+
 export async function publishUntilStored(pool, relayUrl, event, label, timeoutMs = 45_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {

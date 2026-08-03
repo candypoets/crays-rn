@@ -38,7 +38,10 @@ Development builds also render a fixed **Crays Test Room** card. It subscribes
 to the real local signed relay fixture at the platform-specific port-8787
 address and remains disabled with an exact recovery command while that relay is
 offline. This card and subscription are absent from release builds; they are
-not a substitute for D-001 or a fabricated production listing.
+not a substitute for D-001 or a fabricated production listing. When a direct
+link already targets the test room's relay and id, the duplicate card and its
+subscription are suppressed because relays replace a REQ that reuses a
+subscription ID.
 
 Accessibility: Map/Nearby are real tabs with selected state; room cards have a
 single descriptive action; verification is text plus icon; 48dp targets and

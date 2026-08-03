@@ -81,7 +81,7 @@ Staff do not use this mobile app to run operations. They continue using the Cray
 ### MVP
 
 - Intent-aware entry for cold signup, invite redemption, and returning-user login.
-- Nostr identity creation, Apple/Google access, device unlock, recovery/import, and a minimal profile without protocol jargon.
+- Nostr identity creation, Apple/Google access *(deferred from the pilot build — see D-008 in `docs/DESIGN-DEBT.md`)*, device unlock, recovery/import, and a minimal profile without protocol jargon.
 - Foreground Bluetooth discovery of nearby Crays rooms.
 - Signed venue verification and explicit join/leave.
 - Venue-scoped presence with visibility and intent controls.
@@ -90,11 +90,11 @@ Staff do not use this mobile app to run operations. They continue using the Cray
 - Encrypted direct messages.
 - Venue menu, self-order, and order status.
 - Active order tracking, order history, receipts, recovery, cancellation/refund status, and venue support paths.
-- Embedded Cashu wallet with Nostr-backed encrypted state, Bitcoin/Lightning funding, venue payment, receiving, activity, recovery, and discreet advanced controls.
+- Embedded Cashu wallet with Nostr-backed encrypted state, Bitcoin/Lightning funding, venue payment, receiving, activity, recovery, and discreet advanced controls. *(Deferred from the pilot build — see D-006 and D-007 in `docs/DESIGN-DEBT.md`.)*
 - “Send a drink” from a profile or conversation.
 - Venue events, RSVP, capacity messaging, and entry ticket.
 - Membership discovery, detail, benefits, status, renewal/payment action, multi-use passes, remaining uses, activity, and presentation QR.
-- Notifications for message requests, replies, gifted items, orders, tickets, and passes.
+- Notifications for message requests, replies, gifted items, orders, tickets, and passes. *(Deferred from the pilot build — see D-009 in `docs/DESIGN-DEBT.md`.)*
 - Blocking, reporting, venue moderation, and emergency leave controls.
 
 ### Explicit non-goals
@@ -857,16 +857,16 @@ The MVP is ready for a real hospitality pilot when:
 13. Staff can publish a venue announcement and moderate a room post through trusted admin roles.
 14. A user can purchase an available menu item, review the final commitment, see every relevant admin status transition, and later retrieve order detail and receipt from Me → Orders.
 15. A user can send a non-anonymous venue item to another eligible person; recipient response, message delivery, and venue fulfillment remain distinct.
-16. Interrupted checkout recovers without duplicate payment.
+16. Interrupted checkout recovers without duplicate payment. *(Deferred from the pilot build with payments — see D-006 in `docs/DESIGN-DEBT.md`.)*
 17. A member can understand status and benefits, inspect use activity, manage renewal/payment action, and present the relevant credential within two taps.
 18. An attendee can find and present a short-lived event QR within two taps.
 19. A pass shows correct remaining uses after staff fulfillment.
 20. The venue admin can manage the same product/event/order records without a parallel mobile-only database.
 21. Permission denial, interrupted authentication, expired/redeemed invite, account mismatch, relay outage, signal loss, expired QR, cancellation, refund, membership payment failure, and empty-room states are usable and tested.
 22. Screen reader, text scaling, reduced motion, contrast, and 48 dp touch-target checks pass on both platforms.
-23. A user can create or restore the same Nostr identity through supported Apple/Google access without accidentally creating duplicate identities.
-24. A user can pay from Wallet, add funds over Lightning when needed, inspect wallet activity, and recover encrypted wallet state on a new device without double-spending or exposing balance publicly.
-25. A room can publish a signed highlight to the Crays search relay and appear consistently in Map, text/category search, and Bluetooth room-ID resolution.
+23. A user can create or restore the same Nostr identity through supported Apple/Google access without accidentally creating duplicate identities. *(Deferred from the pilot build — see D-008 in `docs/DESIGN-DEBT.md`.)*
+24. A user can pay from Wallet, add funds over Lightning when needed, inspect wallet activity, and recover encrypted wallet state on a new device without double-spending or exposing balance publicly. *(Deferred from the pilot build — see D-006 and D-007 in `docs/DESIGN-DEBT.md`.)*
+25. A room can publish a signed highlight to the Crays search relay and appear consistently in Map, text/category search, and Bluetooth room-ID resolution. *(Deferred from the pilot build — see D-001 in `docs/DESIGN-DEBT.md`.)*
 26. Search-relay outage or a forged/stale result never blocks direct signed Bluetooth/QR entry, changes the active room, or marks an unverified room as verified.
 
 ## 18. Open decisions

@@ -33,7 +33,7 @@ The route disables both affordances while work is active. It must never create t
 - Default.
 - Creating: both local actions disabled; progress label is announced as busy.
 - Secure RNG, storage, or native signer unavailable: remain on screen with a specific recovery action and no navigation.
-- Existing-account action: explicit deferred copy; no protected state changes.
+- Existing-account action: pushes `/login` (screen 09, implemented); no protected state changes.
 - Relaunch after identity persistence: entry router resumes at Profile rather than returning here.
 
 ## Accessibility
@@ -49,7 +49,7 @@ This screen creates Nostr signing identity but deliberately publishes nothing. T
 ## QA strategy
 
 - Component: `AccountAccessScreen.test.tsx` proves local-only choices, absent Apple/Google buttons, busy-state locking, callback routing, and visible error state.
-- Device: `maestro/flows/06b-account-access.yaml` checks provider absence and the deferred login action, double-taps identity creation, then relaunches and proves routing resumes at Profile.
+- Device: `maestro/flows/06b-account-access.yaml` checks provider absence and that the existing-account action reaches the returning-login screen (09), double-taps identity creation, then relaunches and proves routing resumes at Profile.
 - Scenario: `.qa/qa-06b-account-access.mjs` owns clean bootstrap, independently requires exactly one public identity marker with no profile/completion side effects, and tears down.
 - Workflow: `cold-signup.yaml` presses the primary action and must reach Profile inside 30 seconds.
 

@@ -1,5 +1,7 @@
 appId: life.crays
 ---
+# ${QA_CONVERSATION_REPLY_TEXT} is supplied by .qa/relay-screen-scenario.mjs
+# from .qa/flow-fixtures.mjs; standalone runs need `-e` overrides.
 - runFlow: seed-and-join.yaml
 - tapOn:
     id: "tab-messages"
@@ -24,7 +26,7 @@ appId: life.crays
     timeout: 15000
 - tapOn:
     id: "conversation-reply-input"
-- inputText: "Yes — see you there."
+- inputText: "${QA_CONVERSATION_REPLY_TEXT}"
 - assertVisible:
     id: "conversation-reply-count"
 - pressKey: ENTER

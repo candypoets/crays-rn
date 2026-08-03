@@ -13,14 +13,18 @@ export default function MeRoute() {
   const { activeRoom } = useRoomSession();
   const [hasInviteMembership, setHasInviteMembership] = useState(false);
   const [ticketCount, setTicketCount] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!focused) return;
     let active = true;
     void Promise.all([listInviteRedemptions(), listTickets()]).then(([redemptions, tickets]) => {
       if (!active) return;
+      setError(null);
       setHasInviteMembership(Boolean(redemptions.length));
       setTicketCount(tickets.length);
+    }).catch((cause) => {
+      if (active) setError(cause instanceof Error ? cause.message : 'Saved tickets and memberships could not be read on this device.');
     });
     return () => {
       active = false;
@@ -33,6 +37,7 @@ export default function MeRoute() {
   return (
     <MeScreen
       activeOrder={activeOrder}
+      error={error}
       hasMembership={hasInviteMembership || accessCount > 0}
       ticketCount={ticketCount + data.entitlements.filter((item) => item.type === 'event_access').length}
       roomName={activeRoom?.name || activeOrder?.roomName}

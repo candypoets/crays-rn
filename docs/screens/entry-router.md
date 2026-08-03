@@ -14,7 +14,7 @@ Resolution for this slice is deterministic:
 | Identity + profile + completion | `/discover` |
 | Identity + profile + completion + unexpired active room | `/room` |
 
-Future invite/deep-link context will take precedence over these defaults. That context must be validated and preserved before authentication; this slice intentionally does not invent invite semantics while the PRD decision remains open.
+Invite/deep-link context now takes precedence over these defaults. The `/invite` route validates the link and persists the context through `src/account/context.ts` before authentication; `/login` and `/recovery` resume the preserved invite after auth instead of following the default table. Behavior is specified in `docs/screens/08-invite-preview.md` and exercised by the `.qa/qa-08*` scenarios.
 
 ## Interaction and states
 

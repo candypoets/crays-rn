@@ -6,9 +6,11 @@ Purpose: let a person inspect the venue identity, current utility and entry
 consequence before Bluetooth or presence. It is shared by Map, Nearby, QR,
 link, event and invite entry.
 
-The signed room name and Verified label are primary. Current event, description
-and capabilities explain why entry is useful. **Enter room** advances directly
-to Join privacy for Map, QR and direct-link entry. It does not request Bluetooth
+The signed room name and Verified label are primary. The signed description
+and capabilities explain why entry is useful; the manifest carries no event
+title or schedule, so the preview renders none rather than fabricating one.
+**Enter room** advances directly to Join privacy for Map, QR and direct-link
+entry. It does not request Bluetooth
 or publish presence. Nearby discovery owns its just-in-time permission
 rationale before scanning. Back/cancel returns to the preserved discovery
 context.

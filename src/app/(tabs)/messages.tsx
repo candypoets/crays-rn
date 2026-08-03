@@ -6,6 +6,7 @@ import { parseCraysDirectMessage } from '@/messages/nip04';
 import { loadMessageRelays, saveMessageRelays } from '@/messages/relays';
 import { latestConversationMessages, loadLocalMessages, saveLocalMessage, type LocalMessage } from '@/messages/store';
 import { subscribeNip04Messages } from '@/messages/subscription';
+import { relayUrlFor } from '@/rooms/relayUrl';
 import { useRoomData } from '@/rooms/RoomData';
 import { MessagesScreen } from '@/screens/messages/MessagesScreens';
 import { useRoomSession } from '@/session/RoomSession';
@@ -13,11 +14,12 @@ import { useSafety } from '@/safety/Safety';
 
 export default function MessagesRoute() {
   const [messages, setMessages] = useState<LocalMessage[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const { profiles } = useRoomData();
   const { activeRoom } = useRoomSession();
   const { isBlocked } = useSafety();
   const profilesRef = useRef(profiles);
-  const activeRelay = activeRoom ? activeRoom.connectionRelayUrl || activeRoom.relayUrl : null;
+  const activeRelay = activeRoom ? relayUrlFor(activeRoom) : null;
 
   useEffect(() => { profilesRef.current = profiles; }, [profiles]);
 
@@ -60,7 +62,7 @@ export default function MessagesRoute() {
               content: envelope.text,
               createdAt: event.createdAt * 1000,
               state: requested ? 'requested' : 'accepted',
-              direction: requested ? (incoming ? 'incoming' : 'outgoing') : (incoming ? 'incoming' : 'outgoing'),
+              direction: incoming ? 'incoming' : 'outgoing',
               protocol: 'nip04',
               relayUrls: relays,
             };
@@ -69,10 +71,10 @@ export default function MessagesRoute() {
           })();
         },
       });
-    })().catch(() => undefined);
+    })().catch((cause) => { if (!stopped) setError(cause instanceof Error ? cause.message : 'The direct-message relay is unavailable. Saved conversations remain readable.'); });
     return () => { stopped = true; unsubscribe(); };
   }, [activeRelay, isBlocked]);
 
   const visibleConversations = latestConversationMessages(messages.filter((message) => !isBlocked(message.recipientPubkey, message.roomId)));
-  return <MessagesScreen messages={visibleConversations} onOpen={(message) => router.push({ pathname: '/conversation', params: { pubkey: message.recipientPubkey } } as never)} />;
+  return <MessagesScreen error={error} messages={visibleConversations} onOpen={(message) => router.push({ pathname: '/conversation', params: { pubkey: message.recipientPubkey } } as never)} />;
 }

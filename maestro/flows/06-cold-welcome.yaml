@@ -9,11 +9,22 @@ appId: life.crays
 - assertVisible: "Log in"
 - assertVisible: ".*No public location.*"
 - takeScreenshot: 06-cold-welcome
+# Log in is implemented (screen 09): it navigates to the returning-login
+# screen, which on a clean device reports there is no local account.
 - tapOn:
     id: "log-in-button"
-- assertVisible: "Login comes next"
-- assertVisible: ".*Existing-account recovery.*"
-- tapOn: "OK"
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 15000
+- assertVisible: "Pick up where you left off."
+- assertVisible: "No account on this device"
+- tapOn:
+    id: "back-button"
+- extendedWaitUntil:
+    visible:
+      id: "cold-welcome-screen"
+    timeout: 15000
 - tapOn:
     id: "create-account-button"
 - assertVisible:

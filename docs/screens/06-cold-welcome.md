@@ -22,7 +22,7 @@ The screen must not mention mints, relay URLs, keys, payment processors, or Blue
 
 - Entry: root router resolves an empty protected state to `/welcome`.
 - Create account: pushes `/account-access` and preserves normal Back behavior.
-- Log in: currently shows an explicit deferred-state explanation. It must not create a new identity, erase state, or imply Apple/Google access works. Screen 09 will replace this deferred action.
+- Log in: pushes `/login` (screen 09, implemented). It must not create a new identity, erase state, or imply Apple/Google access works; on a clean device the login screen reports that no account exists here.
 - System Back from a cold root follows platform behavior; the screen does not intercept it.
 
 ## States and failures

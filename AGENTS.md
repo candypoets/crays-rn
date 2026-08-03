@@ -37,6 +37,23 @@ screen flow. Port 8085 intentionally avoids the `nuts-rn` Metro process on
 8084. Do not set `CI=1` for Metro; the dev-client launcher discovery and
 bundle freshness are unreliable in that mode on this host.
 
+## QA harness conventions
+
+- Positive relay verifiers must poll with `queryUntil` from
+  `.qa/relay-lib.mjs` (~15s) instead of a single `querySync`; negative
+  (absence) verifiers must call `settleBeforeAbsence` first so a lagging
+  write cannot fake a pass.
+- Strings typed by Maestro flows and asserted by verifiers live in
+  `.qa/flow-fixtures.mjs`. Relay-backed flows receive them as `QA_*` env vars
+  from `relay-screen-scenario.mjs`; bootstrap fixtures use the same module as
+  their source of truth. Never hard-code these strings in a verifier.
+- Logcat `__DEV__` markers are a complement to independent relay queries,
+  never a replacement for them.
+- `npm run qa:contracts` also checks runner→flow references, transitive
+  `launch.yaml` inclusion, and mapped jest coverage; new scenarios that
+  harden an existing screen spec go in `additionalScenarios` there.
+
+
 ## nipworker rules
 
 - Preserve FlatBuffer views and read only fields the UI needs. Do not unpack or

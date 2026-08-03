@@ -1,0 +1,47 @@
+appId: life.crays
+---
+# Negative path for docs/screens/08b-invite-accepted.md: redeeming the SAME
+# invite token twice must reuse the stored nonce/account redemption
+# (redeemInvite in src/invites/invites.ts) instead of calling /redeem again.
+# The second acceptance therefore renders the accepted screen again, and the
+# verifier proves exactly one relay award and one redemption log marker.
+- runFlow: launch.yaml
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}&next=invite&service=${SERVICE_URL}&relay=${RELAY_URL}&room=${ROOM_ID}&token=${INVITE_TOKEN}"
+- extendedWaitUntil:
+    visible:
+      id: "qa-seed-continue"
+    timeout: 30000
+- tapOn:
+    id: "qa-seed-continue"
+- extendedWaitUntil:
+    visible:
+      id: "invite-preview-screen"
+    timeout: 30000
+- tapOn:
+    id: "invite-accept-button"
+- extendedWaitUntil:
+    visible:
+      id: "invite-accepted-screen"
+    timeout: 30000
+- assertVisible: "You’re on the list."
+# Repeat the exact same redemption through the public invite link.
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}&next=invite&service=${SERVICE_URL}&relay=${RELAY_URL}&room=${ROOM_ID}&token=${INVITE_TOKEN}"
+- extendedWaitUntil:
+    visible:
+      id: "qa-seed-continue"
+    timeout: 30000
+- tapOn:
+    id: "qa-seed-continue"
+- extendedWaitUntil:
+    visible:
+      id: "invite-preview-screen"
+    timeout: 30000
+- tapOn:
+    id: "invite-accept-button"
+- extendedWaitUntil:
+    visible:
+      id: "invite-accepted-screen"
+    timeout: 30000
+- assertVisible: "You’re on the list."
+- assertVisible: "You are not visible in the room."
+- takeScreenshot: 08b-invite-redeemed-twice

@@ -15,6 +15,15 @@ describe('invite contract', () => {
     expect(decodeInviteToken(token, 1_900_000_000)).toEqual(claims);
   });
 
+  it('passes forged claims client-side because the HMAC key is server-only; only /redeem rejects them', () => {
+    // Documents the trust boundary: the issuer signs with HMAC-SHA256 keyed by
+    // a server-only INVITE_SECRET (strfry-badge-node/crates/invite), so no
+    // client-side check can detect tampering. Preview copy must never call the
+    // invite "verified" before redemption succeeds.
+    const forged = `${base64url({ ...claims, max: 100 })}.forged-signature`;
+    expect(decodeInviteToken(forged, 1_900_000_000)).toMatchObject({ nonce: 'qa-nonce', max: 100 });
+  });
+
   it.each([
     ['missing signature', token.split('.')[0]],
     ['expired', `${base64url({ ...claims, exp: 1 })}.sig`],

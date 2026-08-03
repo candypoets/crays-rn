@@ -49,7 +49,7 @@ export function FirstContactScreen({ contactState, onBack, onBlock, onHideInRoom
         </View>
       </View>
 
-      <Pressable accessibilityRole="button" className="mt-6 min-h-14 flex-row items-center justify-center gap-3 rounded-2xl bg-primary px-6 disabled:opacity-50" disabled={waiting} onPress={onMessage} testID="message-person">
+      <Pressable accessibilityRole="button" accessibilityState={{ disabled: waiting }} className="mt-6 min-h-14 flex-row items-center justify-center gap-3 rounded-2xl bg-primary px-6 disabled:opacity-50" disabled={waiting} onPress={onMessage} testID="message-person">
         <Ionicons color="white" name="chatbubble-outline" size={22} />
         <Text className="text-base font-black text-white">{contactState === 'accepted' ? `Open conversation with ${person.name}` : waiting ? 'Waiting for a response' : `Message ${person.name}`}</Text>
       </Pressable>
@@ -65,7 +65,7 @@ export function FirstContactScreen({ contactState, onBack, onBlock, onHideInRoom
       <View className="gap-2">
         <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center rounded-2xl bg-base-200 px-4" onPress={onHideInRoom} testID="person-hide-room"><Ionicons color={colors.accent} name="eye-off-outline" size={22} /><Text className="ml-3 flex-1 font-bold text-base-content">Hide in this room</Text></Pressable>
         <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center rounded-2xl bg-base-200 px-4" onPress={onBlock} testID="person-block-global"><Ionicons color={colors.accent} name="ban-outline" size={22} /><Text className="ml-3 flex-1 font-bold text-base-content">Block everywhere</Text></Pressable>
-        <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center rounded-2xl bg-base-200 px-4 disabled:opacity-50" disabled={reporting} onPress={onReport} testID="person-report"><Ionicons color={colors.accent} name="flag-outline" size={22} /><Text className="ml-3 flex-1 font-bold text-base-content">{reporting ? 'Reporting…' : 'Report to this venue'}</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityState={{ disabled: reporting }} className="min-h-12 flex-row items-center rounded-2xl bg-base-200 px-4 disabled:opacity-50" disabled={reporting} onPress={onReport} testID="person-report"><Ionicons color={colors.accent} name="flag-outline" size={22} /><Text className="ml-3 flex-1 font-bold text-base-content">{reporting ? 'Reporting…' : 'Report to this venue'}</Text></Pressable>
       </View>
       {safetyNotice ? <Text accessibilityRole="alert" className="mt-3 leading-6 text-muted">{safetyNotice}</Text> : null}
     </AppShell>

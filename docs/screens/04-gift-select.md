@@ -4,7 +4,7 @@
 
 This screen chooses an eligible drink for one known room identity. It is a social venue order, never an anonymous transfer. It states: the bar gets the order, the named recipient gets the ticket, and they may decline before fulfillment.
 
-Resolve recipient by pubkey from current room data and require a locally retained, accepted NIP-04 conversation. The route repeats this authorization check, so a deep link cannot bypass the consent gate. Filter operator-signed products to `availability=available` and `product_kind=drink`; food and unrelated catalog records are excluded. Selection opens the normal screen-13 configuration with recipient context, which repeats the accepted-conversation guard.
+Resolve recipient by pubkey from current room data and require a locally retained, accepted NIP-04 conversation. The route repeats this authorization check, so a deep link cannot bypass the consent gate. If the consent read itself fails, the route fails closed back to the room profile rather than hanging on the consent check. Filter operator-signed products to `availability=available` and `product_kind=drink`; food and unrelated catalog records are excluded. Selection opens the normal screen-13 configuration with recipient context, which repeats the accepted-conversation guard.
 
 ## Paths and safety
 

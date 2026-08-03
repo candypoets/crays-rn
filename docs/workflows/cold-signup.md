@@ -26,4 +26,4 @@ At every interruption boundary, relaunch resumes at the first incomplete step. B
 
 ## Required follow-up scenarios
 
-The next entry slice must add process death during an active identity/profile write, corrupted SecureStore recovery, returning login/import, and invite-priority routing. Those are separate workflows and must not be claimed by this cold-signup scenario.
+Returning login/import and invite-priority routing are now separate delivered workflows: see `docs/screens/09-returning-login.md` (`.qa/qa-09-returning-login.mjs`) and `docs/screens/08-invite-preview.md` (`.qa/qa-08-invite-preview.mjs`, `.qa/qa-08b-invite-accepted.mjs`). What genuinely remains for a later entry slice is process death during an active identity/profile write and corrupted SecureStore recovery. Neither is claimed by this cold-signup scenario.

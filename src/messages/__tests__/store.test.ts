@@ -5,6 +5,7 @@ import {
   hasAcceptedConversation,
   latestConversationMessages,
   saveLocalMessage,
+  updateLocalConversation,
   type LocalMessage,
 } from '@/messages/store';
 
@@ -32,6 +33,32 @@ it('retains previous messages in the same conversation', async () => {
   await saveLocalMessage(makeMessage('second', peer, 2));
   const saved = JSON.parse(jest.mocked(SecureStore.setItemAsync).mock.calls[0][1]) as LocalMessage[];
   expect(saved.map((item) => item.id)).toEqual(['second', 'first']);
+});
+
+it('serializes concurrent mutations so neither clobbers the other', async () => {
+  let stored = JSON.stringify([makeMessage('first', peer, 1)]);
+  let releaseFirstRead!: () => void;
+  const gate = new Promise<void>((resolve) => { releaseFirstRead = resolve; });
+  let reads = 0;
+  jest.mocked(SecureStore.getItemAsync).mockImplementation(async () => {
+    reads += 1;
+    if (reads === 1) await gate; // hold the first read so mutation two starts mid-flight
+    return stored;
+  });
+  jest.mocked(SecureStore.setItemAsync).mockImplementation(async (_key, value) => { stored = value; });
+
+  const save = saveLocalMessage(makeMessage('second', peer, 2));
+  const update = updateLocalConversation(peer, 'ignored');
+  releaseFirstRead();
+  await Promise.all([save, update]);
+
+  const writes = jest.mocked(SecureStore.setItemAsync).mock.calls.map((call) => JSON.parse(call[1]) as LocalMessage[]);
+  expect(writes).toHaveLength(2);
+  expect(writes[0].map((item) => item.id)).toEqual(['second', 'first']);
+  // Without the mutation queue this write would have read the stale pre-save
+  // snapshot and silently dropped 'second'.
+  expect(writes[1].map((item) => item.id)).toEqual(['second', 'first']);
+  expect(writes[1].every((item) => item.state === 'ignored')).toBe(true);
 });
 
 it('projects one latest row per peer while preserving chronological threads', () => {
