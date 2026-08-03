@@ -25,8 +25,17 @@ npm run android
 ```
 
 `expo run:android`/`expo run:ios` generates the native project when needed. The
-local Expo config plugin adds nipworker's Maven repository on every Android
-prebuild, including clean prebuilds.
+local Expo config plugin adds nipworker's Maven repository on Android and pins
+the matching FlatBuffers Swift runtime on iOS, including after clean prebuilds.
+
+To run the iOS development client in a simulator:
+
+```sh
+npm run ios
+```
+
+For a physical iPhone, select your Apple development team for the `Crays`
+target in Xcode, then run `npm run ios -- --device`. Expo Go is not supported.
 
 For the known-good headless Android + Maestro loop used by `nuts-rn`:
 
