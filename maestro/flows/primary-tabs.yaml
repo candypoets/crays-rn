@@ -1,0 +1,49 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- tapOn:
+    id: "room-feed-tab"
+- extendedWaitUntil:
+    visible:
+      id: "room-feed-screen"
+    timeout: 15000
+- tapOn:
+    id: "tab-discover"
+- extendedWaitUntil:
+    visible:
+      id: "discover-screen"
+    timeout: 15000
+- tapOn:
+    id: "tab-messages"
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 15000
+- tapOn:
+    id: "tab-me"
+- extendedWaitUntil:
+    visible:
+      id: "me-screen"
+    timeout: 15000
+- tapOn:
+    id: "tab-room"
+- extendedWaitUntil:
+    visible:
+      id: "room-feed-screen"
+    timeout: 15000
+- tapOn:
+    id: "room-menu"
+- extendedWaitUntil:
+    visible:
+      id: "menu-screen"
+    timeout: 15000
+- assertNotVisible:
+    id: "tab-room"
+- assertNotVisible:
+    id: "tab-me"
+- tapOn: "Back to room"
+- extendedWaitUntil:
+    visible:
+      id: "room-feed-screen"
+    timeout: 15000
+- takeScreenshot: primary-tabs

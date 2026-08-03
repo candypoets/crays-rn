@@ -43,6 +43,7 @@ const contracts = [
   ['entry-router.md', 'cold-signup.yaml', 'qa-cold-signup.mjs'],
   ['memberships.md', 'memberships.yaml', 'qa-memberships.mjs'],
   ['messages.md', 'conversation.yaml', 'qa-conversation.mjs'],
+  ['primary-tabs.md', 'primary-tabs.yaml', 'qa-primary-tabs.mjs'],
   ['settings.md', 'settings.yaml', 'qa-settings.mjs'],
 ];
 

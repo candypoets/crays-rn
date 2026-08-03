@@ -2,6 +2,7 @@ export const colors = {
   primary: '#f50a48',
   accent: '#ff7668',
   night: '#10090e',
+  nightBorder: '#281620',
   paper: '#fff4f5',
   mutedAction: '#4d3640',
   placeholder: '#8d7580',

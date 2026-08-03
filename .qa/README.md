@@ -100,6 +100,12 @@ Safety paths use `qa-02-first-contact.mjs`, `qa-conversation-not-now.mjs`, and
 effects for dismissal or block mutations, persistence, scope, filtering, and
 unblock.
 
+Primary navigation uses `qa-primary-tabs.mjs`. It proves that Room, Discover,
+Messages, and Me are peer destinations in one tab navigator, that Room-local
+state survives tab changes, and that a root-stack workflow covers the tab bar.
+The scenario provisions the real relay contract and independently verifies the
+signed room fixture and the app's relay-derived projections after UI exercise.
+
 Join privacy uses separate identities. `qa-11-join-quiet.mjs` proves zero
 presence writes; `qa-11-join-visible.mjs` proves exactly one signed visible
 presence with selected intent, context, stable replacement key, and expiry.

@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { useRoomManifest } from '@/rooms/useRoomManifest';
@@ -8,9 +8,10 @@ import { useNearbyRoom } from '@/discovery/useNearbyRoom';
 
 export default function DiscoverRoute() {
   const params = useLocalSearchParams<{ relay?: string; room?: string; nearby?: string }>();
+  const focused = useIsFocused();
   const [mode, setMode] = useState<'map' | 'nearby'>(params.nearby === '1' ? 'nearby' : 'map');
   const { activeRoom } = useRoomSession();
-  const nearby = useNearbyRoom(mode === 'nearby' && params.nearby === '1' && !params.relay);
+  const nearby = useNearbyRoom(focused && mode === 'nearby' && params.nearby === '1' && !params.relay);
   const transportRelay = params.relay || nearby.pointer?.relayUrl;
   const roomId = params.room || nearby.pointer?.roomId;
   const manifest = useRoomManifest(transportRelay, roomId);

@@ -65,7 +65,9 @@ export default function RootLayout() {
             <RoomDataProvider>
               <CartProvider>
                 <StatusBar style="light" />
-                <Stack screenOptions={{ headerShown: false }} />
+                <Stack screenOptions={{ headerShown: false }}>
+                  <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+                </Stack>
               </CartProvider>
             </RoomDataProvider>
           </SafetyProvider>
