@@ -1,0 +1,34 @@
+appId: life.crays
+---
+# Shared setup: launch the development client, connect it to Metro on 8085,
+# and wait for the Crays bundle. Keep Metro out of CI mode so discovery and
+# fresh-bundle behavior match the known-good nuts-rn setup.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible: "Development Build"
+    timeout: 30000
+- runFlow:
+    when:
+      visible: "New development server"
+    commands:
+      - tapOn: "New development server"
+- extendedWaitUntil:
+    visible: "(exp|http)://"
+    timeout: 20000
+- tapOn: "(exp|http)://"
+- inputText: "exp://localhost:8085"
+- tapOn: "Connect"
+- extendedWaitUntil:
+    visible: "Continue"
+    timeout: 30000
+    optional: true
+- tapOn:
+    text: "Continue"
+    optional: true
+- tapOn:
+    text: "Close"
+    optional: true
+- extendedWaitUntil:
+    visible: "Crays"
+    timeout: 180000

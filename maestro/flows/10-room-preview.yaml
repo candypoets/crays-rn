@@ -1,0 +1,16 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///room-preview?relay=${RELAY_URL}&room=${ROOM_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "room-preview-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Verified room"
+    timeout: 15000
+- assertVisible: "Rooftop jazz"
+- assertVisible: "Inside this room"
+- assertVisible:
+    id: "enter-room-button"
+- takeScreenshot: 10-room-preview-relay

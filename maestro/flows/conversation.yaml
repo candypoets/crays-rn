@@ -1,0 +1,40 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- tapOn:
+    id: "tab-messages"
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 15000
+- assertVisible: "Want to hear the second set?"
+- assertVisible: "requested"
+- tapOn:
+    text: "Jonas"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "conversation-screen"
+    timeout: 15000
+- assertVisible: "Message request · requested"
+- tapOn:
+    id: "conversation-accept"
+- extendedWaitUntil:
+    visible: "Conversation · accepted"
+    timeout: 15000
+- tapOn:
+    id: "conversation-reply-input"
+- inputText: "Yes — see you there."
+- assertVisible:
+    id: "conversation-reply-count"
+- pressKey: ENTER
+- extendedWaitUntil:
+    visible: "0/2000"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "conversation-report"
+    direction: DOWN
+- tapOn:
+    id: "conversation-report"
+- takeScreenshot: conversation-nip04-relay

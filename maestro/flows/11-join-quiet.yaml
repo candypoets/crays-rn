@@ -1,0 +1,30 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
+- extendedWaitUntil:
+    visible:
+      id: "qa-seed-continue"
+    timeout: 30000
+- tapOn:
+    id: "qa-seed-continue"
+- openLink: "crays:///join-room?relay=${RELAY_URL}&room=${ROOM_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "join-privacy-screen"
+    timeout: 30000
+- assertVisible: "Browse quietly"
+- tapOn:
+    id: "leave-after-60"
+- scrollUntilVisible:
+    element:
+      id: "join-room-button"
+    direction: DOWN
+- tapOn:
+    id: "join-room-button"
+- extendedWaitUntil:
+    visible:
+      id: "room-people-screen"
+    timeout: 30000
+- assertVisible: "Connected in the room"
+- takeScreenshot: 11-join-quiet-no-presence

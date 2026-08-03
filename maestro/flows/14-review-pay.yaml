@@ -1,0 +1,20 @@
+appId: life.crays
+---
+- runFlow: 12-menu.yaml
+- tapOn: "Mezcal Negroni"
+- extendedWaitUntil:
+    visible:
+      id: "item-screen"
+    timeout: 15000
+- tapOn:
+    id: "add-item"
+- extendedWaitUntil:
+    visible:
+      id: "review-pay-screen"
+    timeout: 15000
+- assertVisible: "Total"
+- assertVisible: "€12.00"
+- assertVisible: "Payments are intentionally not connected in this pilot. No charge or venue order will be created from this build."
+- assertVisible:
+    id: "place-order-disabled"
+- takeScreenshot: 14-review-pay-relay

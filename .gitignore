@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+
+# Expo generated state and exports
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# generated native projects (regenerate with npm run prebuild)
+android/
+ios/
+
+# tests and logs
+coverage/
+*.log
+npm-debug.log*
+
+# editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# local environment and signing material
+.env
+.env.*
+!.env.example
+*.jks
+*.keystore
+*.p12
+local.properties

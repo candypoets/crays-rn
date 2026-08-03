@@ -1,0 +1,15 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///invite?service=${SERVICE_URL}&relay=${RELAY_URL}&room=${ROOM_ID}&token=${INVITE_TOKEN}"
+- extendedWaitUntil:
+    visible:
+      id: "invite-preview-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "The Skyline Room"
+    timeout: 15000
+- assertVisible: "Room membership"
+- assertVisible: "Issuer details match this invitation.*"
+- assertVisible: "Create account to accept"
+- takeScreenshot: 08-invite-preview-relay

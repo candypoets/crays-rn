@@ -1,0 +1,35 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- tapOn:
+    id: "create-account-button"
+- tapOn:
+    id: "create-on-device-button"
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-screen"
+    timeout: 30000
+- tapOn:
+    id: "display-name-input"
+- inputText: "QA Alex"
+- hideKeyboard
+- tapOn:
+    id: "profile-continue-button"
+- extendedWaitUntil:
+    visible:
+      id: "recovery-screen"
+    timeout: 30000
+- tapOn:
+    id: "finish-account-button"
+- extendedWaitUntil:
+    visible:
+      id: "discover-screen"
+    timeout: 30000
+- assertVisible: "Discover rooms"
+- assertVisible: "ACCOUNT READY"
+- assertVisible: "Map and search are not configured"
+- assertVisible:
+    id: "discover-search-disabled"
+- assertVisible: ".*Direct signed room links and Nearby manifests still work.*"
+- assertVisible: ".*No Bluetooth or location permission was requested.*"
+- takeScreenshot: 27-discover-handoff

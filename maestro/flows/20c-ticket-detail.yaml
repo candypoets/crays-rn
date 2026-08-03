@@ -1,0 +1,18 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- openLink: "crays:///ticket?awardId=${EVENT_ACCESS_AWARD_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "ticket-detail-screen"
+    timeout: 15000
+- assertVisible: "Ready · relay issued"
+- scrollUntilVisible:
+    element:
+      id: "entitlement-presentation"
+    direction: DOWN
+- assertVisible:
+    id: "entitlement-presentation"
+- assertVisible: "Live code · refreshes automatically · tap to enlarge"
+- assertVisible: ".*short-lived code is signed.*"
+- takeScreenshot: 20c-ticket-detail-relay

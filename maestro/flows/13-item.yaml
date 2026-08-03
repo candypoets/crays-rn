@@ -1,0 +1,14 @@
+appId: life.crays
+---
+- runFlow: 12-menu.yaml
+- tapOn: "Mezcal Negroni"
+- extendedWaitUntil:
+    visible:
+      id: "item-screen"
+    timeout: 15000
+- assertVisible: "Smoky, bitter, orange"
+- assertVisible: "Unit price"
+- tapOn:
+    id: "item-quantity-increase"
+- assertVisible: "Add to order · €24.00"
+- takeScreenshot: 13-item-relay

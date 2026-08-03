@@ -1,0 +1,43 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
+- extendedWaitUntil:
+    visible:
+      id: "qa-seed-continue"
+    timeout: 30000
+- tapOn:
+    id: "qa-seed-continue"
+- openLink: "crays:///join-room?relay=${RELAY_URL}&room=${ROOM_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "join-privacy-screen"
+    timeout: 30000
+- tapOn:
+    id: "visibility-visible"
+- tapOn:
+    id: "join-room-button"
+- extendedWaitUntil:
+    visible:
+      id: "room-people-screen"
+    timeout: 30000
+- tapOn:
+    id: "room-leave"
+- extendedWaitUntil:
+    visible:
+      id: "leave-room-screen"
+    timeout: 15000
+- assertVisible: "Stop appearing in People"
+- tapOn:
+    id: "leave-room-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "room-ended-screen"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      text: ".*Nothing announces that you left.*"
+    direction: DOWN
+- assertVisible: ".*Nothing announces that you left.*"
+- assertVisible: "Private messages · orders and receipts.*"
+- takeScreenshot: 21-room-ended-relay

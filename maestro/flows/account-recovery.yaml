@@ -1,0 +1,17 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///login"
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 15000
+- tapOn:
+    id: "login-other-ways"
+- extendedWaitUntil:
+    visible:
+      id: "account-recovery-screen"
+    timeout: 15000
+- assertVisible: "Key import, remote signer, and provider recovery are not configured.*"
+- assertVisible: "No local identity will be overwritten."
+- takeScreenshot: account-recovery-unconfigured

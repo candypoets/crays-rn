@@ -1,0 +1,49 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- tapOn:
+    id: "create-account-button"
+- tapOn:
+    id: "create-on-device-button"
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-screen"
+    timeout: 30000
+- tapOn:
+    id: "display-name-input"
+- inputText: "QA Alex"
+- hideKeyboard
+- tapOn:
+    id: "profile-continue-button"
+- extendedWaitUntil:
+    visible:
+      id: "recovery-screen"
+    timeout: 30000
+- assertVisible: "ACCOUNT · 2 OF 2"
+- assertVisible: "Keep your account with you"
+- assertVisible: "This device, for now"
+- assertVisible: ".*Cross-device recovery is not enabled yet.*"
+- assertVisible: ".*Before you add money or buy a durable item.*"
+- takeScreenshot: 07b-account-recovery
+- tapOn:
+    id: "back-button"
+- assertVisible:
+    id: "profile-setup-screen"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "recovery-screen"
+    timeout: 30000
+- tapOn:
+    id: "finish-account-button"
+- extendedWaitUntil:
+    visible:
+      id: "discover-handoff-screen"
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "discover-handoff-screen"
+    timeout: 30000

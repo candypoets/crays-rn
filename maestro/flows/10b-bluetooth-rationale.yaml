@@ -1,0 +1,14 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///bluetooth-rationale"
+- extendedWaitUntil:
+    visible:
+      id: "bluetooth-rationale-screen"
+    timeout: 30000
+- assertVisible: "Find the room you’re in"
+- assertVisible: ".*does not make you visible.*"
+- assertVisible: ".*does not publish your exact location.*"
+- assertVisible:
+    id: "use-map-button"
+- takeScreenshot: 10b-bluetooth-rationale

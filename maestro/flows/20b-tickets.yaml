@@ -1,0 +1,4 @@
+appId: life.crays
+---
+- runFlow: rsvp-and-open-tickets.yaml
+- takeScreenshot: 20b-tickets-relay

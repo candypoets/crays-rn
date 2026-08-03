@@ -1,0 +1,21 @@
+appId: life.crays
+---
+- runFlow: 14-review-pay.yaml
+- tapOn:
+    id: "review-payment-method"
+- extendedWaitUntil:
+    visible:
+      id: "payment-methods-screen"
+    timeout: 15000
+- assertVisible: "Wallet"
+- assertVisible: "Apple Pay"
+- assertVisible: "Google Pay"
+- assertVisible: "Card"
+- tapOn:
+    id: "payment-wallet"
+- extendedWaitUntil:
+    visible:
+      id: "review-pay-screen"
+    timeout: 15000
+- assertVisible: "Wallet"
+- takeScreenshot: 24-payment-methods-relay

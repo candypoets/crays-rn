@@ -1,0 +1,32 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- tapOn:
+    id: "tab-messages"
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 15000
+- tapOn:
+    text: "Jonas"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "conversation-screen"
+    timeout: 15000
+- tapOn:
+    id: "conversation-not-now"
+- assertVisible: "Request dismissed.*"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible: "Crays"
+    timeout: 30000
+- tapOn:
+    id: "tab-messages"
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 15000
+- assertVisible: "ignored"
+- takeScreenshot: conversation-not-now-persistent

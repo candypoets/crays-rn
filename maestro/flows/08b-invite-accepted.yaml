@@ -1,0 +1,26 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}&next=invite&service=${SERVICE_URL}&relay=${RELAY_URL}&room=${ROOM_ID}&token=${INVITE_TOKEN}"
+- extendedWaitUntil:
+    visible:
+      id: "qa-seed-continue"
+    timeout: 30000
+- tapOn:
+    id: "qa-seed-continue"
+- extendedWaitUntil:
+    visible:
+      id: "invite-preview-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Accept invite"
+    timeout: 15000
+- tapOn:
+    id: "invite-accept-button"
+- extendedWaitUntil:
+    visible:
+      id: "invite-accepted-screen"
+    timeout: 30000
+- assertVisible: "You’re on the list."
+- assertVisible: "You are not visible in the room."
+- takeScreenshot: 08b-invite-accepted-relay

@@ -1,0 +1,25 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
+- extendedWaitUntil:
+    visible:
+      id: "qa-seed-continue"
+    timeout: 30000
+- tapOn:
+    id: "qa-seed-continue"
+- openLink: "crays:///login"
+- extendedWaitUntil:
+    visible:
+      id: "login-screen"
+    timeout: 15000
+- assertVisible: "Unlock on this device"
+- assertVisible: "Continue with Apple"
+- assertVisible: "Not configured"
+- tapOn:
+    id: "login-device-unlock"
+- extendedWaitUntil:
+    visible:
+      id: "discover-screen"
+    timeout: 30000
+- takeScreenshot: 09-returning-login

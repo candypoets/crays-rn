@@ -1,0 +1,14 @@
+appId: life.crays
+---
+- runFlow: 05-my-night.yaml
+- tapOn:
+    id: "my-night-order"
+- extendedWaitUntil:
+    visible:
+      id: "order-detail-screen"
+    timeout: 15000
+- assertVisible: "Ready"
+- assertVisible: "Progress"
+- assertVisible: "Receipt pending settlement"
+- assertNotVisible: "Delivered"
+- takeScreenshot: 15-order-detail-relay

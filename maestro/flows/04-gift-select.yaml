@@ -1,0 +1,40 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- tapOn:
+    id: "tab-messages"
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 15000
+- tapOn:
+    text: "Jonas"
+    index: 0
+- extendedWaitUntil:
+    visible:
+      id: "conversation-screen"
+    timeout: 15000
+- tapOn:
+    id: "conversation-accept"
+- extendedWaitUntil:
+    visible: "Conversation · accepted"
+    timeout: 15000
+- tapOn: "Messages"
+- tapOn:
+    id: "tab-room"
+- tapOn: "Jonas"
+- extendedWaitUntil:
+    visible:
+      id: "first-contact-screen"
+    timeout: 15000
+- tapOn:
+    id: "send-drink-person"
+- extendedWaitUntil:
+    visible:
+      id: "gift-select-screen"
+    timeout: 15000
+- assertVisible: "The gift is from you. The bar gets the order. Jonas gets the ticket and can decline before fulfillment."
+- assertVisible: "Mezcal Negroni"
+- assertVisible: "Rooftop Lager"
+- assertNotVisible: "Marinated olives"
+- takeScreenshot: 04-gift-select-relay

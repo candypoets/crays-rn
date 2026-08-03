@@ -1,0 +1,14 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- tapOn:
+    id: "room-my-night"
+- extendedWaitUntil:
+    visible:
+      id: "my-night-screen"
+    timeout: 15000
+- assertVisible: "Rooftop Jazz"
+- assertVisible: "Mezcal Negroni"
+- assertVisible: "Ready"
+- assertVisible: "Skyline Regular"
+- takeScreenshot: 05-my-night-relay

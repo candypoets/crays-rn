@@ -1,0 +1,12 @@
+appId: life.crays
+---
+- runFlow: 25-wallet.yaml
+- tapOn:
+    id: "wallet-add-funds"
+- extendedWaitUntil:
+    visible:
+      id: "add-funds-screen"
+    timeout: 15000
+- assertVisible: "Lightning funding is not configured"
+- assertVisible: "Mint configuration required"
+- takeScreenshot: 26-add-funds-unconfigured

@@ -1,0 +1,21 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- openLink: "crays:///event"
+- extendedWaitUntil:
+    visible:
+      id: "event-screen"
+    timeout: 30000
+- tapOn:
+    id: "event-rsvp"
+- extendedWaitUntil:
+    visible: "Going · RSVP sent"
+    timeout: 30000
+- openLink: "crays:///tickets"
+- extendedWaitUntil:
+    visible:
+      id: "tickets-screen"
+    timeout: 30000
+- assertVisible: "Upcoming"
+- assertVisible: "Rooftop Jazz"
+- assertVisible: ".*The Skyline Room.*"

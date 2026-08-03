@@ -1,0 +1,27 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- tapOn:
+    id: "create-account-button"
+- assertVisible:
+    id: "account-access-screen"
+- assertVisible: "Create your Crays account"
+- assertVisible: "Create on this device"
+- assertNotVisible: "Continue with Apple"
+- assertNotVisible: "Continue with Google"
+- takeScreenshot: 06b-account-access
+- tapOn:
+    id: "existing-account-button"
+- assertVisible: ".*Existing-account recovery is the next entry slice.*"
+- doubleTapOn:
+    id: "create-on-device-button"
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-screen"
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-screen"
+    timeout: 30000

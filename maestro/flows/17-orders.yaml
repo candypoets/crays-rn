@@ -1,0 +1,13 @@
+appId: life.crays
+---
+- runFlow: 16-me.yaml
+- tapOn:
+    id: "me-orders"
+- extendedWaitUntil:
+    visible:
+      id: "orders-screen"
+    timeout: 15000
+- assertVisible: "Active now"
+- assertVisible: "Mezcal Negroni"
+- assertVisible: "Ready"
+- takeScreenshot: 17-orders-relay

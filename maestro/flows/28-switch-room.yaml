@@ -1,0 +1,44 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
+- extendedWaitUntil:
+    visible:
+      id: "qa-seed-continue"
+    timeout: 30000
+- tapOn:
+    id: "qa-seed-continue"
+- openLink: "crays:///join-room?relay=${RELAY_A_URL}&room=${ROOM_A_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "join-privacy-screen"
+    timeout: 30000
+- tapOn:
+    id: "visibility-visible"
+- tapOn:
+    id: "join-room-button"
+- extendedWaitUntil:
+    visible:
+      id: "room-people-screen"
+    timeout: 30000
+- openLink: "crays:///switch-room?relay=${RELAY_B_URL}&room=${ROOM_B_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "switch-room-screen"
+    timeout: 30000
+- assertVisible: "Leaving"
+- assertVisible: "Entering"
+- assertVisible: "Leave and enter new room"
+- tapOn:
+    id: "switch-room-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "join-privacy-screen"
+    timeout: 30000
+- assertVisible: "Browse quietly"
+- scrollUntilVisible:
+    element:
+      text: "No presence event is published."
+    direction: DOWN
+- assertVisible: "No presence event is published."
+- takeScreenshot: 28-switch-room-two-relays

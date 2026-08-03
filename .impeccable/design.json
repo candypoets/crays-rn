@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-02T16:00:00.000Z",
+  "title": "Design System: Crays Mobile",
+  "extensions": {
+    "colorMeta": {
+      "primary": { "role": "primary", "displayName": "Crays Signal", "canonical": "#f50a48" },
+      "accent": { "role": "secondary", "displayName": "Last Light", "canonical": "#ff7668" },
+      "night": { "role": "neutral", "displayName": "Night", "canonical": "#10090e" },
+      "paper": { "role": "neutral", "displayName": "Ticket Paper", "canonical": "#fff4f5" }
+    },
+    "motion": [
+      {
+        "name": "native-state",
+        "value": "platform standard",
+        "purpose": "Route and control feedback follows native motion and honors reduced motion."
+      }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": "<600dp" },
+      { "name": "expanded", "value": ">=600dp" }
+    ]
+  },
+  "components": [],
+  "narrative": {
+    "northStar": "The Night's Paper Trail",
+    "overview": "Crays uses the familiar physical objects exchanged during a night out to make venue entry, social contact, commerce, and access feel grounded. Dark wine surfaces support low-light use; paper artifacts carry explanations and credentials.",
+    "keyCharacteristics": [
+      "Wine-black tonal surfaces with warm-white text",
+      "One vivid coral-red committed action",
+      "Paper and woven artifacts only when they communicate meaning",
+      "Large Swiss-style headlines and familiar native controls"
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "The primary gradient identifies the one committed action on a screen; secondary actions remain text or outlined controls.",
+        "section": "colors"
+      }
+    ],
+    "dos": [
+      "Do preserve the tactile night-out vocabulary while adapting controls to each platform.",
+      "Do use semantic color utilities and shared components."
+    ],
+    "donts": [
+      "Don't use protocol jargon as primary product copy.",
+      "Don't request permissions before demonstrating their value."
+    ]
+  }
+}

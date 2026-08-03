@@ -1,0 +1,14 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- tapOn:
+    id: "tab-me"
+- extendedWaitUntil:
+    visible:
+      id: "me-screen"
+    timeout: 15000
+- assertVisible: "Active now"
+- assertVisible: "Orders"
+- assertVisible: "Memberships & passes"
+- assertVisible: "Wallet"
+- takeScreenshot: 16-me-relay

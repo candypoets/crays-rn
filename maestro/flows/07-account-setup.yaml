@@ -1,0 +1,33 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- tapOn:
+    id: "create-account-button"
+- tapOn:
+    id: "create-on-device-button"
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-screen"
+    timeout: 30000
+- assertVisible: "ACCOUNT · 1 OF 2"
+- assertVisible: "What should people call you?"
+- assertVisible:
+    id: "display-name-input"
+- tapOn:
+    id: "display-name-input"
+- inputText: "QA Alex"
+- hideKeyboard
+- assertVisible: "QA Alex"
+- takeScreenshot: 07-account-setup
+- tapOn:
+    id: "profile-continue-button"
+- extendedWaitUntil:
+    visible:
+      id: "recovery-screen"
+    timeout: 30000
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "recovery-screen"
+    timeout: 30000

@@ -1,0 +1,25 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///discover?relay=${RELAY_URL}&room=${ROOM_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "discover-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "The Skyline Room"
+    timeout: 15000
+- assertVisible: "Verified room"
+- tapOn:
+    id: "discover-nearby-tab"
+- assertVisible:
+    id: "bluetooth-rationale-screen"
+- assertVisible: ".*does not make you visible.*"
+- tapOn:
+    id: "use-map-button"
+- extendedWaitUntil:
+    visible:
+      id: "discover-screen"
+    timeout: 15000
+- assertVisible: "Room result"
+- takeScreenshot: 27-discover-relay

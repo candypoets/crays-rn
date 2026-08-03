@@ -1,0 +1,20 @@
+appId: life.crays
+---
+- runFlow: 04-gift-select.yaml
+- tapOn: "Mezcal Negroni"
+- extendedWaitUntil:
+    visible:
+      id: "item-screen"
+    timeout: 15000
+- assertVisible: "Maya"
+- tapOn:
+    id: "add-item"
+- extendedWaitUntil:
+    visible:
+      id: "gift-review-screen"
+    timeout: 15000
+- assertVisible: "The bar receives a normal order. Maya receives a private message and claim ticket."
+- assertVisible: "Refund pending"
+- assertVisible:
+    id: "pay-gift-disabled"
+- takeScreenshot: 23-gift-review-relay

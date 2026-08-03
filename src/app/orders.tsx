@@ -1,0 +1,2 @@
+import { router } from 'expo-router'; import { useRoomData } from '@/rooms/RoomData'; import { OrdersScreen } from '@/screens/durable/NightAndOrderScreens';
+export default function OrdersRoute() { const { orders } = useRoomData(); return <OrdersScreen orders={orders} onBack={() => router.back()} onOpen={(order) => router.push({ pathname: '/order', params: { ref: order.orderRef } } as never)} />; }

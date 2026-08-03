@@ -1,0 +1,1 @@
+import { router } from 'expo-router'; import { WalletScreen } from '@/screens/durable/AccountWalletScreens'; export default function WalletRoute() { return <WalletScreen onAddFunds={() => router.push('/add-funds' as never)} onBack={() => router.back()} />; }

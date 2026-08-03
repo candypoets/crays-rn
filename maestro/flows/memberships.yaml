@@ -1,0 +1,26 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- openLink: "crays:///memberships"
+- extendedWaitUntil:
+    visible:
+      id: "memberships-screen"
+    timeout: 15000
+- assertVisible: "Memberships & passes"
+- assertVisible: "Skyline Regular"
+- assertVisible: "Skyline three-visit pass"
+- assertVisible: ".*2 uses left.*"
+- tapOn: "Skyline three-visit pass"
+- extendedWaitUntil:
+    visible:
+      id: "membership-detail-screen"
+    timeout: 15000
+- assertVisible: "2 of 3 uses remaining"
+- assertVisible:
+    id: "entitlement-presentation"
+- scrollUntilVisible:
+    element:
+      text: "Used"
+    direction: DOWN
+- assertVisible: "Used"
+- takeScreenshot: memberships-pass-relay

@@ -1,0 +1,2 @@
+import { router, useLocalSearchParams } from 'expo-router'; import { RoomEndedScreen } from '@/screens/room/LeaveAndSwitchScreens';
+export default function RoomEndedRoute() { const { name, reason } = useLocalSearchParams<{ name?: string; reason?: string }>(); return <RoomEndedScreen automatic={reason === 'automatic'} previousRoomName={name || 'the room'} onDiscover={() => router.replace('/discover')} onMessages={() => router.replace('/messages' as never)} />; }

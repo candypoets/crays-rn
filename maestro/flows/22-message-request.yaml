@@ -1,0 +1,20 @@
+appId: life.crays
+---
+- runFlow: 01-people.yaml
+- tapOn: "Maya"
+- extendedWaitUntil:
+    visible:
+      id: "first-contact-screen"
+    timeout: 15000
+- tapOn:
+    id: "message-person"
+- extendedWaitUntil:
+    visible:
+      id: "message-request-screen"
+    timeout: 15000
+- assertVisible: "This is your only message until Maya accepts or replies. It is encrypted before publication."
+- tapOn: "What are you drinking?"
+- assertVisible: "23/240"
+- assertVisible:
+    id: "send-message-request"
+- takeScreenshot: 22-message-request-relay

@@ -1,0 +1,44 @@
+appId: life.crays
+---
+- runFlow: seed-and-join.yaml
+- tapOn: "Jonas"
+- extendedWaitUntil:
+    visible:
+      id: "first-contact-screen"
+    timeout: 15000
+- tapOn:
+    id: "message-person"
+- extendedWaitUntil:
+    visible:
+      id: "message-request-screen"
+    timeout: 15000
+- tapOn:
+    id: "message-request-input"
+- inputText: "What are you drinking?"
+- hideKeyboard
+- assertVisible: "22/240"
+- tapOn:
+    id: "send-message-request"
+- extendedWaitUntil:
+    visible: "Request sent"
+    timeout: 15000
+- tapOn:
+    id: "tab-messages"
+- extendedWaitUntil:
+    visible:
+      id: "messages-screen"
+    timeout: 15000
+- assertVisible: "Jonas"
+- assertVisible: "waiting"
+- assertVisible: "What are you drinking?"
+- tapOn:
+    id: "tab-room"
+- tapOn: "Jonas"
+- extendedWaitUntil:
+    visible: "Waiting for a response"
+    timeout: 15000
+- tapOn:
+    id: "message-person"
+- assertVisible:
+    id: "first-contact-screen"
+- takeScreenshot: messages-home-relay

@@ -1,0 +1,64 @@
+{
+  "expo": {
+    "name": "Crays",
+    "slug": "crays",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": [
+      "crays",
+      "nostr"
+    ],
+    "userInterfaceStyle": "automatic",
+    "plugins": [
+      "expo-router",
+      [
+        "expo-dev-client",
+        {
+          "launchMode": "most-recent"
+        }
+      ],
+      "./plugins/withNipworkerMaven",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": [],
+          "bluetoothAlwaysPermission": "Crays uses Bluetooth while Nearby is open to find participating rooms. It never publishes your presence or exact location."
+        }
+      ],
+      "expo-secure-store",
+      "expo-font",
+      "expo-splash-screen"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "ios": {
+      "bundleIdentifier": "life.crays",
+      "supportsTablet": true,
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "nostrconnect"
+        ]
+      }
+    },
+    "android": {
+      "package": "life.crays",
+      "predictiveBackGestureEnabled": true,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "nostr"
+            }
+          ],
+          "category": [
+            "DEFAULT",
+            "BROWSABLE"
+          ]
+        }
+      ]
+    }
+  }
+}

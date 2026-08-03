@@ -1,0 +1,35 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- assertVisible:
+    id: "cold-welcome-screen"
+- tapOn:
+    id: "create-account-button"
+- assertVisible:
+    id: "account-access-screen"
+- tapOn:
+    id: "create-on-device-button"
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-screen"
+    timeout: 30000
+- tapOn:
+    id: "display-name-input"
+- inputText: "QA Alex"
+- hideKeyboard
+- tapOn:
+    id: "profile-continue-button"
+- extendedWaitUntil:
+    visible:
+      id: "recovery-screen"
+    timeout: 30000
+- tapOn:
+    id: "finish-account-button"
+- extendedWaitUntil:
+    visible:
+      id: "discover-handoff-screen"
+    timeout: 30000
+- assertVisible: "Discover rooms"
+- assertVisible: "ACCOUNT READY"
+- assertVisible: ".*No Bluetooth or location permission was requested.*"
+- takeScreenshot: cold-signup-complete

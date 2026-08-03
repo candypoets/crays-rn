@@ -1,0 +1,17 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///join-room?relay=${RELAY_URL}&room=${ROOM_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "join-privacy-screen"
+    timeout: 30000
+- assertVisible: "Browse quietly"
+- assertVisible: "No presence event is published."
+- tapOn:
+    id: "visibility-visible"
+- assertVisible: "Enter and be visible"
+- tapOn:
+    id: "visibility-quiet"
+- assertVisible: "Enter quietly"
+- takeScreenshot: 11-join-privacy

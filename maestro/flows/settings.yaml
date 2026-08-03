@@ -1,0 +1,13 @@
+appId: life.crays
+---
+- runFlow: 16-me.yaml
+- tapOn:
+    id: "me-profile"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- assertVisible: "Protected on this device"
+- assertVisible: "Apple and Google"
+- assertVisible: "Not configured"
+- takeScreenshot: profile-settings

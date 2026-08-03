@@ -1,0 +1,14 @@
+appId: life.crays
+---
+- runFlow: 01-people.yaml
+- tapOn:
+    id: "room-menu"
+- extendedWaitUntil:
+    visible:
+      id: "menu-screen"
+    timeout: 15000
+- assertVisible: "Cocktails"
+- assertVisible: "Mezcal Negroni"
+- assertVisible: "Rooftop Lager"
+- assertVisible: "Marinated olives"
+- takeScreenshot: 12-menu-relay
