@@ -23,6 +23,11 @@ export type InvitePreview = {
   serviceUrl: string;
 };
 
+export type InviteHandoff = {
+  serviceUrl: string;
+  token: string;
+};
+
 export type InviteRedemption = {
   eventId: string;
   nonce: string;
@@ -65,6 +70,16 @@ function normalizedServiceUrl(value: string): string {
   const url = new URL(value);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('The invite service address is invalid.');
   return url.toString().replace(/\/$/, '');
+}
+
+export async function fetchInviteHandoff(urlInput: string): Promise<InviteHandoff> {
+  const url = normalizedServiceUrl(urlInput);
+  const response = await fetch(url, { headers: { accept: 'application/json' } });
+  const data = await response.json().catch(() => ({})) as { service_url?: string; token?: string };
+  if (!response.ok || typeof data.token !== 'string' || !data.token.includes('.') || typeof data.service_url !== 'string') {
+    throw new Error('The room could not grant tonight’s access. Try again near the entrance.');
+  }
+  return { serviceUrl: normalizedServiceUrl(data.service_url), token: data.token };
 }
 
 export async function fetchCommunityInfo(serviceUrlInput: string): Promise<CommunityInfo> {

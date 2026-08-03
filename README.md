@@ -59,7 +59,9 @@ npm run test-room
 ```
 
 Discover will show **Crays Test Room** after its signed manifest arrives. Open
-it and choose quiet entry; Bluetooth range is not involved. The command uses a
+it and choose quiet entry; Bluetooth range is not involved. Entry silently
+redeems the same real invite contract used by nearby-room handoff and grants
+the current account a 24-hour badge before the room opens. The command uses a
 real isolated Nuts relay and removes it when stopped. Stop it with Ctrl-C or
 `npm run test-room:stop`.
 

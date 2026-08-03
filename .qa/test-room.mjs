@@ -18,6 +18,10 @@ const scriptEnv = {
   CRAYS_TEST_ROOM_NAME: roomName,
   CRAYS_TEST_ROOM_DOMAIN: `craysdev-room-${Date.now().toString(36)}`,
   CRAYS_TEST_ROOM_TTL_SECONDS: process.env.CRAYS_TEST_ROOM_TTL_SECONDS || '86400',
+  CRAYS_INVITE_TTL_SECONDS: process.env.CRAYS_INVITE_TTL_SECONDS || '86400',
+  CRAYS_BADGE_TTL_SECONDS: process.env.CRAYS_BADGE_TTL_SECONDS || '86400',
+  CRAYS_INVITE_MAX_REDEMPTIONS: process.env.CRAYS_INVITE_MAX_REDEMPTIONS || '100',
+  CRAYS_QA_PREAUTHORIZE: process.env.CRAYS_QA_PREAUTHORIZE || '0',
 };
 
 let relayCreated = false;
@@ -71,10 +75,34 @@ try {
   relayCreated = true;
   const state = JSON.parse(readFileSync(statePath, 'utf8'));
 
-  server = http.createServer((request, response) => {
+  server = http.createServer(async (request, response) => {
     if (request.url === '/healthz') {
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ ok: true, room_id: state.room_id, relay_url: state.relay_url }));
+      return;
+    }
+    if (request.url === '/invite' && request.method === 'GET') {
+      const host = request.headers.host || `127.0.0.1:${proxyPort}`;
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ service_url: `http://${host}`, token: state.invite_token }));
+      return;
+    }
+    if ((request.url === '/community/info' && request.method === 'GET') || (request.url === '/redeem' && request.method === 'POST')) {
+      try {
+        const chunks = [];
+        for await (const chunk of request) chunks.push(chunk);
+        const body = chunks.length ? Buffer.concat(chunks) : undefined;
+        const upstream = await fetch(`${state.base_url}${request.url}`, {
+          method: request.method,
+          headers: request.url === '/redeem' ? { 'content-type': 'application/json' } : { accept: 'application/json' },
+          body,
+        });
+        response.writeHead(upstream.status, { 'content-type': upstream.headers.get('content-type') || 'application/json' });
+        response.end(Buffer.from(await upstream.arrayBuffer()));
+      } catch (error) {
+        response.writeHead(502, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ error: `Test Room invite service unavailable: ${error.message}` }));
+      }
       return;
     }
     response.writeHead(404).end();

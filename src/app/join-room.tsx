@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
 import { ensureLocalIdentity, getLocalProfileTemplate } from '@/account/account';
+import { fetchInviteHandoff, loadInvitePreview, redeemInvite } from '@/invites/invites';
 import { presenceTemplate } from '@/nostr/protocol';
 import { publishEvent } from '@/nostr/publish';
 import { useRoomManifest } from '@/rooms/useRoomManifest';
@@ -10,7 +11,7 @@ import { JoinPrivacyScreen } from '@/screens/discovery/JoinPrivacyScreen';
 import { useRoomSession } from '@/session/RoomSession';
 
 export default function JoinRoomRoute() {
-  const params = useLocalSearchParams<{ relay?: string; room?: string }>();
+  const params = useLocalSearchParams<{ invite?: string; relay?: string; room?: string }>();
   const manifest = useRoomManifest(params.relay, params.room);
   const { enterRoom } = useRoomSession();
   const [loading, setLoading] = useState(false);
@@ -20,6 +21,14 @@ export default function JoinRoomRoute() {
     setLoading(true);
     setError(null);
     try {
+      if (params.invite) {
+        const identity = await ensureLocalIdentity();
+        const handoff = await fetchInviteHandoff(params.invite);
+        const preview = await loadInvitePreview(handoff.serviceUrl, handoff.token);
+        if (preview.community.relay_url !== manifest.room.relayUrl) throw new Error('Tonight’s access does not belong to this room.');
+        const redemption = await redeemInvite(preview, handoff.token, identity.pubkey);
+        if (__DEV__) console.info(`[crays-room-access-granted]${JSON.stringify({ eventId: redemption.eventId, roomId: manifest.room.id })}`);
+      }
       if (preferences.visibility === 'visible') {
         const [identity, profile] = await Promise.all([ensureLocalIdentity(), getLocalProfileTemplate()]);
         if (!profile) throw new Error('Finish account setup before joining visibly. You can still browse quietly.');

@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import { decodeInviteToken, loadInvitePreview, redeemInvite } from '@/invites/invites';
+import { decodeInviteToken, fetchInviteHandoff, loadInvitePreview, redeemInvite } from '@/invites/invites';
 
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn() }));
 
@@ -24,6 +24,16 @@ describe('invite contract', () => {
   it('matches token, required badge, and issuer metadata', async () => {
     globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ badge_issuer: issuer, relay_url: 'wss://venue.test', required_badge: claims.badge }) }) as never;
     await expect(loadInvitePreview('https://venue.test', token)).resolves.toMatchObject({ claims, serviceUrl: 'https://venue.test' });
+  });
+
+  it('loads a hidden room-entry handoff without exposing the token in navigation', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ service_url: 'https://venue.test', token }) }) as never;
+    await expect(fetchInviteHandoff('https://nearby.test/invite')).resolves.toEqual({ serviceUrl: 'https://venue.test', token });
+  });
+
+  it('rejects an incomplete room-entry handoff', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ service_url: 'https://venue.test' }) }) as never;
+    await expect(fetchInviteHandoff('https://nearby.test/invite')).rejects.toThrow(/grant tonight/i);
   });
 
   it('posts one redemption and reuses the persisted result', async () => {

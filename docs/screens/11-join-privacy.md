@@ -13,10 +13,20 @@ Primary action wording follows the current selection: **Enter quietly** or
 Every entry chooses a one-, two-, or four-hour automatic leave time (two hours
 by default). Repeated taps are disabled while entry/publish is in progress.
 
+When discovery supplies an opaque invite-handoff URL, entry first retrieves
+the unrendered token, validates its community metadata against the signed room,
+and redeems it for the current account. Redemption must return a real kind-8
+award before either quiet entry or visible presence continues. Missing,
+expired, exhausted, wrong-room, issuer-mismatched, and offline grants remain on
+this screen with a retryable error. Repeated entry reuses the locally persisted
+nonce/account redemption and cannot consume the invite twice.
+
 ## Mutation and lifecycle
 
 - Quiet: persist `ActiveRoom(visibility=quiet, leaveAt=…)`; open only that
   relay's room subscriptions; do not sign or publish kind `78` presence.
+- Granted entry: redeem the handoff before the visibility branch. The badge is
+  authorization for the room and never implies visible presence by itself.
 - Visible: publish the local kind-0 profile, then sign/publish the versioned
   presence template with the exact room id, stable `d`, selected intent,
   bounded optional context, and automatic-leave expiry. Persist the room only
@@ -49,6 +59,8 @@ also a seeded visible guest:
   window.
 
 Explicit leave and relay switching remain independently verified by screens 21
-and 28. Component/fake-clock coverage owns automatic local expiry; a future BLE
+and 28. The long-running Test Room scenario additionally proves hidden-handoff
+redemption produced exactly one real issuer-signed, 24-hour kind-8 badge for an
+identity that was not pre-authorized. Component/fake-clock coverage owns automatic local expiry; a future BLE
 gateway harness must additionally force credential-renewal loss and verify the
 Signal weak → Reconnecting → Room locked sequence.

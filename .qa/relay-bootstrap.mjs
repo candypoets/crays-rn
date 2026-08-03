@@ -57,7 +57,11 @@ writeState({
 const pool = makePool();
 
 const inviteEndpoint = `${relay.base_url}/invites`;
-const inviteBody = JSON.stringify({ expires_in_seconds: 3600, badge_expires_in_seconds: 604800, max_redemptions: 5 });
+const inviteBody = JSON.stringify({
+  expires_in_seconds: Number(process.env.CRAYS_INVITE_TTL_SECONDS || 3600),
+  badge_expires_in_seconds: Number(process.env.CRAYS_BADGE_TTL_SECONDS || 604800),
+  max_redemptions: Number(process.env.CRAYS_INVITE_MAX_REDEMPTIONS || 5),
+});
 let invite;
 for (let attempt = 0; attempt < 30 && !invite; attempt += 1) {
   try {
@@ -97,7 +101,10 @@ const fixtureUsers = keys.users.slice(0, 3);
 const qaUserIndex = Number(process.env.CRAYS_QA_USER_INDEX || 0);
 const qaUser = keys.users[qaUserIndex];
 if (!qaUser) throw new Error(`CRAYS_QA_USER_INDEX ${qaUserIndex} has no fixture key`);
-const authorizedUsers = [...new Map([...fixtureUsers, qaUser].map((user) => [user.pub, user])).values()];
+const authorizedUsers = [...new Map([
+  ...fixtureUsers,
+  ...(process.env.CRAYS_QA_PREAUTHORIZE === '0' ? [] : [qaUser]),
+].map((user) => [user.pub, user])).values()];
 for (const user of authorizedUsers) {
   await publish(
     signEvent({ kind: 8, tags: [['a', requiredBadge], ['p', user.pub]] }, issuerSecret),
