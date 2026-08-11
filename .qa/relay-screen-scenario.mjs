@@ -1,4 +1,4 @@
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
@@ -19,7 +19,62 @@ const root = resolve(new URL('..', import.meta.url).pathname);
 export const deviceArgs = () => (process.env.ANDROID_SERIAL ? ['--device', process.env.ANDROID_SERIAL] : []);
 
 function run(command, args, env) {
-  return execFileSync(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit', maxBuffer: 64 * 1024 * 1024 });
+  try {
+    return execFileSync(command, args, { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit', maxBuffer: 64 * 1024 * 1024 });
+  } catch (cause) {
+    // Maestro arguments contain fixture credentials and invite tokens. Its
+    // own output is inherited above; do not repeat the full command in a
+    // thrown Node error.
+    throw new Error(`${command} exited with status ${cause.status ?? 'unknown'}`);
+  }
+}
+
+function processIsRunning(pid) {
+  try {
+    process.kill(pid, 0);
+    const state = readFileSync(`/proc/${pid}/stat`, 'utf8').split(' ')[2];
+    return state !== 'Z';
+  } catch {
+    return false;
+  }
+}
+
+function portIsListening(port) {
+  return execFileSync('ss', ['-H', '-ltn', `sport = :${port}`], { encoding: 'utf8' }).trim().length > 0;
+}
+
+function selectProxyPort(preferred) {
+  for (let port = preferred; port < preferred + 20; port += 1) {
+    if (!portIsListening(port)) {
+      if (port !== preferred) console.log(`warn - proxy port ${preferred} is owned by another worktree; using ${port}`);
+      return port;
+    }
+  }
+  throw new Error(`no free Test Room proxy port in ${preferred}-${preferred + 19}`);
+}
+
+function waitForProxy(child, port, expectedRoomId, statePath) {
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    if (!processIsRunning(child.pid)) throw new Error(`Test Room proxy exited before readiness (pid ${child.pid})`);
+    try {
+      const response = execFileSync('curl', ['-sf', `http://127.0.0.1:${port}/healthz`], { encoding: 'utf8', timeout: 2000 });
+      const health = JSON.parse(response);
+      if (health.room_id === expectedRoomId && existsSync(statePath)) return;
+    } catch {
+      // The child may still be seeding fixtures or binding the proxy.
+    }
+    execFileSync('sleep', ['0.5']);
+  }
+  throw new Error('Test Room proxy did not become ready within 120 seconds');
+}
+
+function stopProxy(child) {
+  if (!processIsRunning(child.pid)) return;
+  process.kill(child.pid, 'SIGTERM');
+  const deadline = Date.now() + 60_000;
+  while (Date.now() < deadline && processIsRunning(child.pid)) execFileSync('sleep', ['0.25']);
+  if (processIsRunning(child.pid)) process.kill(child.pid, 'SIGKILL');
 }
 
 // Flow-typed strings live in .qa/flow-fixtures.mjs so verifiers and flows
@@ -36,21 +91,39 @@ const fixtureEnv = {
 
 export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyManifest = true }) {
   const statePath = `/tmp/qa-crays-${scenario}.json`;
-  const env = { CRAYS_QA_STATE: statePath, CRAYS_QA_USER_INDEX: String(qaUserIndex), ...bootstrapEnv };
+  const preferredProxyPort = Number(process.env.CRAYS_TEST_ROOM_PROXY_PORT || 8787);
+  const proxyPort = selectProxyPort(preferredProxyPort);
+  const roomId = 'crays-qa-skyline';
+  const env = {
+    CRAYS_QA_STATE: statePath,
+    CRAYS_TEST_ROOM_STATE: statePath,
+    CRAYS_TEST_ROOM_PID: '/tmp/qa-crays-relay-proxy.pid',
+    CRAYS_TEST_ROOM_PROXY_PORT: String(proxyPort),
+    CRAYS_TEST_ROOM_ID: roomId,
+    CRAYS_TEST_ROOM_NAME: 'The Skyline Room',
+    CRAYS_QA_USER_INDEX: String(qaUserIndex),
+    ...bootstrapEnv,
+  };
   run('adb', ['get-state'], env);
   run('adb', ['logcat', '-c'], env);
   let scenarioFailed = false;
+  let state;
+  const testRoom = spawn(process.execPath, ['.qa/test-room.mjs'], {
+    cwd: root,
+    env: { ...process.env, ...env },
+    stdio: 'inherit',
+  });
   try {
-    run(process.execPath, ['.qa/relay-bootstrap.mjs'], env);
+    waitForProxy(testRoom, proxyPort, roomId, statePath);
     if (!existsSync(statePath)) throw new Error(`bootstrap did not write ${statePath}`);
-    const state = JSON.parse(readFileSync(statePath, 'utf8'));
+    state = JSON.parse(readFileSync(statePath, 'utf8'));
     const fixtureNsec = loadKeys().users[qaUserIndex].nsec;
     run(process.env.MAESTRO_CLI || 'maestro', [
       'test',
       ...deviceArgs(),
-      '-e', `RELAY_URL=${state.emulator_relay_url}`,
+      '-e', `RELAY_URL=ws://10.0.2.2:${proxyPort}`,
       '-e', `ROOM_ID=${state.room_id}`,
-      '-e', `SERVICE_URL=${state.emulator_base_url}`,
+      '-e', `SERVICE_URL=http://10.0.2.2:${proxyPort}`,
       '-e', `INVITE_TOKEN=${state.invite_token}`,
       '-e', `QA_NSEC=${fixtureNsec}`,
       '-e', `JONAS_PUBKEY=${loadKeys().users[1].pub}`,
@@ -72,15 +145,14 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     scenarioFailed = true;
     throw error;
   } finally {
+    stopProxy(testRoom);
     try {
-      run(process.execPath, ['.qa/relay-teardown.mjs'], env);
+      // The proxy owns normal teardown. A second idempotent sweep independently
+      // proves that no fixture-authored non-deletion event survived it.
+      run(process.execPath, ['.qa/relay-teardown.mjs', '--sweep'], env);
     } catch (error) {
-      let state;
-      try { state = existsSync(statePath) ? JSON.parse(readFileSync(statePath, 'utf8')) : undefined; } catch { state = undefined; }
       warnTeardownLeak(scenario, state, error);
-      // A passing scenario keeps its PASS: the leak is surfaced, not fatal.
-      // A failing scenario already exits non-zero from the rethrow above.
-      if (scenarioFailed) process.exitCode = 1;
+      if (!scenarioFailed) throw error;
     }
   }
 }

@@ -2,6 +2,10 @@ import { extractTagValue, extractTagValues, type ParsedEvent, type PreGenericPar
 import { asKind0, asKind1, fbIterable } from '@candypoets/nipworker/utils';
 
 import { CRAYS_PROTOCOL } from '@/nostr/protocol';
+import {
+  maxUsesForDefinition,
+  parsePriceTag,
+} from '@/access/nip97';
 import type {
   RoomCalendarEvent,
   RoomCapability,
@@ -102,22 +106,22 @@ export function projectRoomPost(event: ParsedEvent, roomId: string): RoomPost | 
   };
 }
 
-export function projectRoomProduct(event: ParsedEvent, operatorPubkey: string): RoomProduct | null {
-  if (event.kind() !== CRAYS_PROTOCOL.badgeDefinitionKind || event.pubkey() !== operatorPubkey) return null;
-  const type = extractTagValue(event, 'type');
-  if (type !== 'product') return null;
+/** Store menu items are single-use NIP-99 listings; passes and tickets stay in access. */
+export function projectRoomProduct(event: ParsedEvent, admins: ReadonlySet<string>): RoomProduct | null {
+  if (event.kind() !== CRAYS_PROTOCOL.listingKind || !admins.has(event.pubkey() ?? '')) return null;
+  if (extractTagValue(event, 'a') || (maxUsesForDefinition(event.kind(), event) ?? 1) > 1) return null;
   const d = extractTagValue(event, 'd');
-  const name = extractTagValue(event, 'name');
-  const price = finiteNumber(extractTagValue(event, 'price'), Number.NaN);
+  const name = extractTagValue(event, 'title');
+  const price = parsePriceTag(event);
   const id = event.id() ?? '';
-  if (!d || !name || !id || !Number.isFinite(price)) return null;
+  if (!d || !name || !id || !price) return null;
   return {
     id,
-    address: `30009:${operatorPubkey}:${d}`,
+    address: `${CRAYS_PROTOCOL.listingKind}:${event.pubkey()}:${d}`,
     name,
-    description: extractTagValue(event, 'description') ?? '',
-    price,
-    currency: extractTagValues(event, 'price', 2)[0] ?? 'EUR',
+    description: extractTagValue(event, 'summary') ?? extractTagValue(event, 'description') ?? '',
+    price: price.amount,
+    currency: price.currency,
     section: extractTagValue(event, 'section') ?? 'Menu',
     productKind: extractTagValue(event, 'product_kind') ?? 'item',
     available: extractTagValue(event, 'availability') !== 'unavailable',
@@ -125,60 +129,92 @@ export function projectRoomProduct(event: ParsedEvent, operatorPubkey: string): 
   };
 }
 
-export function projectMembershipOffer(event: ParsedEvent, operatorPubkey: string): RoomMembershipOffer | null {
+export function projectMembershipOffer(event: ParsedEvent, admins: ReadonlySet<string>): RoomMembershipOffer | null {
   if (
     event.kind() !== CRAYS_PROTOCOL.badgeDefinitionKind ||
-    event.pubkey() !== operatorPubkey ||
-    extractTagValue(event, 'type') !== 'membership'
+    !admins.has(event.pubkey() ?? '') ||
+    !extractTagValues(event, 't').includes('membership')
   ) return null;
   const d = extractTagValue(event, 'd');
   const name = extractTagValue(event, 'name');
-  const price = finiteNumber(extractTagValue(event, 'price'), Number.NaN);
+  const price = parsePriceTag(event);
   const id = event.id() ?? '';
-  if (!d || !name || !id || !Number.isFinite(price)) return null;
+  if (!d || !name || !id || !price) return null;
+  const recurrence = price.recurrence;
   return {
     id,
-    address: `30009:${operatorPubkey}:${d}`,
+    address: `${CRAYS_PROTOCOL.badgeDefinitionKind}:${event.pubkey()}:${d}`,
     name,
     description: extractTagValue(event, 'description') ?? '',
-    price,
-    currency: extractTagValues(event, 'price', 2)[0] ?? 'EUR',
-    billing: extractTagValue(event, 'billing') ?? 'one-time',
+    price: price.amount,
+    currency: price.currency,
+    billing: recurrence === 'month' ? 'monthly' : recurrence === 'year' ? 'yearly' : 'one-time',
     available: extractTagValue(event, 'availability') !== 'unavailable',
   };
 }
 
-const ENTITLEMENT_TYPES = new Set<RoomEntitlementType>(['product', 'membership', 'pass', 'event_access']);
+/**
+ * NIP-97 definition classification, derived from the event shape rather than
+ * a `type` tag: 30009 memberships, 30402 products/passes/tickets, and
+ * 31922/31923 events acting as their own free-admission definition.
+ */
+function entitlementTypeFor(event: ParsedEvent): { type: RoomEntitlementType; eventAddress?: string } | null {
+  const kind = event.kind();
+  if (kind === CRAYS_PROTOCOL.badgeDefinitionKind) {
+    return extractTagValues(event, 't').includes('membership') ? { type: 'membership' } : null;
+  }
+  if (kind === CRAYS_PROTOCOL.listingKind) {
+    const linked = extractTagValue(event, 'a');
+    const linkedKind = linked ? Number(linked.split(':')[0]) : undefined;
+    if (linked && (CRAYS_PROTOCOL.calendarKinds as readonly number[]).includes(linkedKind ?? 0)) {
+      return { type: 'event_access', eventAddress: linked };
+    }
+    return { type: (maxUsesForDefinition(kind, event) ?? 1) > 1 ? 'pass' : 'product' };
+  }
+  if (CRAYS_PROTOCOL.calendarKinds.includes(kind as 31922 | 31923)) {
+    return { type: 'event_access', eventAddress: `${kind}:${event.pubkey()}:${extractTagValue(event, 'd')}` };
+  }
+  return null;
+}
 
 /** Stable definition copy used after the FlatBuffer callback and after leaving the room. */
 export function projectEntitlementDefinition(
   event: ParsedEvent,
-  operatorPubkey: string,
+  admins: ReadonlySet<string>,
 ): EntitlementDefinitionProjection | null {
-  if (event.kind() !== CRAYS_PROTOCOL.badgeDefinitionKind || event.pubkey() !== operatorPubkey) return null;
-  const rawType = extractTagValue(event, 'type') as RoomEntitlementType | undefined;
-  const d = extractTagValue(event, 'd');
+  const author = event.pubkey() ?? '';
   const id = event.id() ?? '';
-  if (!rawType || !ENTITLEMENT_TYPES.has(rawType) || !d || !id) return null;
-  const maxUsesRaw = Number(extractTagValue(event, 'max_uses'));
-  const maxUses = Number.isSafeInteger(maxUsesRaw) && maxUsesRaw > 0
-    ? maxUsesRaw
-    : rawType === 'product' ? 1 : undefined;
+  if (!admins.has(author) || !id) return null;
+  const classified = entitlementTypeFor(event);
+  if (!classified) return null;
+  const d = extractTagValue(event, 'd');
+  if (!d) return null;
+  const kind = event.kind();
+  const name = kind === CRAYS_PROTOCOL.listingKind
+    ? extractTagValue(event, 'title')
+    : kind === CRAYS_PROTOCOL.badgeDefinitionKind
+      ? extractTagValue(event, 'name')
+      : extractTagValue(event, 'title');
+  const price = parsePriceTag(event);
+  const recurrence = price?.recurrence;
   return {
     id,
-    address: `30009:${operatorPubkey}:${d}`,
-    issuerPubkey: operatorPubkey,
-    type: rawType,
-    name: extractTagValue(event, 'name')?.trim() || d,
-    description: extractTagValue(event, 'description')?.trim() || '',
-    billing: extractTagValue(event, 'billing'),
-    eventAddress: rawType === 'event_access' ? extractTagValue(event, 'a') : undefined,
-    maxUses,
+    address: `${kind}:${author}:${d}`,
+    issuerPubkey: author,
+    type: classified.type,
+    name: name?.trim() || d,
+    description: (extractTagValue(event, 'description') ?? extractTagValue(event, 'summary'))?.trim() || '',
+    ...(classified.type === 'membership'
+      ? { billing: recurrence === 'month' ? 'monthly' : recurrence === 'year' ? 'yearly' : 'one-time' }
+      : {}),
+    eventAddress: classified.eventAddress,
+    maxUses: maxUsesForDefinition(kind, event),
+    sellable: Boolean(price),
   };
 }
 
-export function projectCalendarEvent(event: ParsedEvent, operatorPubkey: string): RoomCalendarEvent | null {
-  if (!CRAYS_PROTOCOL.calendarKinds.includes(event.kind() as 31922 | 31923) || event.pubkey() !== operatorPubkey) return null;
+export function projectCalendarEvent(event: ParsedEvent, admins: ReadonlySet<string>): RoomCalendarEvent | null {
+  if (!CRAYS_PROTOCOL.calendarKinds.includes(event.kind() as 31922 | 31923) || !admins.has(event.pubkey() ?? '')) return null;
   const d = extractTagValue(event, 'd');
   const title = extractTagValue(event, 'title');
   const start = finiteNumber(extractTagValue(event, 'start'), Number.NaN);
@@ -189,7 +225,7 @@ export function projectCalendarEvent(event: ParsedEvent, operatorPubkey: string)
   const end = finiteNumber(extractTagValue(event, 'end'), Number.NaN);
   return {
     id,
-    address: `${event.kind()}:${operatorPubkey}:${d}`,
+    address: `${event.kind()}:${event.pubkey()}:${d}`,
     title,
     summary: extractTagValue(event, 'summary') ?? '',
     location: extractTagValue(event, 'location') ?? '',

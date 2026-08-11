@@ -54,6 +54,7 @@ const additionalScenarios = [
   ['08b-invite-accepted.md', '08b-invite-redeemed-twice.yaml', 'qa-08b-invite-redeemed-twice.mjs'],
   ['20b-tickets.md', '20d-rsvp-rejected.yaml', 'qa-20d-rsvp-rejected.mjs'],
   ['11-join-privacy.md', '11c-join-relay-unavailable.yaml', 'qa-11c-join-relay-unavailable.mjs'],
+  ['27-discover.md', '27-discover-handoff.yaml', 'qa-27-discover-handoff.mjs'],
 ];
 
 // Screen spec -> jest test that covers it, by existing naming conventions.
@@ -91,7 +92,7 @@ const screenTests = {
   '24-payment-methods.md': 'src/screens/commerce/__tests__/CommerceScreens.test.tsx',
   '25-wallet.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
   '26-add-funds.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
-  '27-discover.md': 'src/discovery/__tests__/blePointer.test.ts',
+  '27-discover.md': 'src/screens/__tests__/DiscoverHandoffScreen.test.tsx',
   '28-switch-room.md': 'src/screens/room/__tests__/LeaveAndSwitchScreens.test.tsx',
   'memberships.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
   'messages.md': 'src/screens/messages/__tests__/MessagesScreens.test.tsx',

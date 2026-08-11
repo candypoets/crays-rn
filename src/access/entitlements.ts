@@ -5,9 +5,11 @@ import type {
   RoomEntitlementType,
   RoomOrderStatus,
 } from '@/rooms/types';
+import { awardIssuerValid, revocationSignerValid, statusSignerValid, type CommunityTrust } from '@/rooms/trust';
 
 export type EntitlementDefinitionProjection = {
   id: string;
+  /** NIP-97 definition address: 30009, 30402, 31922, or 31923. */
   address: string;
   issuerPubkey: string;
   type: RoomEntitlementType;
@@ -16,6 +18,8 @@ export type EntitlementDefinitionProjection = {
   billing?: string;
   eventAddress?: string;
   maxUses?: number;
+  /** A well-formed `price` tag makes the definition awardable by the badge issuer. */
+  sellable: boolean;
 };
 
 export type EntitlementAwardProjection = {
@@ -33,6 +37,8 @@ export type EntitlementStatusProjection = {
   awardId: string;
   address: string;
   recipientPubkey: string;
+  /** Event author; trusted only as an anchor admin or the badge issuer. */
+  signerPubkey: string;
   contextKey: string;
   status: RoomOrderStatus;
   createdAt: number;
@@ -98,21 +104,32 @@ export function deriveEntitlements({
   awards,
   definitions,
   statuses,
-  revokedAwardIds,
+  revocations,
+  trust,
   room,
   now = Math.floor(Date.now() / 1000),
 }: {
   awards: EntitlementAwardProjection[];
   definitions: ReadonlyMap<string, EntitlementDefinitionProjection>;
   statuses: EntitlementStatusProjection[];
-  revokedAwardIds: ReadonlySet<string>;
+  /** Award id → kind-5 deleter pubkey, as read from the community relay. */
+  revocations: ReadonlyMap<string, string>;
+  trust: CommunityTrust;
   room: EntitlementRoomContext;
   now?: number;
 }): RoomEntitlement[] {
   return awards.flatMap((award) => {
     const definition = definitions.get(award.address);
     if (!definition) return [];
-    const activity = latestPerContext(award, statuses);
+    // NIP-97 issuance rule, checked where award and definition meet: anchor
+    // admins may award anything; the badge issuer only sellable definitions.
+    if (!awardIssuerValid({ issuer: award.issuerPubkey, sellable: definition.sellable, trust })) return [];
+    const deleter = revocations.get(award.id);
+    const revoked = deleter !== undefined && revocationSignerValid(deleter, award.issuerPubkey, trust);
+    const activity = latestPerContext(
+      award,
+      statuses.filter((status) => statusSignerValid(status.signerPubkey, trust)),
+    );
     const used = activity.filter((item) => item.status === 'fulfilled').length;
     const remainingUses = definition.maxUses === undefined
       ? undefined
@@ -134,7 +151,7 @@ export function deriveEntitlements({
       expiresAt: award.expiresAt,
       state: entitlementState({
         type: definition.type,
-        revoked: revokedAwardIds.has(award.id),
+        revoked,
         expiresAt: award.expiresAt,
         remainingUses,
         activity,

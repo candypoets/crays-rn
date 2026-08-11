@@ -12,6 +12,10 @@ export type InviteClaims = {
 };
 
 export type CommunityInfo = {
+  /** NIP-97 root key (the relay's NIP-11 pubkey), mirrored for HTTP-only consumers. */
+  community_root: string;
+  /** Anchor admin pubkeys. */
+  admins: string[];
   badge_issuer: string;
   relay_url: string;
   required_badge: string;
@@ -103,6 +107,9 @@ export async function fetchCommunityInfo(serviceUrlInput: string): Promise<Commu
   const data = await response.json() as Partial<CommunityInfo>;
   if (
     !/^[0-9a-f]{64}$/i.test(data.badge_issuer || '') ||
+    !/^[0-9a-f]{64}$/i.test(data.community_root || '') ||
+    !Array.isArray(data.admins) || !data.admins.length ||
+    data.admins.some((admin) => !/^[0-9a-f]{64}$/i.test(admin)) ||
     !/^wss?:\/\//.test(data.relay_url || '') ||
     !/^30009:[0-9a-f]{64}:.+/i.test(data.required_badge || '')
   ) throw new Error('The invite issuer returned incomplete identity details.');
@@ -116,8 +123,10 @@ export async function loadInvitePreview(serviceUrlInput: string, token: string):
   if (claims.badge !== community.required_badge) {
     throw new Error('This invite does not match the membership offered by this venue.');
   }
-  const addressIssuer = community.required_badge.split(':')[1];
-  if (addressIssuer !== community.badge_issuer) {
+  // NIP-97: the membership definition is authored by an anchor admin (the
+  // community root or an operational admin), never by the delegated issuer.
+  const definitionAuthor = community.required_badge.split(':')[1];
+  if (!community.admins.includes(definitionAuthor) && definitionAuthor !== community.community_root) {
     throw new Error('The venue membership issuer does not match its published identity.');
   }
   return { claims, community, serviceUrl };

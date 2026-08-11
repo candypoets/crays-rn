@@ -31,5 +31,5 @@ appId: life.crays
     timeout: 30000
 - assertVisible: "Discover rooms"
 - assertVisible: "ACCOUNT READY"
-- assertVisible: ".*No Bluetooth or location permission was requested.*"
+- assertVisible: ".*No Bluetooth or location permission asked.*"
 - takeScreenshot: cold-signup-complete

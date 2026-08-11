@@ -8,6 +8,10 @@ appId: life.crays
       id: "me-screen"
     timeout: 15000
 - assertVisible: "Active now"
+- assertVisible: "Ready for pickup"
+- assertVisible: "1 saved ticket"
+- assertNotVisible: "CR-QA-READY"
+- assertNotVisible: ".*relay-confirmed.*"
 - assertVisible: "Orders"
 - assertVisible: "Memberships & passes"
 - assertVisible: "Wallet"

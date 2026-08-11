@@ -10,5 +10,9 @@ appId: life.crays
 - assertVisible: "Ready"
 - assertVisible: "Progress"
 - assertVisible: "Receipt pending settlement"
+- assertVisible: "Payment details appear after payment is confirmed."
+- assertNotVisible: ".*payment rail.*"
+- assertNotVisible: ".*venue relay.*"
+- assertNotVisible: "CR-QA-READY"
 - assertNotVisible: "Delivered"
 - takeScreenshot: 15-order-detail-relay

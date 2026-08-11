@@ -6,6 +6,14 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import * as SecureStore from 'expo-secure-store';
 
 import { CRAYS_PROTOCOL } from '@/nostr/protocol';
+import { isNewerAnchor, parseCommunityAnchor, type CommunityAnchor } from '@/access/nip97';
+import {
+  awardIssuerValid,
+  fetchRelayRootPubkey,
+  statusSignerValid,
+  trustFromAnchor,
+  type CommunityTrust,
+} from '@/rooms/trust';
 import {
   deriveEntitlements,
   type EntitlementAwardProjection,
@@ -74,8 +82,10 @@ const EMPTY: RoomDataValue = {
 const RoomDataContext = createContext<RoomDataValue>(EMPTY);
 
 const ORDER_STATUSES = new Set<RoomOrderStatus>(['pending', 'accepted', 'processing', 'ready', 'fulfilled', 'cancelled']);
-const ORDER_ARCHIVE_KEY = 'crays.orders.archive.v1';
-const ENTITLEMENT_ARCHIVE_KEY = 'crays.entitlements.archive.v1';
+// Archive keys are versioned: the NIP-97 migration dropped the pre-NIP
+// (30009 type-tag) projections, so v1 caches are abandoned rather than read.
+const ORDER_ARCHIVE_KEY = 'crays.orders.archive.v2';
+const ENTITLEMENT_ARCHIVE_KEY = 'crays.entitlements.archive.v2';
 
 function upsertById<T extends { id: string }>(items: T[], value: T): T[] {
   const index = items.findIndex((item) => item.id === value.id);
@@ -124,6 +134,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   const [statuses, setStatuses] = useState<EntitlementStatusProjection[]>([]);
   const [definitions, setDefinitions] = useState<Map<string, EntitlementDefinitionProjection>>(new Map());
   const [revocations, setRevocations] = useState<Map<string, string>>(new Map());
+  const [communityTrust, setCommunityTrust] = useState<CommunityTrust | null>(null);
   const [archivedOrders, setArchivedOrders] = useState<RoomOrder[]>([]);
   const [archivedEntitlements, setArchivedEntitlements] = useState<RoomEntitlement[]>([]);
   // Refs mirror the archive state so persistence effects can compute the next
@@ -178,6 +189,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     setStatuses([]);
     setDefinitions(new Map());
     setRevocations(new Map());
+    setCommunityTrust(null);
     setConnected(false);
     if (!activeRoom) {
       setLoading(false);
@@ -185,6 +197,12 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     }
     setLoading(true);
     const relayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;
+    let cancelled = false;
+    // The resolved NIP-97 trust for this room, held in a closure so the ingest
+    // path reads the current anchor without re-running the effect.
+    const trustHolder: { current: CommunityTrust | null } = { current: null };
+    const NO_ADMINS: ReadonlySet<string> = new Set();
+    const currentAdmins = () => trustHolder.current?.admins ?? NO_ADMINS;
 
     const handleMessage = (message: WorkerMessage) => {
         // A healthy relay can legitimately have no matching events. EOSE is
@@ -203,13 +221,14 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           const id = event.id() ?? '';
           const address = extractTagValue(event, 'a') ?? '';
           const recipientPubkey = extractTagValue(event, 'p') ?? '';
-          const issuer = event.pubkey() ?? '';
-          if (id && address && recipientPubkey === viewerPubkey && activeRoom.awardIssuerPubkey && issuer === activeRoom.awardIssuerPubkey) {
+          // Issuer trust is applied at derivation time against the anchor, so
+          // awards arriving before the anchor resolves are simply buffered.
+          if (id && address && recipientPubkey === viewerPubkey) {
             const invoice = extractTagValue(event, 'i') ?? '';
             const orderRef = extractTagValue(event, 'order') || invoice.replace(/^payment-redemption:/, '') || id;
             const expiration = Number(extractTagValue(event, 'expiration'));
             setAwards((current) => upsertById(current, {
-              id, address, issuerPubkey: issuer, recipientPubkey, orderRef, createdAt: event.createdAt(),
+              id, address, issuerPubkey: event.pubkey() ?? '', recipientPubkey, orderRef, createdAt: event.createdAt(),
               ...(Number.isSafeInteger(expiration) && expiration > 0 ? { expiresAt: expiration } : {}),
             }));
             if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'award', id })}`);
@@ -217,10 +236,11 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        if (event.kind() === CRAYS_PROTOCOL.eventDeletionKind && activeRoom.awardIssuerPubkey && event.pubkey() === activeRoom.awardIssuerPubkey) {
-          const issuer = event.pubkey() ?? '';
+        if (event.kind() === CRAYS_PROTOCOL.eventDeletionKind) {
+          const deleter = event.pubkey() ?? '';
+          if (!deleter) return;
           for (const awardId of extractTagValues(event, 'e')) {
-            setRevocations((current) => new Map(current).set(awardId, issuer));
+            setRevocations((current) => new Map(current).set(awardId, deleter));
           }
           return;
         }
@@ -234,8 +254,9 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           const eventContext = extractTagValue(event, 'event') ?? '';
           const contextKey = extractTagValue(event, 'd') || (orderRef ? `order:${orderRef}` : eventContext ? `event:${eventContext}` : '');
           const status = extractTagValue(event, 'status') as RoomOrderStatus | undefined;
-          if (id && awardId && address && recipientPubkey === viewerPubkey && event.pubkey() === activeRoom.operatorPubkey && contextKey && status && ORDER_STATUSES.has(status)) {
-            setStatuses((current) => upsertById(current, { id, awardId, address, recipientPubkey, contextKey, status, createdAt: event.createdAt() }));
+          // Signer trust (anchor admin / badge issuer) is applied at derivation.
+          if (id && awardId && address && recipientPubkey === viewerPubkey && contextKey && status && ORDER_STATUSES.has(status)) {
+            setStatuses((current) => upsertById(current, { id, awardId, address, recipientPubkey, signerPubkey: event.pubkey() ?? '', contextKey, status, createdAt: event.createdAt() }));
             if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'order-status', id, status })}`);
           }
           return;
@@ -274,34 +295,33 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        const product = projectRoomProduct(event, activeRoom.operatorPubkey);
-        if (product) {
-          if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'product', id: product.id })}`);
-          setProducts((current) => upsertById(current, product).sort((a, b) => a.position - b.position));
-          return;
-        }
-
-        const entitlementDefinition = projectEntitlementDefinition(event, activeRoom.operatorPubkey);
+        const entitlementDefinition = projectEntitlementDefinition(event, currentAdmins());
         if (entitlementDefinition) {
           setDefinitions((current) => {
             const previous = current.get(entitlementDefinition.address);
             if (previous?.id === entitlementDefinition.id) return current;
             return new Map(current).set(entitlementDefinition.address, entitlementDefinition);
           });
-          // Membership definitions are also projected into the offer list by
-          // projectMembershipOffer below, so they must fall through; every
-          // other entitlement type is fully handled here.
-          if (entitlementDefinition.type !== 'membership') return;
+          // The same event may also surface as a menu item, membership offer,
+          // or calendar event below; definition and display projections share
+          // one addressable event under NIP-97.
         }
 
-        const membership = projectMembershipOffer(event, activeRoom.operatorPubkey);
+        const product = projectRoomProduct(event, currentAdmins());
+        if (product) {
+          if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'product', id: product.id })}`);
+          setProducts((current) => upsertById(current, product).sort((a, b) => a.position - b.position));
+          return;
+        }
+
+        const membership = projectMembershipOffer(event, currentAdmins());
         if (membership) {
           if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'membership', id: membership.id })}`);
           setMemberships((current) => upsertById(current, membership));
           return;
         }
 
-        const calendarEvent = projectCalendarEvent(event, activeRoom.operatorPubkey);
+        const calendarEvent = projectCalendarEvent(event, currentAdmins());
         if (calendarEvent) {
           if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'event', id: calendarEvent.id })}`);
           setEvents((current) => upsertById(current, calendarEvent).sort((a, b) => a.start - b.start));
@@ -309,29 +329,80 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     };
     // NIP-01 replaces a live REQ when its subscription id is reused. Each
     // concurrent result family therefore owns a distinct deterministic id.
+    const unsubscribes: (() => void)[] = [];
+    let phaseTwoUnsubscribes: (() => void)[] = [];
+    let phaseTwoKey = '';
+    // Phase 2: venue-authored families scoped to the anchor admins (+ issuer).
+    const openPhaseTwo = (trust: CommunityTrust) => {
+      const authors = [...trust.admins];
+      const key = `${authors.slice().sort().join(',')}|${trust.badgeIssuer ?? ''}`;
+      if (cancelled || key === phaseTwoKey) return;
+      phaseTwoKey = key;
+      phaseTwoUnsubscribes.forEach((unsubscribe) => unsubscribe());
+      const subscriptions: [string, RequestObject][] = [
+        ['catalog', { kinds: [CRAYS_PROTOCOL.badgeDefinitionKind, CRAYS_PROTOCOL.listingKind], authors, relays: [relayUrl], limit: 200, noCache: true }],
+        ['events', { kinds: [...CRAYS_PROTOCOL.calendarKinds], authors, relays: [relayUrl], limit: 100, noCache: true }],
+        ['revocations', { kinds: [CRAYS_PROTOCOL.eventDeletionKind], authors: [...authors, ...(trust.badgeIssuer ? [trust.badgeIssuer] : [])], relays: [relayUrl], limit: 200, noCache: true }],
+      ];
+      phaseTwoUnsubscribes = subscriptions.map(([family, filter]) => subscribeToNostr(
+        `room_${family}_${activeRoom.id}`,
+        [filter],
+        handleMessage,
+        { closeOnEose: false, bytesPerEvent: 12 * 1024 },
+      ));
+    };
+    // Phase 1: member-authored and viewer-scoped families open immediately.
     const subscriptions: [string, RequestObject][] = [
       ['presence', { kinds: [CRAYS_PROTOCOL.roomActivityKind], tags: { '#h': [activeRoom.id] }, relays: [relayUrl], limit: 200, noCache: true }],
       ['profiles', { kinds: [CRAYS_PROTOCOL.profileKind], relays: [relayUrl], limit: 200, noCache: true }],
       ['feed', { kinds: [CRAYS_PROTOCOL.roomFeedKind], tags: { '#h': [activeRoom.id] }, relays: [relayUrl], limit: 100, noCache: true }],
-      ['catalog', { kinds: [CRAYS_PROTOCOL.badgeDefinitionKind], authors: [activeRoom.operatorPubkey], relays: [relayUrl], limit: 200, noCache: true }],
-      ['events', { kinds: [...CRAYS_PROTOCOL.calendarKinds], authors: [activeRoom.operatorPubkey], relays: [relayUrl], limit: 100, noCache: true }],
-      ...(activeRoom.awardIssuerPubkey ? [['revocations', { kinds: [CRAYS_PROTOCOL.eventDeletionKind], authors: [activeRoom.awardIssuerPubkey], relays: [relayUrl], limit: 200, noCache: true }] as [string, RequestObject]] : []),
     ];
     if (viewerPubkey) subscriptions.push(
       ['awards', { kinds: [CRAYS_PROTOCOL.badgeAwardKind], tags: { '#p': [viewerPubkey] }, relays: [relayUrl], limit: 200, noCache: true }],
       ['statuses', { kinds: [CRAYS_PROTOCOL.orderStatusKind, CRAYS_PROTOCOL.legacyOrderStatusKind], tags: { '#p': [viewerPubkey] }, relays: [relayUrl], limit: 200, noCache: true }],
     );
-    const unsubscribes = subscriptions.map(([family, filter]) => subscribeToNostr(
+    unsubscribes.push(...subscriptions.map(([family, filter]) => subscribeToNostr(
       `room_${family}_${activeRoom.id}`,
       [filter],
       handleMessage,
       { closeOnEose: false, bytesPerEvent: 12 * 1024 },
-    ));
+    )));
+
+    // NIP-97 trust chain: the relay's NIP-11 pubkey is the community root key;
+    // the root-signed anchor declares admins and the delegated badge issuer.
+    fetchRelayRootPubkey(relayUrl).then((rootPubkey) => {
+      if (cancelled) return;
+      let currentAnchor: CommunityAnchor | null = null;
+      unsubscribes.push(subscribeToNostr(
+        `room_anchor_${activeRoom.id}`,
+        [{ kinds: [CRAYS_PROTOCOL.anchorKind], authors: [rootPubkey], tags: { '#d': ['community'] }, relays: [relayUrl], limit: 10, noCache: true }],
+        (message) => {
+          const event = isParsedEvent(message);
+          if (!event) return;
+          const anchor = parseCommunityAnchor(event);
+          if (!anchor || anchor.pubkey !== rootPubkey) return;
+          if (currentAnchor && !isNewerAnchor(anchor, currentAnchor)) return;
+          currentAnchor = anchor;
+          const trust = trustFromAnchor(anchor);
+          trustHolder.current = trust;
+          setCommunityTrust(trust);
+          if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'anchor', admins: anchor.admins.length })}`);
+          openPhaseTwo(trust);
+        },
+        { closeOnEose: false, bytesPerEvent: 12 * 1024 },
+      ));
+    }).catch((error) => {
+      // The room stays usable for social surfaces; entitlement derivation
+      // simply stays empty until the anchor can be resolved.
+      if (__DEV__) console.warn(`[crays-room-data] NIP-11 root resolution failed for ${relayUrl}: ${error?.message ?? error}`);
+    });
 
     const timeout = setTimeout(() => setLoading(false), 10_000);
     return () => {
+      cancelled = true;
       clearTimeout(timeout);
       unsubscribes.forEach((unsubscribe) => unsubscribe());
+      phaseTwoUnsubscribes.forEach((unsubscribe) => unsubscribe());
     };
   }, [activeRoom, viewerPubkey]);
 
@@ -354,15 +425,20 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
 
   const visiblePosts = useMemo(() => posts.filter((post) => !isBlocked(post.pubkey, activeRoom?.id)), [activeRoom?.id, isBlocked, posts]);
 
-  const liveOrders = useMemo<RoomOrder[]>(() => awards.flatMap((award) => {
-    const product = products.find((candidate) => candidate.address === award.address);
-    if (!product) return [];
-    const latest = statuses
-      .filter((status) => status.awardId === award.id && status.address === award.address && status.contextKey.startsWith('order:'))
-      .sort((left, right) => right.createdAt - left.createdAt || left.id.localeCompare(right.id))[0];
-    const statusOrderRef = latest?.contextKey.slice('order:'.length);
-    return [{ id: `${award.id}:${statusOrderRef || award.orderRef}`, awardId: award.id, orderRef: statusOrderRef || award.orderRef, product, status: latest?.status || 'pending', createdAt: award.createdAt, updatedAt: latest?.createdAt || award.createdAt, recipientPubkey: award.recipientPubkey, roomId: activeRoom?.id, roomName: activeRoom?.name }];
-  }).sort((a, b) => b.updatedAt - a.updatedAt), [activeRoom?.id, activeRoom?.name, awards, products, statuses]);
+  const liveOrders = useMemo<RoomOrder[]>(() => {
+    if (!communityTrust) return [];
+    return awards.flatMap((award) => {
+      const product = products.find((candidate) => candidate.address === award.address);
+      const definition = definitions.get(award.address);
+      if (!product || !definition) return [];
+      if (!awardIssuerValid({ issuer: award.issuerPubkey, sellable: definition.sellable, trust: communityTrust })) return [];
+      const latest = statuses
+        .filter((status) => status.awardId === award.id && status.address === award.address && status.contextKey.startsWith('order:') && statusSignerValid(status.signerPubkey, communityTrust))
+        .sort((left, right) => right.createdAt - left.createdAt || left.id.localeCompare(right.id))[0];
+      const statusOrderRef = latest?.contextKey.slice('order:'.length);
+      return [{ id: `${award.id}:${statusOrderRef || award.orderRef}`, awardId: award.id, orderRef: statusOrderRef || award.orderRef, product, status: latest?.status || 'pending', createdAt: award.createdAt, updatedAt: latest?.createdAt || award.createdAt, recipientPubkey: award.recipientPubkey, roomId: activeRoom?.id, roomName: activeRoom?.name }];
+    }).sort((a, b) => b.updatedAt - a.updatedAt);
+  }, [activeRoom?.id, activeRoom?.name, awards, communityTrust, definitions, products, statuses]);
 
   useEffect(() => {
     if (!liveOrders.length) return;
@@ -377,16 +453,17 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
 
   const orders = useMemo(() => [...liveOrders, ...archivedOrders.filter((item) => !liveOrders.some((live) => live.id === item.id))].sort((a, b) => b.updatedAt - a.updatedAt), [archivedOrders, liveOrders]);
 
-  const liveEntitlements = useMemo(() => activeRoom ? deriveEntitlements({
+  const liveEntitlements = useMemo(() => activeRoom && communityTrust ? deriveEntitlements({
     awards,
     definitions,
     statuses,
-    revokedAwardIds: new Set(Array.from(revocations.entries()).filter(([awardId, issuer]) => awards.some((award) => award.id === awardId && award.issuerPubkey === issuer)).map(([awardId]) => awardId)),
+    revocations,
+    trust: communityTrust,
     // Presentation is portable to staff scanners, so it carries the signed
     // manifest relay URL—not this device's QA/proxy transport override.
     room: { id: activeRoom.id, name: activeRoom.name, relayUrl: activeRoom.relayUrl },
     now: projectionNow,
-  }) : [], [activeRoom, awards, definitions, projectionNow, revocations, statuses]);
+  }) : [], [activeRoom, awards, communityTrust, definitions, projectionNow, revocations, statuses]);
 
   useEffect(() => {
     if (!liveEntitlements.length) return;

@@ -19,8 +19,8 @@ exit points: object detail, live QR presentation, venue support
 
 ## Purpose and handoff goal
 
-The holder sees the same kind-8 award, kind-30009 definition, and kind-37237
-fulfillment truth that staff sees. Finite uses are derived from the latest valid
+The holder sees the same kind-8 award, its addressable definition (30009
+membership or 30402 listing), and kind-37237 fulfillment truth that staff sees. Finite uses are derived from the latest valid
 status in each fulfillment context. A usable object can create a short-lived,
 holder-signed kind-27236 QR; no durable award or local cache is itself a QR.
 
@@ -34,7 +34,7 @@ file layout, and UI primitive choices may differ.
 Venue subscription owner
   role: Subscription
   owns: live request handles and EOSE/connectivity state
-  receives: one authoritative relay and signed room manifest trust anchors
+  receives: one authoritative relay and the kind-31727 community anchor
   emits: validated definitions, awards, statuses, revocations
   must not own: use counters or purchase success
 
@@ -95,11 +95,11 @@ presentation child emits no commerce mutation and owns only ephemeral QR state.
 
 ```text
 source state:
-  definitions by 30009 address
+  definitions by their address (30009/30402)
   awards by kind-8 event ID
   statuses by event ID
   revocations by target award ID and issuer
-  trust anchors from signed room manifest
+  trust anchors from the kind-31727 community anchor
 
 derived entitlement state:
   active | available | exhausted | expired | revoked | cancelled
@@ -118,10 +118,10 @@ external handles:
 
 ```text
 route/create -> load archive and start relay subscriptions
-relay definition -> validate operator and upsert by address/event freshness
-relay award -> validate holder and manifest award issuer; upsert by ID
+relay definition -> validate anchor-admin author and upsert by address/event freshness
+relay award -> validate holder and anchor-authorized issuer role; upsert by ID
 relay status -> validate holder/address/award/context/status and authorized signer
-relay deletion -> accept revocation only when deletion author issued the award
+relay deletion -> accept revocation only from the award issuer or an anchor admin
 clock tick -> recompute expiry
 leave/offline -> dispose live room handles; retain verified archive
 
@@ -137,27 +137,29 @@ any -> disposed on unmount; cancel timer and ignore late signer callbacks
 
 ```text
 Definition event:
-  kind: 30009
-  identity: address 30009:<definition issuer>:<d>
-  required: d, supported type, name
-  optional: description, billing, event address, max_uses, expiration
+  kind: 30009 (membership) or 30402 (product/pass/ticket)
+  identity: address <kind>:<definition author>:<d>
+  required: d, name (30009, bare t=membership topic) or title (30402)
+  optional: description, NIP-99 price (billing recurrence rides its 4th
+            element), event address, max_uses, expiration
 
 Ownership event:
   kind: 8
   required: a=definition address, p=holder
-  trust: author equals the signed manifest's award issuer
+  trust: author is an anchor admin, or the badge_issuer for a sellable
+         definition
   optional: order, i/payment reference, expiration
 
 Status event:
   kind: 37237 (27237 read-only migration compatibility)
   required: status, a, e=award, p=holder, exactly one order/event context
   addressability: d=order:<id> or event:<coordinate>
-  trust: authorized venue status signer
+  trust: anchor admin or badge issuer signer
 
 Revocation event:
   kind: 5
   required: e=award
-  trust: deletion author equals that award's issuer
+  trust: deletion author equals that award's issuer or is an anchor admin
 
 Presentation event:
   kind: 27236
@@ -171,7 +173,7 @@ Presentation event:
 ## Data flow and side effects
 
 ```text
-signed manifest
+community anchor (kind 31727)
   -> one relay per subscription family
   -> FlatBuffer event validation inside callback
   -> minimal stable copy
@@ -223,7 +225,7 @@ destroy: clear interval; invalidate pending generation; dispose subscriptions
    ID breaks a same-second tie.
 4. A cancellation that is latest for a context removes that context from the
    fulfilled-use count.
-5. Revocation is valid only from the award issuer.
+5. Revocation is valid only from the award issuer or an anchor admin.
 6. Expiry/revocation takes precedence over remaining-use presentation.
 7. Membership/pass presentations use a fresh `use:` context; event tickets use
    the event coordinate; products use the purchase/order reference.

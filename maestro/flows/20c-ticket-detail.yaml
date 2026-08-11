@@ -6,7 +6,8 @@ appId: life.crays
     visible:
       id: "ticket-detail-screen"
     timeout: 15000
-- assertVisible: "Ready · relay issued"
+- assertVisible: "Ready to show"
+- assertNotVisible: "Ready · relay issued"
 - scrollUntilVisible:
     element:
       id: "entitlement-presentation"
@@ -14,5 +15,6 @@ appId: life.crays
 - assertVisible:
     id: "entitlement-presentation"
 - assertVisible: "Live code · refreshes automatically · tap to enlarge"
-- assertVisible: ".*short-lived code is signed.*"
+- assertVisible: ".*refreshes automatically and is signed for you.*"
+- assertVisible: ".*Staff checks your ticket.*"
 - takeScreenshot: 20c-ticket-detail-relay

@@ -25,7 +25,7 @@ const pool = makePool();
 const { events } = await queryUntil(
   pool,
   state.relay_url,
-  { kinds: [0, 1, 78, 30009, 31923], limit: 200 },
+  { kinds: [0, 1, 78, 30009, 30402, 31923], limit: 200 },
   (polled) => fixtureIds.every((id) => polled.some((event) => event.id === id)),
   'projected fixture family is stored on the scenario relay',
 );
@@ -50,8 +50,9 @@ assert(
 
 assert(state.feed_ids.every((id) => events.some((event) => event.id === id && event.kind === 1)), 'all seeded room feed posts exist on the relay');
 
-const definitions = events.filter((event) => event.kind === 30009);
-const definitionName = (event) => event.tags.find((tag) => tag[0] === 'name')?.[1];
+const definitions = events.filter((event) => event.kind === 30009 || event.kind === 30402);
+// NIP-97: 30402 listings name with `title`; 30009 memberships keep `name`.
+const definitionName = (event) => event.tags.find((tag) => tag[0] === 'title' || tag[0] === 'name')?.[1];
 for (const [, productName, , price] of FIXTURE_PRODUCTS) {
   const product = definitions.find((event) => definitionName(event) === productName);
   assert(Boolean(product), `seeded product ${productName} exists on the relay`);

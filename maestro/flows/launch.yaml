@@ -18,6 +18,9 @@ appId: life.crays
     timeout: 20000
 - tapOn: "(exp|http)://"
 - inputText: "exp://localhost:8085"
+# The tablet IME covers the launcher action row; dismiss it before selecting
+# Connect so the shared startup does not race an off-screen control.
+- hideKeyboard
 - tapOn: "Connect"
 - extendedWaitUntil:
     visible: "Continue"

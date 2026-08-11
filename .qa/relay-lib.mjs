@@ -1,15 +1,18 @@
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import WebSocket from 'ws';
-import { finalizeEvent } from 'nostr-tools';
+import { finalizeEvent, getPublicKey } from 'nostr-tools';
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 
 useWebSocketImplementation(WebSocket);
 
-export const COORDINATOR_URL = (process.env.COORDINATOR_URL || 'http://127.0.0.1:7798').replace(/\/$/, '');
+export const COORDINATOR_URL = (process.env.COORDINATOR_URL || 'https://coordinator.nuts.cash').replace(/\/$/, '');
 export const STATE_PATH = process.env.CRAYS_QA_STATE || '/tmp/qa-crays-room.json';
 export const DEFAULT_KEYS_JSON = '/root/code/strfry-badge-node/test/env/keys.json';
+export const RESERVED_RELAY_DOMAIN = process.env.CRAYS_QA_RELAY_DOMAIN || 'crays-test.relays.nuts.cash';
+export const FIXTURE_CAPABILITY_D = 'crays-qa-write-capabilities';
+export const FIXTURE_WRITE_KINDS = [0, 1, 4, 5, 78, 1984, 27236, 31925];
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export const nowSeconds = () => Math.floor(Date.now() / 1000);
@@ -57,12 +60,18 @@ export function nip98Header(url, method, body, privHex) {
 }
 
 export async function requireCoordinator() {
-  try {
-    const response = await fetch(`${COORDINATOR_URL}/healthz`, { signal: AbortSignal.timeout(3000) });
-    if (!response.ok) throw new Error(`status ${response.status}`);
-  } catch {
-    throw new Error(`Crays QA requires the Nuts coordinator at ${COORDINATOR_URL}; see .qa/README.md.`);
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await fetch(`${COORDINATOR_URL}/healthz`, { signal: AbortSignal.timeout(5000) });
+      if (response.ok) return;
+    } catch {
+      // The deployed health route can briefly lag while authenticated API and
+      // relay traffic remain healthy. Retry before declaring infrastructure
+      // unavailable.
+    }
+    if (attempt < 2) await sleep(750);
   }
+  throw new Error(`Crays QA requires the Nuts coordinator at ${COORDINATOR_URL}; see .qa/README.md.`);
 }
 
 async function coordinatorApi(path, method, keys, body) {
@@ -86,6 +95,35 @@ export const getRelay = (id, keys) => coordinatorApi(`/relays/${id}`, 'GET', key
 export const getRelaySecrets = (id, keys) => coordinatorApi(`/relays/${id}/secrets`, 'GET', keys);
 export const deleteRelay = (id, keys) => coordinatorApi(`/relays/${id}`, 'DELETE', keys);
 export const listRelays = (keys) => coordinatorApi('/relays', 'GET', keys);
+
+/**
+ * The deployed coordinator rate-limits creation per owner. Relay-backed Crays
+ * QA therefore owns one reserved relay and only creates it if it is genuinely
+ * absent. Never create a per-scenario relay on the live coordinator.
+ */
+export async function reserveOrReuseRelay(keys) {
+  const relays = await listRelays(keys);
+  let relay = relays.find((candidate) => candidate.domain === RESERVED_RELAY_DOMAIN);
+  if (!relay) {
+    const created = await createRelay(
+      {
+        name: 'crays-test',
+        description: 'Crays RN reserved QA relay (live coordinator). Do not delete.',
+        domain_label: 'crays-test',
+        admin_pubkeys: [keys.admin.pub],
+        badge_d: 'members',
+      },
+      keys,
+    );
+    relay = await waitRelayRunning(created.id, keys);
+    assert(true, `created reserved relay ${RESERVED_RELAY_DOMAIN}`);
+  } else if (relay.status !== 'running') {
+    relay = await waitRelayRunning(relay.id, keys);
+  }
+  assert(relay.domain === RESERVED_RELAY_DOMAIN, `reusing reserved relay ${RESERVED_RELAY_DOMAIN}`);
+  assert(relay.relay_url === `wss://${RESERVED_RELAY_DOMAIN}`, 'reserved relay exposes its deployed WSS URL');
+  return relay;
+}
 
 export async function waitRelayRunning(id, keys, timeoutMs = 90_000) {
   const deadline = Date.now() + timeoutMs;
@@ -133,24 +171,23 @@ export async function settleBeforeAbsence(label) {
   console.log(`ok - settled ${ABSENCE_SETTLE_MS}ms before absence check so a lagging write cannot fake it: ${label}`);
 }
 
-/**
- * Surface a failed teardown loudly: a scenario may pass while leaking the
- * provisioned relay and its docker volume. Printed with the relay name and
- * the exact recovery command so the leak is actionable.
- */
+/** Surface a failed fixture teardown without implying the reserved relay should be deleted. */
 export function warnTeardownLeak(scenario, state, error) {
   const relay = state?.name ? `${state.name} (id ${state.id})` : 'unknown relay (state file missing)';
   console.error(`\n*** QA TEARDOWN FAILED for ${scenario} ***`);
-  console.error(`*** leaked relay: ${relay}`);
+  console.error(`*** reserved relay may contain fixture leftovers: ${relay}`);
   console.error(`*** cause: ${String(error?.message || error).split('\n')[0]}`);
   console.error('*** recover once no other QA run is live with: node .qa/relay-teardown.mjs --sweep');
-  console.error('*** the scenario result above still stands; this warning only covers infrastructure cleanup\n');
+  console.error('*** do not delete the reserved relay or its volume\n');
 }
 
 export async function publishUntilStored(pool, relayUrl, event, label, timeoutMs = 45_000) {
   const deadline = Date.now() + timeoutMs;
+  let lastRejection;
   while (Date.now() < deadline) {
-    await Promise.allSettled(pool.publish([relayUrl], event));
+    const outcomes = await Promise.allSettled(pool.publish([relayUrl], event));
+    const rejected = outcomes.find((outcome) => outcome.status === 'rejected');
+    if (rejected) lastRejection = String(rejected.reason?.message || rejected.reason);
     await sleep(750);
     const stored = await pool.get([relayUrl], { ids: [event.id] });
     if (stored?.id === event.id) {
@@ -158,7 +195,124 @@ export async function publishUntilStored(pool, relayUrl, event, label, timeoutMs
       return stored;
     }
   }
-  throw new Error(`relay never round-tripped ${label}`);
+  throw new Error(`relay never round-tripped ${label}${lastRejection ? `; last rejection: ${lastRejection}` : ''}`);
+}
+
+export function fixtureSignerMap(keys, badgeIssuerSecret) {
+  if (!/^[0-9a-f]{64}$/i.test(badgeIssuerSecret || '')) throw new Error('fixture cleanup requires the reserved relay badge issuer secret');
+  const signers = new Map();
+  const add = (key) => {
+    if (key?.pub && key?.priv) signers.set(key.pub, key.priv);
+  };
+  add(keys.admin);
+  add(keys.issuer);
+  for (const user of keys.users || []) add(user);
+  const badgeIssuerPubkey = getPublicKey(Uint8Array.from(Buffer.from(badgeIssuerSecret, 'hex')));
+  signers.set(badgeIssuerPubkey, badgeIssuerSecret);
+  return { signers, badgeIssuerPubkey };
+}
+
+export async function queryFixtureEvents(pool, relayUrl, signers) {
+  const events = await pool.querySync([relayUrl], { authors: [...signers.keys()], limit: 5000 });
+  // NIP-09 tombstones are the cleanup proof and may remain stored. They are
+  // never cleanup targets themselves, otherwise every sweep creates another
+  // unbounded generation of tombstones.
+  return events.filter((event) => event.kind !== 5);
+}
+
+/**
+ * Publish a UI-invisible priced definition and awards that grant fixture
+ * identities the kinds exercised by the harness, including kind 5 so each
+ * original author can remove its own events under NIP-09.
+ */
+export async function ensureFixtureCleanupCapability(pool, relayUrl, keys, badgeIssuerSecret, recipientPubkeys) {
+  const address = `30009:${keys.admin.pub}:${FIXTURE_CAPABILITY_D}`;
+  const definition = signEvent(
+    {
+      kind: 30009,
+      tags: [
+        ['d', FIXTURE_CAPABILITY_D],
+        ['t', 'qa_capability'],
+        ['name', 'Crays QA fixture writes'],
+        ['price', '0', 'EUR'],
+        ...FIXTURE_WRITE_KINDS.map((kind) => ['permission', String(kind), 'write']),
+      ],
+    },
+    keys.admin.priv,
+  );
+  await publishUntilStored(pool, relayUrl, definition, 'temporary QA capability definition');
+  await sleep(1000);
+
+  const awards = [];
+  for (const pubkey of [...new Set(recipientPubkeys)].filter(Boolean)) {
+    const award = signEvent(
+      { kind: 8, tags: [['a', address], ['p', pubkey], ['t', '30009'], ['t', 'qa_capability']] },
+      badgeIssuerSecret,
+    );
+    await publishUntilStored(pool, relayUrl, award, `temporary QA capability award for ${pubkey.slice(0, 8)}`);
+    awards.push(award);
+  }
+  await sleep(1000);
+  return { definition, awards };
+}
+
+/**
+ * Delete every non-kind-5 fixture event with a kind-5 event signed by that
+ * event's original author. Ordinary fixture identities are deleted first;
+ * issuer awards next; the admin capability definition last.
+ */
+export async function deleteFixtureEvents({ pool, relayUrl, keys, badgeIssuerSecret, communityRoot, excludeIds = [], label }) {
+  const { signers, badgeIssuerPubkey } = fixtureSignerMap(keys, badgeIssuerSecret);
+  if (signers.has(communityRoot)) throw new Error('fixture cleanup signer set unexpectedly contains the community root');
+  const excluded = new Set(excludeIds);
+  const targets = (await queryFixtureEvents(pool, relayUrl, signers)).filter((event) => !excluded.has(event.id));
+  if (!targets.length) {
+    assert(true, `${label}: no fixture-authored leftovers`);
+    return { deleted: 0, deletionIds: [] };
+  }
+
+  const byAuthor = new Map();
+  for (const event of targets) {
+    const authored = byAuthor.get(event.pubkey) || [];
+    authored.push(event);
+    byAuthor.set(event.pubkey, authored);
+  }
+  const orderedAuthors = [...byAuthor.keys()].sort((left, right) => {
+    const rank = (pubkey) => pubkey === keys.admin.pub ? 2 : pubkey === badgeIssuerPubkey ? 1 : 0;
+    return rank(left) - rank(right);
+  });
+  const deletionIds = [];
+  for (const author of orderedAuthors) {
+    const authored = byAuthor.get(author);
+    const privateKey = signers.get(author);
+    if (!privateKey) throw new Error(`${label}: no private key for fixture author ${author}`);
+    const deletion = signEvent(
+      {
+        kind: 5,
+        content: `Crays QA cleanup: ${label}`,
+        tags: authored.map((event) => ['e', event.id]),
+      },
+      privateKey,
+    );
+    try {
+      await publishUntilStored(pool, relayUrl, deletion, `${label} deletion by ${author.slice(0, 8)}`, 15_000);
+    } catch (error) {
+      throw new Error(`${label}: relay rejected fixture-author deletion by ${author}: ${error.message}`);
+    }
+    deletionIds.push(deletion.id);
+  }
+
+  await settleBeforeAbsence(`${label}: fixture targets`);
+  await queryUntil(
+    pool,
+    relayUrl,
+    { ids: targets.map((event) => event.id), limit: Math.max(100, targets.length) },
+    (events) => events.length === 0,
+    `${label}: all ${targets.length} fixture-authored targets were deleted`,
+  );
+  const remaining = (await queryFixtureEvents(pool, relayUrl, signers)).filter((event) => !excluded.has(event.id));
+  assert(remaining.length === 0, `${label}: reserved relay has no non-deletion fixture events outside the protected run capability`);
+  return { deleted: targets.length, deletionIds };
 }
 
 export function emulatorUrl(url) {
@@ -171,7 +325,8 @@ export function readState() {
 }
 
 export function writeState(state) {
-  writeFileSync(STATE_PATH, `${JSON.stringify({ ...state, written_at: new Date().toISOString() }, null, 2)}\n`);
+  writeFileSync(STATE_PATH, `${JSON.stringify({ ...state, written_at: new Date().toISOString() }, null, 2)}\n`, { mode: 0o600 });
+  chmodSync(STATE_PATH, 0o600);
   assert(true, `state written to ${STATE_PATH}`);
 }
 

@@ -11,17 +11,31 @@ here and versioned. Established Nuts records remain unchanged.
 
 ## Established records
 
+Entitlements follow **NIP-97** (Composable Entitlements and Community Access
+Control; draft spec of record at `~/nips/97.md`). The trust root is the room
+relay's NIP-11 `pubkey`; the root-signed community anchor declares admins and
+the delegated `badge_issuer`. All entitlement events are resolved from, and
+only from, the pinned community relay.
+
 | Capability | Kind | Contract |
 | --- | ---: | --- |
 | Identity/profile | `0` | NIP-01 profile JSON. |
 | Room feed | `1` | NIP-29 `h=<room-id>` context plus NIP-40 `expiration`. |
-| Event | `31922`, `31923` | NIP-52 calendar event. |
+| Community anchor | `31727` | NIP-97 anchor, `d=community`, root-signed: admin `p` tags, `badge_issuer`. |
+| Membership definition | `30009` | NIP-58 definition with `t=membership`, optional NIP-99 `price` (recurrence in the 4th element) and `permission` tags. |
+| Product, pass, ticket definition | `30402` | NIP-99 listing (`title`, `summary`, `price`, `availability`, `max_uses`); a ticket links its calendar event with `a`. |
+| Event | `31922`, `31923` | NIP-52 calendar event; also its own free-admission definition. |
 | RSVP | `31925` | NIP-52 RSVP. |
-| Product, pass, membership, ticket definition | `30009` | Nuts badge-definition tags (`type`, `t`, `name`, price and availability). |
-| Ownership/order award | `8` | NIP-58 award with `a`, `p`, and semantic `order` or `event` context. |
-| Order/check-in state | `37237` | Addressable Nuts status with semantic context and matching `d`; read legacy `27237`. |
+| Ownership/order award | `8` | NIP-58 award with `a`, `p`, semantic `order`/`event` context, and `t` query hints (definition kind plus finer topic). |
+| Order/check-in state | `37237` | Addressable NIP-97 status with semantic context and matching `d`; read legacy `27237`. |
 | Presentation | `27236` | Short-lived Nuts presentation; never treat the QR alone as fulfillment. |
 | Wallet | `17375`, `7375`, `7376` | NIP-60 encrypted wallet, proofs, and optional history. |
+
+NIP-97 issuance rules apply: anchor admins may award any definition; the
+`badge_issuer` may award sellable (priced) definitions only. Award revocation
+is a NIP-09 kind `5` from the award issuer or an anchor admin. Fulfillment
+signers are anchor admins or the `badge_issuer` (the relay write gate enforces
+37237-write role holders relay-side).
 
 ## Versioned Crays pilot records
 
@@ -81,3 +95,14 @@ room binding, signer binding, and one-active-room subscription behavior.
 When a standard replaces one of these pilot records, add a dual-read period,
 write only the new shape, independently verify both projections, then remove
 pilot reads in a named protocol version. Never silently reinterpret v1 data.
+
+### NIP-97 cut-over
+
+The entitlement substrate moved from the venue-custom model (everything on
+`30009` with `type` tags, trust from the manifest `operator`/`award_issuer`
+tags) to NIP-97 in one clean cut: pilot QA relays are freshly provisioned per
+scenario, so no dual-read of `30009 type=*` data was kept. The manifest
+`award_issuer` tag is parsed for interop but no longer trusted; entitlement
+trust derives from the NIP-11 root key and the anchor. Local entitlement/order
+archives were versioned (`crays.orders.archive.v2`,
+`crays.entitlements.archive.v2`) so pre-NIP caches are abandoned, not read.

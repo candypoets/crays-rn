@@ -3,8 +3,17 @@ import { decodeInviteToken, fetchInviteHandoff, loadInvitePreview, redeemInvite 
 
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn() }));
 
-const issuer = 'a'.repeat(64);
-const claims = { v: 1, nonce: 'qa-nonce', badge: `30009:${issuer}:members`, exp: 2_000_000_000, badge_exp: 2_000_100_000, max: 1 };
+const root = 'a'.repeat(64);
+const admin = 'd'.repeat(64);
+const badgeIssuer = 'e'.repeat(64);
+const claims = { v: 1, nonce: 'qa-nonce', badge: `30009:${root}:members`, exp: 2_000_000_000, badge_exp: 2_000_100_000, max: 1 };
+const communityInfo = {
+  community_root: root,
+  admins: [root, admin],
+  badge_issuer: badgeIssuer,
+  relay_url: 'wss://venue.test',
+  required_badge: claims.badge,
+};
 const base64url = (value: object) => globalThis.btoa(JSON.stringify(value)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
 const token = `${base64url(claims)}.server-signature`;
 
@@ -30,9 +39,18 @@ describe('invite contract', () => {
     ['wrong badge', `${base64url({ ...claims, badge: 'bad' })}.sig`],
   ])('rejects %s tokens', (_label, input) => expect(() => decodeInviteToken(input, 10)).toThrow());
 
-  it('matches token, required badge, and issuer metadata', async () => {
-    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => ({ badge_issuer: issuer, relay_url: 'wss://venue.test', required_badge: claims.badge }) }) as never;
+  it('matches token, required badge, and anchor metadata', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({ ok: true, json: async () => communityInfo }) as never;
     await expect(loadInvitePreview('https://venue.test', token)).resolves.toMatchObject({ claims, serviceUrl: 'https://venue.test' });
+  });
+
+  it('rejects a membership definition authored outside the anchor admins', async () => {
+    globalThis.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...communityInfo, required_badge: `30009:${'0'.repeat(64)}:members` }),
+    }) as never;
+    const foreignToken = `${base64url({ ...claims, badge: `30009:${'0'.repeat(64)}:members` })}.server-signature`;
+    await expect(loadInvitePreview('https://venue.test', foreignToken)).rejects.toThrow(/published identity/);
   });
 
   it('loads a hidden room-entry handoff without exposing the token in navigation', async () => {
@@ -47,7 +65,7 @@ describe('invite contract', () => {
 
   it('posts one redemption and reuses the persisted result', async () => {
     globalThis.fetch = jest.fn()
-      .mockResolvedValueOnce({ ok: true, json: async () => ({ badge_issuer: issuer, relay_url: 'wss://venue.test', required_badge: claims.badge }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => communityInfo })
       .mockResolvedValueOnce({ ok: true, json: async () => ({ event_id: 'b'.repeat(64) }) }) as never;
     const preview = await loadInvitePreview('https://venue.test', token);
     await expect(redeemInvite(preview, token, 'c'.repeat(64))).resolves.toMatchObject({ eventId: 'b'.repeat(64), nonce: 'qa-nonce' });

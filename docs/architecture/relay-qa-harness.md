@@ -142,7 +142,7 @@ The runner records infrastructure ownership immediately after each successful cr
 
 1. Product data is accepted only when its signature and expected authority relationship verify.
 2. Exactly one room relay is active; search, identity/message, and wallet-sync infrastructure do not count as active rooms.
-3. `30009:<issuer>:<d>` definitions and kind-8 awards remain the durable entitlement substrate.
+3. Addressable definitions (`30009` memberships, `30402` listings, `31922/31923` events) and kind-8 awards remain the durable entitlement substrate.
 4. Order/check-in state writes use addressable kind `37237` with both a stable `d` context and the legacy semantic context tag (`order` or `event`).
 5. Status events count only when signed by relay/admin/badge authorities allowed by the venue trust contract.
 6. A publish succeeds after at least one required relay accepts it; failed/absent acknowledgements remain visible and retryable.
@@ -157,13 +157,13 @@ The runner records infrastructure ownership immediately after each successful cr
 | Family | Relay truth seeded | Screens/workflows |
 | --- | --- | --- |
 | `entry` | identity/profile only when a relay publish is required | 06, 06B, 07, 07B, 09 |
-| `invite` | issuer profile, invite, `30009`, optional kind-8 prior award | 08, 08B, invite workflows |
+| `invite` | issuer profile, invite, `31727` community anchor, `30009` `t=membership` definition, optional kind-8 prior award | 08, 08B, invite workflows |
 | `discover` | signed expiring room highlights and direct manifests | 10, 27, 28, outage/forgery paths |
 | `room` | venue profile/metadata, visible profiles, presence, announcements, posts | 01, 03, 10B, 11, 21 |
 | `messaging` | sender/recipient profiles, request/contact state, block/report variants | 02, 22, Messages workflows |
-| `commerce` | `30009` products, kind-8 orders, `37237` status history | 04, 12–15, 17, 23, 24 |
-| `events` | `31922/31923`, `31925`, event-access `30009`, award/status | 05, 20 and ticket paths |
-| `membership` | membership/pass `30009`, kind-8 award, `37237` uses | 05, 16, 18, 19 |
+| `commerce` | `30402` product listings, kind-8 orders, `37237` status history | 04, 12–15, 17, 23, 24 |
+| `events` | `31922/31923`, `31925`, event-access `30402` ticket listings, award/status | 05, 20 and ticket paths |
+| `membership` | membership `30009` / pass `30402`, kind-8 award, `37237` uses | 05, 16, 18, 19 |
 | `wallet` | encrypted wallet-sync fixtures and deterministic local mint/shim state | 25, 26 and recovery/conflict paths |
 
 Unknown PRD event shapes—room discovery, presence, and room-feed expiration—must be isolated behind versioned Crays contracts and explicitly labelled pilot contracts. They may not masquerade as established NIPs.

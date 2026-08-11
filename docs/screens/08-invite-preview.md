@@ -4,7 +4,7 @@
 
 This screen opens directly from an invite deep link, before authentication. It shows the room/operator identity, the exact membership grant, invite expiry, and award expiry when present. It persists `{serviceUrl, transportRelayUrl, roomId, token}` before handing off to account creation or login. Accepting never enters a room or publishes presence.
 
-The token's base64url claims are untrusted display input until checked against `GET /community/info`. The client accepts only version 1, a future expiry, a valid kind-30009 badge address, a matching `required_badge`, and a badge issuer matching that address. The client deliberately says “issuer details match”; only `POST /redeem` verifies the service HMAC. The room card is independently read from the supplied Nostr relay and must pass the signed manifest projection.
+The token's base64url claims are untrusted display input until checked against `GET /community/info`. The client accepts only version 1, a future expiry, a valid kind-30009 badge address, a matching `required_badge`, and a definition author listed in the mirrored anchor (`admins` or `community_root`). The client deliberately says “issuer details match”; only `POST /redeem` verifies the service HMAC. The room card is independently read from the supplied Nostr relay and must pass the signed manifest projection.
 
 States: initial/loading; issuer reachable and signed room loaded; issuer valid while room is still loading; offline with retry; malformed; expired; badge mismatch; issuer mismatch; no local identity; local identity ready; redeeming; redemption limit/used; and retryable service failure. Back preserves the invite context; cancel does not consume it.
 

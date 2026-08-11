@@ -8,7 +8,7 @@ const pool = makePool();
 const { events } = await queryUntil(
   pool,
   state.relay_url,
-  { kinds: [0, 1, 8, 78, 30009, 30078, 31923, 37237], limit: 200 },
+  { kinds: [0, 1, 8, 78, 30009, 30078, 30402, 31727, 31923, 37237], limit: 200 },
   (polled) => polled.length >= 15,
   'fixture family remains queryable',
 );

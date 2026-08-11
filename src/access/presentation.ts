@@ -3,6 +3,7 @@ import type { Event, EventTemplate } from 'nostr-tools';
 
 import { signActiveEvent } from '@/account/account';
 import { presentationContextFor } from '@/access/entitlements';
+import { isDefinitionAddress } from '@/access/nip97';
 import type { RoomEntitlement } from '@/rooms/types';
 
 export const PRESENTATION_KIND = 27236;
@@ -13,9 +14,10 @@ export const ENTITLEMENT_PRESENTATION_TYPE = 'nuts_entitlement_presentation';
 
 function isHex(value: string) { return /^[0-9a-f]{64}$/i.test(value); }
 
+/** NIP-97: the presented `a` tag may reference any definition family. */
 function validBadgeAddress(value: string) {
-  const [kind, author, ...d] = value.split(':');
-  return kind === '30009' && isHex(author) && Boolean(d.join(':'));
+  const [, author, ...d] = value.split(':');
+  return isDefinitionAddress(value) && isHex(author) && Boolean(d.join(':'));
 }
 
 function validEventAddress(value: string) {

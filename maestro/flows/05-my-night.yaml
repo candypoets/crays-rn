@@ -8,7 +8,26 @@ appId: life.crays
       id: "my-night-screen"
     timeout: 15000
 - assertVisible: "Rooftop Jazz"
+- assertVisible: "Ready at the door"
+- assertVisible: ".*Live code ready.*"
 - assertVisible: "Mezcal Negroni"
 - assertVisible: "Ready"
 - assertVisible: "Skyline Regular"
+- assertNotVisible: "CR-QA-READY"
 - takeScreenshot: 05-my-night-relay
+- tapOn:
+    id: "my-night-event"
+- extendedWaitUntil:
+    visible:
+      id: "ticket-detail-screen"
+    timeout: 15000
+- assertVisible: "Ready to show"
+- assertVisible:
+    id: "entitlement-presentation"
+- takeScreenshot: 05-my-night-live-ticket
+- tapOn:
+    id: "ticket-detail-back"
+- extendedWaitUntil:
+    visible:
+      id: "my-night-screen"
+    timeout: 15000

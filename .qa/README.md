@@ -102,15 +102,38 @@ The entry harness clears exactly `life.crays` during teardown and removes
 
 ## Relay-backed scenarios
 
-For any screen that reads or writes product data, bootstrap must provision the
-real coordinator/relay behavior described by `/root/code/nuts-cash`. A local
-relay, proxy, signer, payment shim, or clock control is acceptable when it
-preserves the production protocol boundary and the screen spec documents it.
+For any screen that reads or writes product data, bootstrap uses the deployed
+coordinator and the reserved owner-scoped relay
+`wss://crays-test.relays.nuts.cash`, preserving the production contract from
+`/root/code/nuts-cash`. The coordinator defaults to
+`https://coordinator.nuts.cash`; the stale local port 7798 is not part of QA.
+Bootstrap lists the fixture admin's relays and reuses the exact
+`crays-test.relays.nuts.cash` domain. It creates that reservation only when it
+is genuinely absent, because the live coordinator enforces owner limits and a
+creation cooldown.
 
 Do not use a JavaScript mock store as proof of relay behavior. Keep fixtures
-deterministic, make operations idempotent where the product requires it, and
-use a Crays-specific unique prefix so the shared Nuts janitor cannot remove an
-active scenario. `--sweep` is never safe while another QA run is live.
+deterministic and make operations idempotent where the product requires it.
+Addressable fixture `d` tags are stable and replace across runs; non-replaceable
+awards are removed before each seed. Scenario state files contain the
+re-fetched badge issuer secret, are always mode `0600`, and must never be
+printed or committed.
+
+The reserved relay persists, but fixture data does not. Bootstrap first grants
+fixture identities a temporary, UI-invisible NIP-97 capability and sweeps old
+events. Teardown publishes kind-5 deletions signed by each original fixture
+author, verifies the tombstones landed, waits before checking absence, and
+requires all non-kind-5 fixture events to be gone. Root-authored infrastructure
+(the kind-31727 community anchor and kind-30009 `members` definition) is never
+in the cleanup signer set. `node .qa/relay-teardown.mjs --sweep` recovers only
+fixture data; it never deletes the relay or a Docker volume, and is safe only
+when no other Crays QA run is active.
+
+UI runs connect through the Test Room bridge at
+`ws://10.0.2.2:8787`. It proxies WebSocket traffic to the reserved WSS relay,
+passes NIP-11 HTTP requests through to the deployed HTTPS origin, and forwards
+invite-service calls. Independent verifiers always query the WSS relay
+directly.
 
 Invite scenarios `qa-08-invite-preview.mjs` and
 `qa-08b-invite-accepted.mjs` mint through the real relay invite service. The
@@ -160,13 +183,16 @@ presence with selected intent, context, stable replacement key, and expiry.
 
 ## Long-running development Test Room
 
-`npm run test-room` provisions the same real signed fixture family but keeps it
-available behind a stable port until stopped. This is the manual-development
-counterpart to the short-lived per-scenario relays; it is not a mock store.
+`npm run test-room` seeds the same real signed fixture family on the reserved
+relay and keeps its proxy available behind a stable port until stopped. This is
+the manual-development counterpart to the screen scenarios; it is not a mock
+store.
 The Android emulator connects to `ws://10.0.2.2:8787`. Use
-`npm run test-room:stop` for scoped cleanup.
+`npm run test-room:stop` for author-scoped fixture cleanup. The reserved relay
+itself remains running.
 
 The executable lifecycle is `.qa/qa-test-room.mjs` with
 `maestro/flows/test-room.yaml`. It proves Discover card availability, remote
 entry without Bluetooth, quiet join, fixture rendering, manifest consumption,
-signature validity, zero presence writes, and exact relay teardown.
+signature validity, zero presence writes, and exact fixture teardown while the
+reserved relay remains available.

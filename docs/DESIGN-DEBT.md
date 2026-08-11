@@ -100,12 +100,13 @@ for every high-value event, denial, duplication, logout, blocks, and exact links
 
 ## D-010 — Entitlement trust and scanner operations
 
-**Partially implemented:** operator kind-30009 definitions, trusted manifest
-award issuer, operator 37237 statuses, issuer kind-5 revocations, finite-use
-derivation, and signed 90-second kind-27236 presentations. Still define general
-authorized status roles, replay storage, clock tolerance, offline policy,
-brightness boost, capacity, issuer rotation, legacy 27237 sunset, and revocation
-SLA.
+**Partially implemented:** anchor-admin kind-30402/30009 definitions, NIP-97
+anchor trust (NIP-11 community root plus delegated badge_issuer), admin/issuer
+37237 statuses, kind-5 revocations by award issuer or anchor admin, finite-use
+30402 (`max_uses`) derivation, and signed 90-second kind-27236 presentations.
+Still define general authorized status roles, replay storage, clock tolerance,
+offline policy, brightness boost, capacity, issuer rotation, legacy 27237
+sunset, and revocation SLA.
 
 **Evidence to close:** mobile/scanner tests for role removal, wrong issuer/holder/
 address, replay/expiry/future clock, offline scanner, rotation, live revocation,

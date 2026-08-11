@@ -25,11 +25,39 @@ appId: life.crays
     visible:
       id: "discover-screen"
     timeout: 30000
+# Newcomer surface: warm consent truth, one honest action.
 - assertVisible: "Discover rooms"
+- assertVisible: ".*never enters one for you.*"
 - assertVisible: "ACCOUNT READY"
-- assertVisible: "Map and search are not configured"
+- assertVisible: ".*No Bluetooth or location permission asked.*"
+- assertVisible: "Nearby is off"
 - assertVisible:
-    id: "discover-search-disabled"
-- assertVisible: ".*Direct signed room links and Nearby manifests still work.*"
-- assertVisible: ".*No Bluetooth or location permission was requested.*"
+    id: "nearby-rationale-button"
+- assertVisible: "Map search isn’t available yet"
+# Internal QA/protocol language never reaches the newcomer surface.
+- assertNotVisible: "Development test mode"
+- assertNotVisible: ".*test relay.*"
+- assertNotVisible: "Map and search are not configured"
+# Map is neither selected nor selectable while search is unavailable.
+- assertVisible:
+    id: "discover-map-tab"
+    enabled: false
+# The developer fixture stays subordinate and labelled as such.
+- assertVisible: "Developer"
+- assertVisible: "Test room"
+# The newcomer's one action explains Nearby before any permission prompt.
+- tapOn:
+    id: "nearby-rationale-button"
+- extendedWaitUntil:
+    visible:
+      id: "bluetooth-rationale-screen"
+    timeout: 15000
+- assertVisible: ".*does not make you visible.*"
+- tapOn:
+    id: "use-map-button"
+- extendedWaitUntil:
+    visible:
+      id: "discover-screen"
+    timeout: 15000
+- assertVisible: "Nearby is off"
 - takeScreenshot: 27-discover-handoff

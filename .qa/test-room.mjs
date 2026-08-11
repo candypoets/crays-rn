@@ -34,13 +34,15 @@ function runScript(file, env = scriptEnv) {
 }
 
 function teardown() {
-  if (!relayCreated && !existsSync(statePath)) return;
+  if (!relayCreated && !existsSync(statePath)) return true;
   try {
     runScript('.qa/relay-teardown.mjs');
   } catch (error) {
     console.error(`Test room teardown warning: ${error.message}`);
+    return false;
   }
   relayCreated = false;
+  return true;
 }
 
 async function stop(signal, exitCode = 0) {
@@ -49,9 +51,9 @@ async function stop(signal, exitCode = 0) {
   console.log(`\nStopping Crays Test Room (${signal})…`);
   for (const socket of sockets?.clients || []) socket.terminate();
   await new Promise((resolve) => server?.close(resolve) || resolve());
-  teardown();
+  const clean = teardown();
   rmSync(pidPath, { force: true });
-  process.exit(exitCode);
+  process.exit(clean ? exitCode : 1);
 }
 
 try {
@@ -68,8 +70,8 @@ try {
   }
   await requireCoordinator();
   if (existsSync(statePath)) {
-    console.log('Removing the previous scoped Test Room relay…');
-    teardown();
+    console.log('Sweeping previous Test Room fixtures from the reserved relay…');
+    if (!teardown()) throw new Error('previous reserved-relay fixture cleanup failed');
   }
   runScript('.qa/relay-bootstrap.mjs');
   relayCreated = true;
@@ -102,6 +104,21 @@ try {
       } catch (error) {
         response.writeHead(502, { 'content-type': 'application/json' });
         response.end(JSON.stringify({ error: `Test Room invite service unavailable: ${error.message}` }));
+      }
+      return;
+    }
+    if (request.method === 'GET' && (request.headers.accept || '').includes('application/nostr+json')) {
+      // NIP-11 passthrough: the app resolves the community root key from the
+      // relay document through this proxy, exactly as against a direct
+      // relay connection.
+      try {
+        const upstreamHttp = state.relay_url.replace(/^ws/, 'http');
+        const upstream = await fetch(`${upstreamHttp}${request.url}`, { headers: { accept: 'application/nostr+json' } });
+        response.writeHead(upstream.status, { 'content-type': upstream.headers.get('content-type') || 'application/nostr+json' });
+        response.end(Buffer.from(await upstream.arrayBuffer()));
+      } catch (error) {
+        response.writeHead(502, { 'content-type': 'application/json' });
+        response.end(JSON.stringify({ error: `Test Room relay document unavailable: ${error.message}` }));
       }
       return;
     }

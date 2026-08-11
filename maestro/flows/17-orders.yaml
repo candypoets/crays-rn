@@ -10,4 +10,7 @@ appId: life.crays
 - assertVisible: "Active now"
 - assertVisible: "Mezcal Negroni"
 - assertVisible: "Ready"
+- assertNotVisible: "CR-QA-READY"
+- assertNotVisible: "checkin-crays-qa-one"
+- assertNotVisible: "Skyline three-visit pass"
 - takeScreenshot: 17-orders-relay

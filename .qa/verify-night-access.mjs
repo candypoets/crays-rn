@@ -5,7 +5,9 @@ import { assert, makePool, queryUntil, readState } from './relay-lib.mjs';
 
 const state = readState();
 const claims = JSON.parse(Buffer.from(state.invite_token.split('.')[0], 'base64url').toString('utf8'));
-const issuer = state.required_badge.split(':')[1];
+// NIP-97: the award is signed by the anchor's delegated badge issuer; the
+// definition itself is authored by the community root.
+const issuer = state.badge_issuer_pubkey || state.required_badge.split(':')[1];
 const pool = makePool();
 const { events: awards } = await queryUntil(
   pool,

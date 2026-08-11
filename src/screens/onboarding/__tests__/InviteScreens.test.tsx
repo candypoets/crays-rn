@@ -3,7 +3,7 @@ import { InviteAcceptedScreen } from '@/screens/onboarding/InviteAcceptedScreen'
 import { InvitePreviewScreen } from '@/screens/onboarding/InvitePreviewScreen';
 import { LoginScreen } from '@/screens/onboarding/LoginScreen';
 
-const preview = { claims: { v: 1 as const, nonce: 'n', badge: `30009:${'a'.repeat(64)}:members`, exp: 2_000_000_000, max: 1 }, community: { badge_issuer: 'a'.repeat(64), relay_url: 'wss://venue.test', required_badge: `30009:${'a'.repeat(64)}:members` }, serviceUrl: 'https://venue.test' };
+const preview = { claims: { v: 1 as const, nonce: 'n', badge: `30009:${'a'.repeat(64)}:members`, exp: 2_000_000_000, max: 1 }, community: { community_root: 'a'.repeat(64), admins: ['a'.repeat(64)], badge_issuer: 'c'.repeat(64), relay_url: 'wss://venue.test', required_badge: `30009:${'a'.repeat(64)}:members` }, serviceUrl: 'https://venue.test' };
 
 describe('invite and login screens', () => {
   it('requires account creation without consuming the invite', () => { const create = jest.fn(); const view = render(<InvitePreviewScreen hasIdentity={false} loading={false} onAccept={jest.fn()} onBack={jest.fn()} onCreateAccount={create} onLogIn={jest.fn()} preview={preview} redeeming={false} room={null} />); fireEvent.press(view.getByTestId('invite-accept-button')); expect(create).toHaveBeenCalled(); expect(view.getByText(/never makes you visible/i)).toBeTruthy(); });

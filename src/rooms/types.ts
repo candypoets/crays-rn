@@ -18,7 +18,11 @@ export type RoomDescriptor = {
   expiresAt: number;
   open: boolean;
   verified: boolean;
-  /** Trusted issuer for kind-8 awards advertised by this signed room. */
+  /**
+   * @deprecated NIP-97 trust flows from the relay's NIP-11 root key and the
+   * community anchor (kind 31727), resolved by `src/rooms/trust.ts`. The
+   * manifest tag is still parsed for interop but never trusted.
+   */
   awardIssuerPubkey?: string;
 };
 
@@ -112,6 +116,7 @@ export type RoomEntitlementActivity = {
 /** Stable, cache-safe projection of one venue-issued kind-8 award. */
 export type RoomEntitlement = {
   awardId: string;
+  /** NIP-97 definition address: 30009 (membership), 30402 (product/pass/ticket), or 31922/31923 (free event). */
   badgeAddress: string;
   awardIssuerPubkey: string;
   recipientPubkey: string;

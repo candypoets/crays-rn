@@ -8,7 +8,7 @@ Apple Pay, Google Pay, and card/Stripe are explicitly deferred by product direct
 
 ## Data and reconciliation
 
-Cart is local operational state; live kind-30009 definitions remain price/availability authority. Before enabling future payment, compare every address, price, currency, and availability. Once a rail reports payment but venue award is uncertain, enter **Confirming with the venue** and suppress all second-pay actions until reconciliation.
+Cart is local operational state; live kind-30402 listings remain price/availability authority. Before enabling future payment, compare every address, price, currency, and availability. Once a rail reports payment but venue award is uncertain, enter **Confirming with the venue** and suppress all second-pay actions until reconciliation.
 
 ## Paths
 

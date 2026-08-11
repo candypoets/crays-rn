@@ -16,6 +16,34 @@
 - Do not add a generic API backend. Product data comes from venue/indexer Nostr
   relays; read `/root/code/nuts-cash` for the relay and coordinator contract.
 
+## Entitlements (NIP-97)
+
+The governing spec is **NIP-97 (draft)** at `/root/nips/97.md` — "Composable
+Entitlements and Community Access Control". Pure helpers live in
+`src/access/nip97.ts`; trust resolution in `src/rooms/trust.ts`.
+
+- Kinds: community anchor `31727` (`d=community`, root-signed, admin `p` tags,
+  `badge_issuer`), membership definitions `30009` (`t=membership`, optional
+  NIP-99 `price` with recurrence in the 4th element, `permission` tags),
+  products/passes/tickets `30402` (NIP-99 listings; a ticket links its event
+  with `a`; `max_uses` defaults to 1), calendar events `31922/31923` (also
+  their own free-admission definitions), awards `8` (with `t` query hints:
+  definition kind plus finer topic), fulfillment `37237`.
+- Trust chain: the room relay's NIP-11 `pubkey` is the community root key —
+  the only out-of-band fact. The root-signed anchor declares admins and the
+  delegated `badge_issuer`. Everything entitlement-related is resolved from
+  the pinned community relay; the manifest `award_issuer` tag is parsed for
+  interop but never trusted.
+- Issuance: anchor admins may award any definition; the `badge_issuer` may
+  award sellable (well-formed `price` tag, zero price included) definitions
+  only. Revocation is a kind `5` from the award issuer or an anchor admin.
+- Status signers are checked as admins ∪ `badge_issuer`; the strfry write
+  gate additionally enforces `37237`-write role holders relay-side, so events
+  read back from the pinned relay already passed the full rule.
+- Trust is enforced in the pure derivations (`deriveEntitlements`,
+  `liveOrders`), not in the FlatBuffer ingest callbacks; events arriving
+  before the anchor resolves are buffered and filtered at derive time.
+
 ## Screen delivery contract
 
 Every screen change must include all of the following in the same change:

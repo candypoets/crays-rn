@@ -3,11 +3,12 @@
 ## Product and implementation contract
 
 This is the durable access archive under Me. It lists only valid kind-8 awards
-for the local pubkey whose kind-30009 definition is available from the venue
-operator and whose issuer matches the signed room manifest. Memberships and
-passes group into **Ready to use** and **History & action needed**. Every row
-states venue and Active/Available/Exhausted/Expired/Revoked/Cancelled in text;
-finite passes state the relay-derived remaining count.
+for the local pubkey whose kind-30009 `t=membership` definition (or kind-30402
+pass listing) is available from the venue and whose issuer is an anchor admin
+or the anchor's badge_issuer. Memberships and passes group into **Ready to
+use** and **History & action needed**. Every row states venue and
+Active/Available/Exhausted/Expired/Revoked/Cancelled in text; finite passes
+state the relay-derived remaining count.
 
 The archive is a minimal stable copy of previously verified events and remains
 after room leave. Reconnecting revalidates and replaces it. It never issues an

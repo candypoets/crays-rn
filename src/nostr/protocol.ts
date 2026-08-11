@@ -13,6 +13,8 @@ export const CRAYS_PROTOCOL = {
   profileKind: 0,
   badgeAwardKind: 8,
   badgeDefinitionKind: 30009,
+  listingKind: 30402,
+  anchorKind: 31727,
   eventDeletionKind: 5,
   presentationKind: 27236,
   orderStatusKind: 37237,
