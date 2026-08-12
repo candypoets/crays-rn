@@ -2,16 +2,20 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/01-room-and-feed-v1.png`, panel 02. This Night Playlist board supersedes the incumbent dark room PNGs for composition and color while the relay contract below remains authoritative.
+
 People is the default destination after a successful room join. It proves that exactly one venue relay is active, shows only opted-in visible presence, and never exposes distance, popularity, or hidden attendance. Quiet visitors retain full read, ordering, ticket, and membership access without appearing in this roster.
 
 Entry requires a persisted `ActiveRoom`. With no active room, route to Discover. The header uses the signed manifest name and the fixed state **Connected in the room**; it must not infer venue identity from profiles or local copy.
 
 ## UI and interaction
 
-- Header: signed room name, connection state, Menu, My night, and Leave.
-- Local switch: People and Room feed. It changes only the active-room view.
-- Roster: display name, intent, and optional context in deterministic accessible order. No per-person "online" dot is rendered; roster membership is the only presence signal and it is already textual.
-- Cards may form a loose coaster-like constellation, but the semantic order is alphabetical and tap targets remain at least 44 points.
+- Header: signed room name, compact connection state, native Leave control, Menu, My night, and the local **Right now / Feed** switch.
+- Current-moment rail: joined time, selected room descriptor, and credential expiry. Its schedule-like form follows the mockup without inventing venue event data.
+- Roster: horizontally readable portrait cards with display name and intent in deterministic accessible order. Optional context is included in each card's accessible label. No per-person "online" dot is rendered; roster membership is the only presence signal and it is already textual.
+- Portrait cards use the Night Playlist portrait atlas with its native tall-cell
+  aspect ratio, retain at least 48-point targets, and end in a uniformly cropped
+  venue image without changing semantic order or distorting either atlas.
 - The visible count counts current, non-expired, explicitly visible presence projections only.
 - Tapping a person opens screen 02 with their relay-derived public key; no name is used as identity.
 
@@ -41,11 +45,21 @@ The versioned kind-78 format is a Crays pilot contract, not a standardized NIP. 
 
 ## Accessibility and privacy
 
-Name, intent, and context are text. Reading order is predictable despite the organic visual layout. No exact distance, table number, follower count, profile-open count, or non-room activity is rendered. Quiet mode is never visually treated as degraded access.
+Name, intent, and context are text and may reflow under large type instead of
+being clipped. Reading order is predictable despite the organic visual layout.
+The current-moment summary announces joined, current, and expiry values as one
+coherent unit. No exact distance, table number, follower count,
+profile-open count, or non-room activity is rendered. Quiet mode is never
+visually treated as degraded access.
 
 ## QA strategy
 
-Unit coverage in `RoomScreen.test.tsx` verifies populated and quiet-empty paths and person identity routing. Native workflow `maestro/flows/01-people.yaml` enters quietly through the real join screen, waits for live relay projections, checks the exact visible-only count, and captures the canonical state.
+Unit coverage in `RoomScreen.test.tsx` verifies populated and quiet-empty paths,
+person identity routing, and the accessible current-moment summary.
+`NightPrimitives.test.tsx` verifies portrait and venue crop geometry. Native
+workflow `maestro/flows/01-people.yaml` enters quietly through the real join
+screen, waits for live relay projections, checks the exact visible-only count,
+and captures the canonical state.
 
 `.qa/qa-01-people.mjs` owns an independent lifecycle:
 

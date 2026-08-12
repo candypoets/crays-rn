@@ -1,6 +1,11 @@
 appId: life.crays
 ---
 - runFlow: 16-me.yaml
+- scrollUntilVisible:
+    element:
+      id: "me-wallet"
+    direction: UP
+    timeout: 8000
 - tapOn:
     id: "me-wallet"
 - extendedWaitUntil:
@@ -9,5 +14,12 @@ appId: life.crays
     timeout: 15000
 - assertVisible: "Unavailable"
 - assertVisible: "No trusted Cashu mint.*"
+- assertVisible: "Review add funds setup"
+- assertVisible: "After wallet setup"
+- scrollUntilVisible:
+    element:
+      text: "Nostr sync not configured"
+    direction: DOWN
+    timeout: 8000
 - assertVisible: "Nostr sync not configured"
 - takeScreenshot: 25-wallet-unconfigured

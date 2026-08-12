@@ -8,7 +8,7 @@ jest.mock('expo-router', () => ({ router: { replace: jest.fn() }, usePathname: (
 const activeRoom: ActiveRoom = {
   id: 'skyline', name: 'The Skyline Room', about: 'Rooftop jazz', relayUrl: 'wss://room.test',
   operatorPubkey: 'a'.repeat(64), capabilities: ['social', 'menu'], expiresAt: 2_000_000_000,
-  open: true, verified: true, joinedAt: 1, visibility: 'quiet', intent: 'curious', context: '', leaveAt: 2_000_000_000_000,
+  open: true, verified: true, joinedAt: 1_600_000_000_000, visibility: 'quiet', intent: 'curious', context: '', leaveAt: 2_000_000_000_000,
 };
 const maya: RoomPerson = {
   pubkey: 'b'.repeat(64), name: 'Maya', about: 'Here for jazz', intent: 'Open to chat', context: 'Here for the jazz',
@@ -29,8 +29,12 @@ describe('RoomScreen', () => {
   it('renders visible people in predictable accessibility order', () => {
     const onOpenPerson = jest.fn();
     render(<RoomScreen {...props({ onOpenPerson })} />);
+    const joined = new Date(activeRoom.joinedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const expiryDate = new Date(activeRoom.expiresAt * 1000);
+    const expiry = `${expiryDate.toLocaleDateString([], { day: 'numeric', month: 'short' })} · ${expiryDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
     expect(screen.getByText('Connected in the room')).toBeOnTheScreen();
-    expect(screen.getByText('1 visible · no distance or ranking')).toBeOnTheScreen();
+    expect(screen.getByText('People here · 1 visible')).toBeOnTheScreen();
+    expect(screen.getByLabelText(`Room timing. Joined ${joined}. Current moment Rooftop jazz. Ends ${expiry}.`)).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId(`person-${maya.pubkey}`));
     expect(onOpenPerson).toHaveBeenCalledWith(maya.pubkey);
   });
@@ -42,10 +46,28 @@ describe('RoomScreen', () => {
 
   it('renders room-only feed, announcement, composer, and publish error', () => {
     render(<RoomScreen {...props({ view: 'feed', composer: 'Hello', composerError: 'Relay rejected it.' })} />);
-    expect(screen.getByText('Live from this room')).toBeOnTheScreen();
+    expect(screen.getByText('Room feed')).toBeOnTheScreen();
+    expect(screen.getByText('Chronological · locks when you leave')).toBeOnTheScreen();
+    expect(screen.getByText('Add a note')).toBeOnTheScreen();
     expect(screen.getByText('Announcement')).toBeOnTheScreen();
     expect(screen.getByText('Jazz starts at 20:30.')).toBeOnTheScreen();
     expect(screen.getByRole('alert')).toHaveTextContent('Relay rejected it.');
+  });
+
+  it('keeps publish disabled for an empty draft and exposes the 500-character boundary', () => {
+    render(<RoomScreen {...props({ view: 'feed', composer: '   ' })} />);
+
+    expect(screen.getByTestId('publish-room-post')).toBeDisabled();
+    expect(screen.getByTestId('room-post-input')).toHaveProp('maxLength', 500);
+    expect(screen.getByText('3/500')).toBeOnTheScreen();
+  });
+
+  it('retains the draft and locks the composer action while publish is pending', () => {
+    render(<RoomScreen {...props({ view: 'feed', composer: 'Hello', composerLoading: true })} />);
+
+    expect(screen.getByTestId('room-post-input')).toHaveProp('value', 'Hello');
+    expect(screen.getByText('5/500')).toBeOnTheScreen();
+    expect(screen.getByTestId('publish-room-post')).toBeDisabled();
   });
 
   it('sends the exact selected post to the report owner', () => {
@@ -53,5 +75,12 @@ describe('RoomScreen', () => {
     render(<RoomScreen {...props({ view: 'feed', onReportPost })} />);
     fireEvent.press(screen.getByTestId(`report-post-${post.id}`));
     expect(onReportPost).toHaveBeenCalledWith(post);
+  });
+
+  it('locks only the selected report action while its relay result is pending', () => {
+    render(<RoomScreen {...props({ view: 'feed', reportingPostId: post.id })} />);
+
+    expect(screen.getByTestId(`report-post-${post.id}`)).toBeDisabled();
+    expect(screen.getByText('Reporting…')).toBeOnTheScreen();
   });
 });

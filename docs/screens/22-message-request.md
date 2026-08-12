@@ -4,14 +4,25 @@
 
 The sender may write one ordinary editable message, maximum 240 characters. Until the recipient accepts or replies, the sender cannot send another request, message, or drink to that person. Starters are optional text substitutions, never a separate interaction format.
 
+Visual authority is the Night Playlist commerce/messages board
+`docs/design-explorations/night-playlist/mockups/03-commerce-and-messages-v1.png`,
+panel 05. The recipient’s portrait, name, and intent lead; no distance or online
+claim is invented. The composer is one white sealed-note surface on the lilac
+canvas rather than a stack of generic cards.
+
 ## UI and interaction
 
-- Resolve recipient by pubkey from the active room; show name, intent, and live room context.
+- Resolve recipient by pubkey from the active room; show name, intent, and the
+  truthful “Met in this room” context without persisting a live/online claim.
 - Explain the one-message boundary before the composer.
 - Starters populate the same editable field.
-- Send is disabled for whitespace-only input and during publication.
+- Send is a Commitment Coral action, disabled for whitespace-only input and
+  during publication. Pending text reads **Sending request…** and the draft and
+  character count remain visible.
 - Confirmed state removes the composer and clearly says to wait.
-- Recipient controls—Accept, Reply, Not now, Block, Report—are named before commitment.
+- **Not right now** and Close return without publishing. Block and Report stay
+  available on the originating person controls and the conversation screen;
+  this screen does not render inert safety buttons without callbacks.
 
 ## Protocol and privacy
 
@@ -29,6 +40,9 @@ Character count and one-message restriction are text. Error and success use live
 
 ## QA strategy
 
-Unit coverage verifies starter editing, empty disablement, failure, and post-success suppression. `maestro/flows/22-message-request.yaml` reaches the screen from real signed profile/presence data and exercises a starter and count.
+Unit coverage verifies starter editing, empty disablement, the 240-character
+boundary, pending draft/count retention, failure, both exits, and post-success
+suppression. `maestro/flows/22-message-request.yaml` reaches the screen from
+real signed profile/presence data and exercises editable text and count.
 
 `.qa/qa-22-message-request.mjs` owns a complete isolated relay lifecycle and verifies all source fixtures. The publication extension must seed an authorized deterministic QA identity, send through the UI, query by sender and `#p`, verify the Nostr signature, decrypt with the fixture recipient key, assert exact plaintext and expiry, assert only one stored request after repeat input, then test relay false/timeout while confirming the draft remains.

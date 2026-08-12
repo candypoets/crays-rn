@@ -1,16 +1,23 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import {
   BackButton,
   BrandMark,
   ErrorBanner,
   OnboardingShell,
-  PaperCard,
   PrimaryButton,
   TextAction,
 } from '@/components/onboarding/OnboardingPrimitives';
 import { colors } from '@/theme/colors';
+
+/**
+ * THESIS: Identity creation is a pre-show checklist, not a wall of competing choices.
+ * OWN-WORLD: Pale lilac field, plum mark, soft lilac icon discs, one blue committed action.
+ * STORY: Read the three boundaries, understand providers are absent, then create locally.
+ * FIRST VIEWPORT: Back and mark lead; headline, checklist, then the single create action.
+ * FORM: Night Playlist board 02 panel 02 — one local method; providers explained, not rendered.
+ */
 
 type AccountAccessScreenProps = {
   error?: string | null;
@@ -19,6 +26,30 @@ type AccountAccessScreenProps = {
   onCreateOnDevice: () => void;
   onLogIn: () => void;
 };
+
+type ChecklistRow = {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  body: string;
+};
+
+const checklist: ChecklistRow[] = [
+  {
+    icon: 'lock-closed-outline',
+    title: 'Local and private',
+    body: 'Your identity lives on this device. It’s not published anywhere.',
+  },
+  {
+    icon: 'person-outline',
+    title: 'Built for real places',
+    body: 'Join verified rooms. Your presence isn’t shown before you enter.',
+  },
+  {
+    icon: 'ban-outline',
+    title: 'Provider login isn’t available',
+    body: 'Apple and Google sign-in aren’t configured in this build.',
+  },
+];
 
 export function AccountAccessScreen({
   error,
@@ -29,57 +60,34 @@ export function AccountAccessScreen({
 }: AccountAccessScreenProps) {
   return (
     <OnboardingShell testID="account-access-screen">
-      <BackButton onPress={onBack} />
-      <BrandMark size={58} />
+      <View className="flex-row items-start justify-between">
+        <BackButton onPress={onBack} />
+        <BrandMark size={40} />
+      </View>
 
       <Text
         accessibilityRole="header"
-        className="mt-6 text-[45px] font-extrabold leading-[47px] tracking-[-1.2px] text-base-content"
+        className="mt-4 text-[36px] font-extrabold leading-[40px] tracking-[-1px] text-base-content"
       >
-        Create your Crays account
-      </Text>
-      <Text className="mt-4 text-lg leading-7 text-muted">
-        A Nostr identity underneath, familiar access on top.
+        Make a Crays identity
       </Text>
 
-      <View className="my-8">
-        <ErrorBanner message={error} />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityState={{ busy: loading, disabled: loading }}
-          className="min-h-24 flex-row items-center gap-4 rounded-2xl border border-base-300 bg-base-200 px-5 py-4 active:border-primary"
-          disabled={loading}
-          onPress={onCreateOnDevice}
-          testID="create-on-device-choice"
-        >
-          <View className="h-14 w-14 items-center justify-center rounded-full border border-primary">
-            <Ionicons color={colors.accent} name="phone-portrait-outline" size={26} />
+      <View className="mt-8 gap-6">
+        {checklist.map((row) => (
+          <View className="flex-row items-center gap-4" key={row.title}>
+            <View className="h-12 w-12 items-center justify-center rounded-full bg-surface-soft">
+              <Ionicons color={colors.ink} name={row.icon} size={24} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-base font-bold text-base-content">{row.title}</Text>
+              <Text className="mt-1 text-sm leading-5 text-muted">{row.body}</Text>
+            </View>
           </View>
-          <View className="flex-1">
-            <Text className="text-lg font-bold text-base-content">Create on this device</Text>
-            <Text className="mt-1 text-sm leading-5 text-muted">
-              Your key stays protected on this phone.
-            </Text>
-          </View>
-          <Ionicons color={colors.paper} name="chevron-forward" size={24} />
-        </Pressable>
+        ))}
       </View>
 
-      <PaperCard>
-        <View className="flex-row items-start gap-4">
-          <View className="h-12 w-12 items-center justify-center rounded-full bg-base-200">
-            <BrandMark size={34} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-xl font-bold text-base-200">Your identity stays yours</Text>
-            <Text className="mt-2 text-base leading-6 text-base-300">
-              Apple and Google access can be added later without becoming your Crays identity.
-            </Text>
-          </View>
-        </View>
-      </PaperCard>
-
       <View className="mt-auto pt-8">
+        <ErrorBanner message={error} />
         <PrimaryButton
           label="Create on this device"
           loading={loading}

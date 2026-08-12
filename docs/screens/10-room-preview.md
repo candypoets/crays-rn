@@ -2,6 +2,8 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`, panel 03. This is the one intentionally immersive Night Playlist frame: full-bleed venue atmosphere under readable dark overlay, with signed identity and actions kept together.
+
 Purpose: let a person inspect the venue identity, current utility and entry
 consequence before Bluetooth or presence. It is shared by Map, Nearby, QR,
 link, event and invite entry.
@@ -14,6 +16,8 @@ entry. It does not request Bluetooth
 or publish presence. Nearby discovery owns its just-in-time permission
 rationale before scanning. Back/cancel returns to the preserved discovery
 context.
+
+**Preview room** expands a pale signed-capabilities section in place. That section reads only the already-validated descriptor and explicitly states that no live-feed subscription or presence publish occurs. **Enter room** is a separate coral commitment and stays disabled when the signed room is closed. The hero never invents an event title, start time, or capability absent from the manifest.
 
 Closed rooms keep durable event/menu information readable but disable entry.
 Missing, stale, unsupported-schema, signer-mismatch and relay-timeout states

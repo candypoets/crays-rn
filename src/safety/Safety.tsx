@@ -37,6 +37,7 @@ function recordKey(record: Pick<BlockRecord, 'pubkey' | 'scope' | 'roomId'>): st
 type SafetyValue = {
   blocks: BlockRecord[];
   hydrated: boolean;
+  storageError: string | null;
   block: (pubkey: string, scope: BlockScope, roomId?: string, label?: string) => Promise<void>;
   unblock: (pubkey: string, scope?: BlockScope, roomId?: string) => Promise<void>;
   isBlocked: (pubkey: string, roomId?: string) => boolean;
@@ -47,9 +48,28 @@ const SafetyContext = createContext<SafetyValue | null>(null);
 export function SafetyProvider({ children }: PropsWithChildren) {
   const [blocks, setBlocks] = useState<BlockRecord[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [storageError, setStorageError] = useState<string | null>(null);
   const blocksRef = useRef<BlockRecord[]>([]);
   const mutationQueue = useRef<Promise<void>>(Promise.resolve());
-  useEffect(() => { SecureStore.getItemAsync(STORAGE_KEY).then((value) => { const next = parseBlockRecords(value); blocksRef.current = next; setBlocks(next); }).finally(() => setHydrated(true)); }, []);
+  useEffect(() => {
+    let current = true;
+    void SecureStore.getItemAsync(STORAGE_KEY)
+      .then((value) => {
+        if (!current) return;
+        const next = parseBlockRecords(value);
+        blocksRef.current = next;
+        setBlocks(next);
+      })
+      .catch(() => {
+        if (current) setStorageError('The protected block list could not be read on this device.');
+      })
+      .finally(() => {
+        if (current) setHydrated(true);
+      });
+    return () => {
+      current = false;
+    };
+  }, []);
 
   const mutate = useCallback((project: (current: BlockRecord[]) => BlockRecord[]) => {
     const operation = mutationQueue.current.then(async () => {
@@ -72,7 +92,7 @@ export function SafetyProvider({ children }: PropsWithChildren) {
     await mutate((current) => current.filter((record) => !(record.pubkey === pubkey && (!scope || record.scope === scope) && (!roomId || record.roomId === roomId))));
   }, [mutate]);
   const isBlocked = useCallback((pubkey: string, roomId?: string) => blocks.some((record) => record.pubkey === pubkey && (record.scope === 'global' || (record.scope === 'venue' && record.roomId === roomId))), [blocks]);
-  const value = useMemo(() => ({ block, blocks, hydrated, isBlocked, unblock }), [block, blocks, hydrated, isBlocked, unblock]);
+  const value = useMemo(() => ({ block, blocks, hydrated, isBlocked, storageError, unblock }), [block, blocks, hydrated, isBlocked, storageError, unblock]);
   return <SafetyContext.Provider value={value}>{children}</SafetyContext.Provider>;
 }
 

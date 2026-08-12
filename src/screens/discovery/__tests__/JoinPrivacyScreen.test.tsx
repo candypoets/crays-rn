@@ -3,9 +3,13 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { JoinPrivacyScreen } from '@/screens/discovery/JoinPrivacyScreen';
 
 describe('JoinPrivacyScreen', () => {
-  it('defaults to quiet and never implies presence publication', () => {
+  it('requires an explicit quiet choice and never implies presence publication', () => {
     const onEnter = jest.fn();
     render(<JoinPrivacyScreen onBack={jest.fn()} onEnter={onEnter} roomName="Skyline" />);
+    expect(screen.getByTestId('visibility-quiet')).toHaveProp('accessibilityState', { selected: false });
+    expect(screen.getByTestId('visibility-visible')).toHaveProp('accessibilityState', { selected: false });
+    expect(screen.getByTestId('join-room-button')).toBeDisabled();
+    fireEvent.press(screen.getByTestId('visibility-quiet'));
     expect(screen.getByTestId('visibility-quiet')).toHaveProp('accessibilityState', { selected: true });
     fireEvent.press(screen.getByTestId('join-room-button'));
     expect(onEnter).toHaveBeenCalledWith({ visibility: 'quiet', intent: 'social', context: '', leaveAfterMinutes: 120 });

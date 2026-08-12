@@ -2,17 +2,19 @@
 
 ## Product requirement
 
-The current slice has device-only custody. Screen 07B must explain that consequence before completion without pretending that Apple/Google or cross-device recovery exists. It also establishes the future guard: before adding money or purchasing durable items, Crays must require a real recoverable configuration.
+The current slice has device-only custody. Screen 07B must explain that consequence before completion without pretending that Apple/Google, biometric, or cross-device recovery exists. It also establishes the future guard: before adding money or purchasing durable items, Crays must require a real recoverable configuration.
 
-Canonical visual reference: `assets/screens/07b-account-recovery.png`, adapted to device-only delivery.
+Visual authority: the Night Playlist entry/account board `docs/design-explorations/night-playlist/mockups/02-entry-and-account-v1.png`, **panel 08** as the visual family for this serious variant (blue lock/ring medallion language), with the treatment notes in `docs/design-explorations/night-playlist/screens/07b-account-recovery.md`. This supersedes the older `assets/screens/07b-account-recovery.png` reference.
 
 ## Content and hierarchy
 
-- Back and **Account · 2 of 2**.
-- **Keep your account with you**.
-- Paper artifact explaining protected device custody.
-- Selected **Continue on this device** consequence.
-- **Continue to Discover**.
+- Back (upper left) and the plum Crays mark (upper right). This serious variant
+  follows panel 08 and does not invent a progress-step indicator.
+- Blue lock medallion: soft lilac outer ring, white ring, blue core with a white lock. Decorative; no biometric or unlock affordance is attached to it.
+- **Keep your account with you** — centered headline.
+- **This device, for now** — caption, then the custody truth: your private key stays protected on this device and cross-device recovery is not enabled yet.
+- Guard row: before you add money or buy a durable item, Crays will ask you to add recovery.
+- **Continue to Discover** — the one committed action.
 - Assurance that raw key material is never revealed unless explicitly requested.
 
 ## Interaction
@@ -20,7 +22,7 @@ Canonical visual reference: `assets/screens/07b-account-recovery.png`, adapted t
 - Finish checks that a verified signed profile exists, then writes the onboarding completion marker.
 - Completion uses replace-navigation to `/discover` and cannot be duplicated by repeat taps.
 - Back returns to Profile and leaves its signed draft intact.
-- No recovery enrollment, cloud service, provider SDK, or key export is started here.
+- No recovery enrollment, cloud service, provider SDK, biometric prompt, or key export is started here.
 
 ## States and failures
 
@@ -31,9 +33,9 @@ Canonical visual reference: `assets/screens/07b-account-recovery.png`, adapted t
 
 ## Accessibility
 
-- Custody state is written in text rather than represented only by the selected ring/check.
+- Custody state is written in text; the medallion and check icons are decorative supplements hidden from screen-reader order.
 - The button reports busy and disabled states.
-- Large text can scroll to the action; decorative phone/lock/shield icons are supplementary.
+- Large text can scroll to the action.
 
 ## Nostr and relay behavior
 
@@ -41,7 +43,7 @@ No relay action occurs. Completion records local product state only. The `.qa` v
 
 ## QA strategy
 
-- Component: `RecoveryScreen.test.tsx` checks explicit device-only and durable-item consequences, the finish action, and repeat-tap locking.
+- Component: `RecoveryScreen.test.tsx` checks explicit device-only and durable-item consequences, the finish action, repeat-tap locking, error display, and Back routing.
 - Device: `maestro/flows/07b-account-recovery.yaml` creates/signs a fresh QA identity, asserts and captures the consequence state, proves Back reaches Profile, relaunches back into Recovery, finishes it, then relaunches and proves routing resumes at Discover.
 - Scenario: `.qa/qa-07b-account-recovery.mjs` requires exactly one valid identity, profile, and device-only completion marker with zero relay/subscription activity before teardown.
 - Workflow: `.qa/qa-cold-signup.mjs` additionally verifies the completion marker and Discover destination.

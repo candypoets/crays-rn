@@ -3,7 +3,7 @@ appId: life.crays
 - runFlow: launch.yaml
 - assertVisible:
     id: "cold-welcome-screen"
-- assertVisible: "Crays"
-- assertVisible: "Your night, in one place."
+- assertVisible: "Your night starts here"
+- assertVisible: "Tonight moves."
 - assertNotVisible: "Nostr engine unavailable"
 - takeScreenshot: 00-entry-foundation

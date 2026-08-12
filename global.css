@@ -4,17 +4,29 @@
 
 @layer base {
   :root {
-    /* Inherited from the Crays web identity. Keep feature code semantic. */
-    --color-primary: 245 10 72;
-    --color-accent: 255 118 104;
-    --color-base-100: 16 9 14;
-    --color-base-200: 26 16 23;
-    --color-base-300: 40 22 32;
-    --color-base-content: 255 244 245;
-    --color-muted: 201 174 182;
-    --color-success: 97 189 145;
-    --color-error: 229 72 77;
-    --color-paper-ink: 33 19 27;
-    --color-paper-muted: 107 89 99;
+    /* Night Playlist. Feature code consumes semantic roles, never raw brand hex. */
+    --color-primary: 6 59 250;
+    --color-primary-pressed: 6 31 208;
+    --color-accent: 252 93 78;
+    --color-base-100: 245 242 251;
+    --color-base-200: 255 255 255;
+    --color-base-300: 215 208 236;
+    --color-base-content: 23 10 76;
+    --color-muted: 102 88 132;
+    --color-success: 74 146 67;
+    --color-error: 196 38 54;
+    --color-paper-ink: 23 10 76;
+    --color-paper-muted: 102 88 132;
+    --color-canvas: 245 242 251;
+    --color-surface: 255 255 255;
+    --color-surface-soft: 233 220 241;
+    --color-edge: 215 208 236;
+    --color-ink: 23 10 76;
+    --color-ink-muted: 102 88 132;
+    --color-signal: 6 59 250;
+    --color-commitment: 252 93 78;
+    --color-verified: 215 245 59;
+    --color-attention: 255 216 61;
+    --color-photo-night: 12 4 41;
   }
 }

@@ -1,6 +1,11 @@
 appId: life.crays
 ---
 - runFlow: 25-wallet.yaml
+- scrollUntilVisible:
+    element:
+      id: "wallet-add-funds"
+    direction: UP
+    timeout: 8000
 - tapOn:
     id: "wallet-add-funds"
 - extendedWaitUntil:
@@ -9,4 +14,5 @@ appId: life.crays
     timeout: 15000
 - assertVisible: "Lightning funding is not configured"
 - assertVisible: "Mint configuration required"
+- assertVisible: "No invoice, QR code, token, or spendable balance is created on this screen."
 - takeScreenshot: 26-add-funds-unconfigured

@@ -2,13 +2,15 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`, panel 04. The Night Playlist board's equal white choice cards and blue icon discs replace the incumbent selected-radio composition.
+
 Purpose: separate selecting the one room relay from volunteering social
-presence. Quiet is the safe default. Quiet users can read announcements, order,
+presence. Neither choice is preselected; the person must deliberately choose quiet or visible before confirmation is enabled. Quiet users can read announcements, order,
 and use credentials but never appear in People. Visible users explicitly choose
 Social, Business, Dating, or Just curious; may add an 80-character room-only
 context; and publish one short-lived, room-scoped presence event.
 
-Primary action wording follows the current selection: **Enter quietly** or
+Before selection the disabled action says **Choose how to enter**. Primary action wording then follows the current selection: **Enter quietly** or
 **Enter and be visible**. Back leaves the current room selection unchanged.
 Every entry chooses a one-, two-, or four-hour automatic leave time (two hours
 by default). Repeated taps are disabled while entry/publish is in progress.
@@ -43,7 +45,7 @@ nonce/account redemption and cannot consume the invite twice.
 
 ## QA strategy
 
-Unit tests prove quiet default, intent/context selection, leave-time selection,
+Unit tests prove the no-default consent state, explicit quiet entry, intent/context selection, leave-time selection,
 context bounding, and exact presence tags. Maestro loads the room from a real
 signed manifest and exercises the complete choice surface.
 

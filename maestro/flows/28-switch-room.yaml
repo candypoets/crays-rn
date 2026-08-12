@@ -13,6 +13,9 @@ appId: life.crays
     visible:
       id: "join-privacy-screen"
     timeout: 30000
+- extendedWaitUntil:
+    visible: "Joining · The Skyline Room"
+    timeout: 45000
 - tapOn:
     id: "visibility-visible"
 # Selecting visible reveals the intent/context fields and pushes the enter
@@ -32,8 +35,8 @@ appId: life.crays
     visible:
       id: "switch-room-screen"
     timeout: 30000
-- assertVisible: "Leaving"
-- assertVisible: "Entering"
+- assertVisible: "You are in"
+- assertVisible: "You’re entering"
 - assertVisible: "Leave and enter new room"
 - tapOn:
     id: "switch-room-confirm"
@@ -41,10 +44,13 @@ appId: life.crays
     visible:
       id: "join-privacy-screen"
     timeout: 30000
+- extendedWaitUntil:
+    visible: "Joining · The Moonlight Room"
+    timeout: 45000
 - assertVisible: "Browse quietly"
 - scrollUntilVisible:
     element:
       text: ".*No presence event is published.*"
     direction: DOWN
 - assertVisible: ".*No presence event is published.*"
-- takeScreenshot: 28-switch-room-two-relays
+- takeScreenshot: 28-switch-room-two-identities

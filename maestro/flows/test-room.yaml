@@ -1,7 +1,7 @@
 appId: life.crays
 ---
 - runFlow: launch.yaml
-- openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}&testRelay=${TEST_ROOM_RELAY_URL}"
 - extendedWaitUntil:
     visible:
       id: "qa-seed-continue"
@@ -12,14 +12,16 @@ appId: life.crays
     visible:
       id: "dev-test-room-card"
     timeout: 30000
-- assertVisible: "Crays Test Room"
-- assertVisible: ".*Bluetooth is not required.*"
+- extendedWaitUntil:
+    visible: "Crays Test Room is online"
+    timeout: 30000
 - tapOn:
     id: "open-test-room"
 - extendedWaitUntil:
     visible:
       id: "room-preview-screen"
     timeout: 30000
+- assertVisible: "Direct links, Map and QR entry do not require Bluetooth."
 - tapOn:
     id: "enter-room-button"
 - extendedWaitUntil:
@@ -28,6 +30,8 @@ appId: life.crays
     timeout: 15000
 - assertNotVisible:
     id: "bluetooth-rationale-screen"
+- tapOn:
+    id: "visibility-quiet"
 - tapOn:
     id: "join-room-button"
 - extendedWaitUntil:

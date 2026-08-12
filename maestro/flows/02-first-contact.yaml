@@ -9,6 +9,8 @@ appId: life.crays
 - assertVisible: "Message Jonas"
 - assertVisible: "Send a drink"
 - assertVisible: ".*A drink is never anonymous.*"
+- tapOn:
+    id: "first-contact-more"
 - scrollUntilVisible:
     element:
       id: "person-report"

@@ -81,6 +81,12 @@ const authorizedUsers = [...new Map([
 // UI-invisible NIP-97 capability so every original fixture author can remove
 // its own old events under NIP-09. Preserve only this run's capability while
 // sweeping; teardown removes it after all user-authored events.
+//
+// The switch-room scenario seeds two signed room manifests on the one
+// coordinator-reserved relay. The deployed coordinator limits this owner to
+// that relay, so its second bootstrap must preserve room A while adding room
+// B. All other scenarios retain the default cleanup behavior.
+const preserveExistingFixtures = process.env.CRAYS_QA_PRESERVE_FIXTURES === '1';
 const { signers } = fixtureSignerMap(keys, issuerSecret);
 const leftovers = await queryFixtureEvents(pool, relay.relay_url, signers);
 const ordinaryLeftoverAuthors = leftovers
@@ -94,15 +100,20 @@ const cleanupCapability = await ensureFixtureCleanupCapability(
   [...ordinaryLeftoverAuthors, ...authorizedUsers.map((user) => user.pub)],
 );
 const capabilityIds = [cleanupCapability.definition.id, ...cleanupCapability.awards.map((award) => award.id)];
-await deleteFixtureEvents({
-  pool,
-  relayUrl: relay.relay_url,
-  keys,
-  badgeIssuerSecret: issuerSecret,
-  communityRoot,
-  excludeIds: capabilityIds,
-  label: 'pre-seed sweep',
-});
+if (preserveExistingFixtures) {
+  assert(Boolean(process.env.CRAYS_TEST_ROOM_ID), 'preserved fixture bootstrap names its room explicitly');
+  console.log(`ok - preserving existing fixture family while seeding room ${roomId}`);
+} else {
+  await deleteFixtureEvents({
+    pool,
+    relayUrl: relay.relay_url,
+    keys,
+    badgeIssuerSecret: issuerSecret,
+    communityRoot,
+    excludeIds: capabilityIds,
+    label: 'pre-seed sweep',
+  });
+}
 
 const inviteEndpoint = `${relay.base_url}/invites`;
 const inviteBody = JSON.stringify({
@@ -382,6 +393,7 @@ writeState({
   community_root: communityRoot,
   badge_issuer_pubkey: badgeIssuerPubkey,
   badge_issuer_secret_key: issuerSecret,
+  nip11_document: nip11,
   cleanup_capability_definition_id: cleanupCapability.definition.id,
   cleanup_capability_award_ids: cleanupCapability.awards.map((award) => award.id),
   manifest_id: manifest.id,

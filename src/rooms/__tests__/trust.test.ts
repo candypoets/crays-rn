@@ -1,6 +1,7 @@
 import {
   awardIssuerValid,
   fetchRelayRootPubkey,
+  fetchRelayRootPubkeyWithRetry,
   nip11UrlForRelay,
   parseNip11RootPubkey,
   revocationSignerValid,
@@ -86,6 +87,26 @@ describe('fetchRelayRootPubkey', () => {
       json: async () => ({ name: 'no key here' }),
     })) as unknown as typeof fetch;
     await expect(fetchRelayRootPubkey('wss://relay.example.com', fetchImpl)).rejects.toThrow();
+  });
+});
+
+describe('fetchRelayRootPubkeyWithRetry', () => {
+  it('recovers from transient NIP-11 transport failures with bounded backoff', async () => {
+    const fetchImpl = jest.fn()
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ ok: false, json: async () => ({}) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ pubkey: ROOT }) }) as unknown as typeof fetch;
+    const sleepImpl = jest.fn(async () => undefined);
+
+    await expect(fetchRelayRootPubkeyWithRetry('wss://relay.example.com', {
+      attempts: 3,
+      delayMs: 10,
+      fetchImpl,
+      sleepImpl,
+    })).resolves.toBe(ROOT);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(sleepImpl).toHaveBeenNthCalledWith(1, 10);
+    expect(sleepImpl).toHaveBeenNthCalledWith(2, 20);
   });
 });
 

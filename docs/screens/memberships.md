@@ -15,6 +15,16 @@ after room leave. Reconnecting revalidates and replaces it. It never issues an
 award, restores a use, or acts as a competing counter. Selection passes only the
 award ID into detail.
 
+Visual authority is the Night Playlist durable/settings board
+`docs/design-explorations/night-playlist/mockups/04-durable-and-settings-v1.png`,
+panel 05. Venue-backed rows group into **Ready to use** and **History & action
+needed**, with name, room, textual state, and relay-derived remaining uses.
+There are no points, streaks, or locally animated counters.
+
+Back and every row meet 48 dp. Long names reflow; venue imagery is labelled;
+status is never color-only. Empty state uses customer language (“Venue-issued”)
+without exposing relay implementation terms.
+
 ## States and paths
 
 Cover loading, empty, one/many venues, active membership, available finite or
@@ -33,3 +43,6 @@ Nuts relay, sees an issuer-signed membership and three-use pass, asserts **2 use
 left**, opens that exact pass, and sees the fulfilled activity. The independent
 presentation verifier validates the signed kind-27236 payload. Complete the
 scanner trust/replay/iOS matrix under D-010/D-011 before production entry use.
+
+Component tests additionally cover active/history grouping, exact award
+routing, empty state, finite remaining-use text, and trusted activity display.

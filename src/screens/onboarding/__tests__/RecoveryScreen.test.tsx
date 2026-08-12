@@ -8,6 +8,7 @@ describe('RecoveryScreen', () => {
 
     expect(screen.getByRole('header', { name: 'Keep your account with you' })).toBeOnTheScreen();
     expect(screen.getByText('This device, for now')).toBeOnTheScreen();
+    expect(screen.getByText(/private key stays protected on this device/)).toBeOnTheScreen();
     expect(screen.getByText(/Cross-device recovery is not enabled yet/)).toBeOnTheScreen();
     expect(screen.getByText(/Before you add money or buy a durable item/)).toBeOnTheScreen();
   });
@@ -21,5 +22,15 @@ describe('RecoveryScreen', () => {
 
     rerender(<RecoveryScreen loading onBack={jest.fn()} onFinish={onFinish} />);
     expect(screen.getByTestId('finish-account-button')).toBeDisabled();
+    expect(screen.getByTestId('finish-account-button')).toBeBusy();
+  });
+
+  it('surfaces completion errors and keeps Back with the router owner', () => {
+    const onBack = jest.fn();
+    render(<RecoveryScreen error="Crays could not finish the account." onBack={onBack} onFinish={jest.fn()} />);
+
+    expect(screen.getByText('Crays could not finish the account.')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('back-button'));
+    expect(onBack).toHaveBeenCalledTimes(1);
   });
 });

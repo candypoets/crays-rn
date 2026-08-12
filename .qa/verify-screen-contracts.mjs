@@ -40,7 +40,9 @@ const contracts = [
   ['26-add-funds.md', '26-add-funds.yaml', 'qa-26-add-funds.mjs'],
   ['27-discover.md', '27-discover.yaml', 'qa-27-discover.mjs'],
   ['28-switch-room.md', '28-switch-room.yaml', 'qa-28-switch-room.mjs'],
+  ['account-recovery.md', 'account-recovery.yaml', 'qa-account-recovery.mjs'],
   ['entry-router.md', 'cold-signup.yaml', 'qa-cold-signup.mjs'],
+  ['leave-room.md', 'leave-room.yaml', 'qa-leave-room.mjs'],
   ['memberships.md', 'memberships.yaml', 'qa-memberships.mjs'],
   ['messages.md', 'conversation.yaml', 'qa-conversation.mjs'],
   ['primary-tabs.md', 'primary-tabs.yaml', 'qa-primary-tabs.mjs'],
@@ -54,7 +56,12 @@ const additionalScenarios = [
   ['08b-invite-accepted.md', '08b-invite-redeemed-twice.yaml', 'qa-08b-invite-redeemed-twice.mjs'],
   ['20b-tickets.md', '20d-rsvp-rejected.yaml', 'qa-20d-rsvp-rejected.mjs'],
   ['11-join-privacy.md', '11c-join-relay-unavailable.yaml', 'qa-11c-join-relay-unavailable.mjs'],
+  ['11-join-privacy.md', '11-join-quiet.yaml', 'qa-11-join-quiet.mjs'],
+  ['11-join-privacy.md', '11-join-visible.yaml', 'qa-11-join-visible.mjs'],
   ['27-discover.md', '27-discover-handoff.yaml', 'qa-27-discover-handoff.mjs'],
+  ['messages.md', 'messages-home.yaml', 'qa-messages-home.mjs'],
+  ['messages.md', 'conversation-not-now.yaml', 'qa-conversation-not-now.mjs'],
+  ['settings.md', 'safety-blocks.yaml', 'qa-safety-blocks.mjs'],
 ];
 
 // Screen spec -> jest test that covers it, by existing naming conventions.
@@ -94,15 +101,14 @@ const screenTests = {
   '26-add-funds.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
   '27-discover.md': 'src/screens/__tests__/DiscoverHandoffScreen.test.tsx',
   '28-switch-room.md': 'src/screens/room/__tests__/LeaveAndSwitchScreens.test.tsx',
+  'account-recovery.md': 'src/screens/onboarding/__tests__/AccountRecoveryScreen.test.tsx',
+  'entry-router.md': 'src/app/__tests__/index.test.tsx',
+  'leave-room.md': 'src/screens/room/__tests__/LeaveAndSwitchScreens.test.tsx',
   'memberships.md': 'src/screens/durable/__tests__/DurableScreens.test.tsx',
   'messages.md': 'src/screens/messages/__tests__/MessagesScreens.test.tsx',
   'primary-tabs.md': 'src/navigation/__tests__/primaryTabs.test.ts',
   'settings.md': 'src/screens/settings/__tests__/SettingsScreen.test.tsx',
 };
-
-// Known exceptions: routing glue with no dedicated screen component. Warn,
-// do not fail; remove entries as real coverage lands.
-const testExemptions = new Set(['entry-router.md']);
 
 const documented = readdirSync(resolve(root, 'docs/screens')).filter((name) => name.endsWith('.md')).sort();
 const registered = contracts.map(([doc]) => doc).sort();
@@ -150,7 +156,6 @@ const warnings = [];
 for (const [doc] of contracts) {
   const testFile = screenTests[doc];
   if (!testFile) {
-    if (testExemptions.has(doc)) { warnings.push(`no jest test mapped for ${doc} (warn-listed exception)`); continue; }
     throw new Error(`No jest test mapping for ${doc}; add one to screenTests in .qa/verify-screen-contracts.mjs`);
   }
   if (!existsSync(resolve(root, testFile))) throw new Error(`Mapped jest test for ${doc} is missing: ${testFile}`);

@@ -43,7 +43,7 @@ function portIsListening(port) {
   return execFileSync('ss', ['-H', '-ltn', `sport = :${port}`], { encoding: 'utf8' }).trim().length > 0;
 }
 
-function selectProxyPort(preferred) {
+export function selectProxyPort(preferred) {
   for (let port = preferred; port < preferred + 20; port += 1) {
     if (!portIsListening(port)) {
       if (port !== preferred) console.log(`warn - proxy port ${preferred} is owned by another worktree; using ${port}`);
@@ -53,7 +53,7 @@ function selectProxyPort(preferred) {
   throw new Error(`no free Test Room proxy port in ${preferred}-${preferred + 19}`);
 }
 
-function waitForProxy(child, port, expectedRoomId, statePath) {
+export function waitForProxy(child, port, expectedRoomId, statePath) {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     if (!processIsRunning(child.pid)) throw new Error(`Test Room proxy exited before readiness (pid ${child.pid})`);
@@ -69,7 +69,7 @@ function waitForProxy(child, port, expectedRoomId, statePath) {
   throw new Error('Test Room proxy did not become ready within 120 seconds');
 }
 
-function stopProxy(child) {
+export function stopProxy(child) {
   if (!processIsRunning(child.pid)) return;
   process.kill(child.pid, 'SIGTERM');
   const deadline = Date.now() + 60_000;

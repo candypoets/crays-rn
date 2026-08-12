@@ -2,6 +2,8 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`, panel 01. The bright Night Playlist board supersedes the incumbent dark Discover treatment while the signed-descriptor rules below remain authoritative.
+
 Purpose: choose one verified room relay without implying attendance, popularity,
 or exact distance. Discover is the pre-selection home and must remain useful
 when Bluetooth is denied or the search relay is offline.
@@ -11,6 +13,8 @@ Discover tab, direct room link/QR, or a preserved authentication intent.
 
 Primary action: open a room preview. Secondary actions: switch Map/Nearby and
 learn why Nearby permission is useful. Neither action joins a room.
+
+The surface is titled **Tonight / Rooms around you**. A fresh descriptor appears as one photographic card with a blue selection border, text-labelled lime **Verified** badge, signed name and description, and **Preview room** action. The card never shows attendance, popularity, distance, or an invented event. Map/Nearby remain one segmented control below the result state.
 
 ## Data and state
 
@@ -52,7 +56,10 @@ disabled while the fixture is down. Internal labels ("Development test mode",
 "local signed test relay", "Waiting for test relay") never appear on the
 newcomer surface. This section and its subscription are absent from release
 builds; they are not a substitute for D-001 or a fabricated production
-listing. When a direct link already targets the test room's relay and id, the
+listing. The named Test Room QA scenario selects the next free local proxy
+port when 8787 belongs to another worktree and carries that validated `ws:`
+or `wss:` address only through the development-only identity seed route. When
+a direct link already targets the test room's relay and id, the
 duplicate card and its subscription are suppressed because relays replace a
 REQ that reuses a subscription ID.
 

@@ -46,6 +46,30 @@ export async function fetchRelayRootPubkey(
   return pubkey;
 }
 
+export async function fetchRelayRootPubkeyWithRetry(
+  relayUrl: string,
+  options: {
+    attempts?: number;
+    delayMs?: number;
+    fetchImpl?: typeof fetch;
+    sleepImpl?: (milliseconds: number) => Promise<void>;
+  } = {},
+): Promise<string> {
+  const attempts = Math.max(1, options.attempts ?? 4);
+  const delayMs = Math.max(0, options.delayMs ?? 500);
+  const sleepImpl = options.sleepImpl ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fetchRelayRootPubkey(relayUrl, options.fetchImpl);
+    } catch (error) {
+      lastError = error;
+      if (attempt + 1 < attempts) await sleepImpl(delayMs * (2 ** attempt));
+    }
+  }
+  throw lastError;
+}
+
 /**
  * Award issuance rule: an anchor admin may award any definition; the
  * delegated badge issuer may award sellable (priced) definitions only.

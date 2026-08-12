@@ -11,11 +11,17 @@ const baseProps = {
 describe('AccountAccessScreen', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('offers only local creation in the current slice', () => {
+  it('states what local identity creation means, without provider buttons', () => {
     render(<AccountAccessScreen {...baseProps} />);
 
-    expect(screen.getByRole('header', { name: 'Create your Crays account' })).toBeOnTheScreen();
-    expect(screen.getAllByText('Create on this device')).toHaveLength(2);
+    expect(screen.getByRole('header', { name: 'Make a Crays identity' })).toBeOnTheScreen();
+    expect(screen.getByText('Local and private')).toBeOnTheScreen();
+    expect(screen.getByText(/identity lives on this device/)).toBeOnTheScreen();
+    expect(screen.getByText('Built for real places')).toBeOnTheScreen();
+    expect(screen.getByText(/Join verified rooms/)).toBeOnTheScreen();
+    expect(screen.getByText(/Provider login isn.t available/)).toBeOnTheScreen();
+    expect(screen.getByText(/Apple and Google sign-in aren.t configured/)).toBeOnTheScreen();
+    expect(screen.getAllByText('Create on this device')).toHaveLength(1);
     expect(screen.queryByText('Continue with Apple')).not.toBeOnTheScreen();
     expect(screen.queryByText('Continue with Google')).not.toBeOnTheScreen();
   });
@@ -28,10 +34,20 @@ describe('AccountAccessScreen', () => {
     expect(screen.getByText('Secure identity creation failed.')).toBeOnTheScreen();
   });
 
-  it('disables repeat actions while creating the identity', () => {
+  it('locks the create action while creating the identity', () => {
     render(<AccountAccessScreen {...baseProps} loading />);
 
     expect(screen.getByTestId('create-on-device-button')).toBeDisabled();
-    expect(screen.getByTestId('create-on-device-choice')).toBeDisabled();
+    expect(screen.getByTestId('create-on-device-button')).toBeBusy();
+  });
+
+  it('hands back and existing-account actions to the router owner', () => {
+    render(<AccountAccessScreen {...baseProps} />);
+
+    fireEvent.press(screen.getByTestId('back-button'));
+    fireEvent.press(screen.getByTestId('existing-account-button'));
+
+    expect(baseProps.onBack).toHaveBeenCalledTimes(1);
+    expect(baseProps.onLogIn).toHaveBeenCalledTimes(1);
   });
 });

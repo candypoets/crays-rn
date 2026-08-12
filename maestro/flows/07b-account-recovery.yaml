@@ -19,7 +19,6 @@ appId: life.crays
     visible:
       id: "recovery-screen"
     timeout: 30000
-- assertVisible: "ACCOUNT · 2 OF 2"
 - assertVisible: "Keep your account with you"
 - assertVisible: "This device, for now"
 - assertVisible: ".*Cross-device recovery is not enabled yet.*"

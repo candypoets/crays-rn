@@ -1,6 +1,11 @@
 appId: life.crays
 ---
 - runFlow: 16-me.yaml
+- scrollUntilVisible:
+    element:
+      id: "me-orders"
+    direction: UP
+    timeout: 8000
 - tapOn:
     id: "me-orders"
 - extendedWaitUntil:
@@ -8,8 +13,10 @@ appId: life.crays
       id: "orders-screen"
     timeout: 15000
 - assertVisible: "Active now"
+- assertVisible: "Active first. History stays."
 - assertVisible: "Mezcal Negroni"
 - assertVisible: "Ready"
+- assertVisible: "View order"
 - assertNotVisible: "CR-QA-READY"
 - assertNotVisible: "checkin-crays-qa-one"
 - assertNotVisible: "Skyline three-visit pass"

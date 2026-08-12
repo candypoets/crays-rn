@@ -1,12 +1,12 @@
 import { Redirect } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getEntryDestination } from '@/account/account';
 import { resolveResumeDestination, type AppEntryDestination } from '@/account/state';
+import { TempoRail } from '@/components/night/NightPrimitives';
 import { BrandMark } from '@/components/onboarding/OnboardingPrimitives';
-import { colors } from '@/theme/colors';
 import { getStoredActiveRoom } from '@/session/RoomSession';
 
 export default function EntryRoute() {
@@ -36,7 +36,7 @@ export default function EntryRoute() {
         <BrandMark size={72} />
         {error ? (
           <>
-            <Text className="mt-6 text-center text-base leading-6 text-base-content">{error}</Text>
+            <Text accessibilityRole="alert" className="mt-6 text-center text-base leading-6 text-base-content">{error}</Text>
             <Pressable
               accessibilityRole="button"
               className="mt-4 min-h-12 items-center justify-center px-6"
@@ -44,14 +44,17 @@ export default function EntryRoute() {
                 setError(null);
                 setAttempt((value) => value + 1);
               }}
+              testID="entry-retry"
             >
               <Text className="font-bold text-primary">Try again</Text>
             </Pressable>
           </>
         ) : (
           <>
-            <ActivityIndicator className="mt-6" color={colors.accent} />
-            <Text className="mt-3 text-sm text-muted">Opening Crays…</Text>
+            <View accessibilityLabel="Opening Crays" accessibilityRole="progressbar" accessible className="mt-6 items-center">
+              <TempoRail className="w-44" />
+              <Text className="mt-3 text-sm font-semibold text-muted">Opening Crays…</Text>
+            </View>
           </>
         )}
       </View>

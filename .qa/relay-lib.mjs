@@ -5,7 +5,20 @@ import WebSocket from 'ws';
 import { finalizeEvent, getPublicKey } from 'nostr-tools';
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 
-useWebSocketImplementation(WebSocket);
+// nostr-tools clears its `onerror` callback when a pool is closed. Node's `ws`
+// can still emit a late transport error from an in-flight TCP/TLS connection
+// after that cleanup; without an EventEmitter listener, Node treats it as an
+// uncaught exception. Keep a no-op listener alongside nostr-tools' callback so
+// a verifier reports its own query/timeout result instead of crashing during
+// connection teardown.
+class QaWebSocket extends WebSocket {
+  constructor(...args) {
+    super(...args);
+    this.on('error', () => {});
+  }
+}
+
+useWebSocketImplementation(QaWebSocket);
 
 export const COORDINATOR_URL = (process.env.COORDINATOR_URL || 'https://coordinator.nuts.cash').replace(/\/$/, '');
 export const STATE_PATH = process.env.CRAYS_QA_STATE || '/tmp/qa-crays-room.json';

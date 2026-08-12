@@ -22,7 +22,7 @@ Every scenario follows the same lifecycle:
 registered flow (or references a missing one), when a flow does not reach the
 shared `maestro/flows/launch.yaml` startup transitively, or when a screen has
 no mapped jest test (`screenTests` in `verify-screen-contracts.mjs`;
-`entry-router.md` is a warn-listed exception). Scenarios that harden an
+`entry-router.md` is covered directly). Scenarios that harden an
 existing spec rather than add a screen are registered in
 `additionalScenarios`. This catches a newly added screen spec that has no
 executable QA scaffold before device tests begin.
@@ -129,11 +129,34 @@ in the cleanup signer set. `node .qa/relay-teardown.mjs --sweep` recovers only
 fixture data; it never deletes the relay or a Docker volume, and is safe only
 when no other Crays QA run is active.
 
+The switch-room scenario is the deliberate exception to the one-bootstrap
+cleanup rule: the deployed coordinator currently limits this QA owner to the
+reserved relay, so `.qa/qa-28-switch-room.mjs` seeds room A and then room B on
+that same real relay with distinct room IDs and signed manifests. Its second
+bootstrap sets `CRAYS_QA_PRESERVE_FIXTURES=1` to retain A while adding B; the
+runner verifies A's left replacement before asserting that the app published
+no B presence at the destination privacy screen. A non-owning instance of the
+same Test Room bridge carries both room IDs during the device flow; stopping
+that bridge never tears down the externally seeded A/B fixture family.
+
 UI runs connect through the Test Room bridge at
 `ws://10.0.2.2:8787`. It proxies WebSocket traffic to the reserved WSS relay,
-passes NIP-11 HTTP requests through to the deployed HTTPS origin, and forwards
-invite-service calls. Independent verifiers always query the WSS relay
-directly.
+serves the exact NIP-11 document fetched and root-key-validated by bootstrap
+for that scenario, and forwards invite-service calls. This scenario-lifetime
+snapshot prevents a transient HTTP outage from erasing trust while relay
+WebSocket traffic remains healthy. Independent verifiers always query the WSS
+relay directly.
+
+The bridge also terminates NIP-42 for kind-4 reads. It verifies the app's
+kind-22242 signature, exact challenge, local relay tag, timestamp, and
+viewer-scoped filter before forwarding the query to the real relay. This is a
+test-transport adapter, not an in-memory message store: events still come from
+the reserved WSS relay and all message writes and verifier reads target that
+relay directly. The adapter is presently necessary because the deployed
+reserved relay challenges protected reads but rejects valid AUTH with its
+routed `serviceUrl` unset. To pass the already-authenticated filter upstream,
+the bridge adds a non-matching kind; remove this adapter once the deployed
+relay advertises NIP-42 and accepts a direct signed AUTH probe.
 
 Invite scenarios `qa-08-invite-preview.mjs` and
 `qa-08b-invite-accepted.mjs` mint through the real relay invite service. The

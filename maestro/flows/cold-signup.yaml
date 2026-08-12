@@ -29,7 +29,7 @@ appId: life.crays
     visible:
       id: "discover-screen"
     timeout: 30000
-- assertVisible: "Discover rooms"
-- assertVisible: "ACCOUNT READY"
+- assertVisible: "Rooms around you"
+- assertVisible: "Account ready.*"
 - assertVisible: ".*No Bluetooth or location permission asked.*"
 - takeScreenshot: cold-signup-complete

@@ -3,10 +3,15 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ColdWelcomeScreen } from '@/screens/onboarding/ColdWelcomeScreen';
 
 describe('ColdWelcomeScreen', () => {
-  it('shows one promise, account actions, and the privacy reassurance', () => {
+  it('shows the Night Playlist promise, sample moments, account actions, and privacy reassurance', () => {
     render(<ColdWelcomeScreen onCreateAccount={jest.fn()} onLogIn={jest.fn()} />);
 
-    expect(screen.getByRole('header', { name: /Your night/ })).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Your night starts here' })).toBeOnTheScreen();
+    expect(screen.getByText('Tonight moves.')).toBeOnTheScreen();
+    expect(screen.getByText(/upcoming moments/i)).toBeOnTheScreen();
+    expect(screen.getByText('Gallery Opening')).toBeOnTheScreen();
+    expect(screen.getByText('Rooftop Jazz')).toBeOnTheScreen();
+    expect(screen.getByText('After Hours')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Create account' })).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Log in' })).toBeOnTheScreen();
     expect(screen.getByText(/No public location/)).toBeOnTheScreen();

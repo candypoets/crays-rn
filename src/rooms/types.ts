@@ -27,6 +27,7 @@ export type RoomDescriptor = {
 };
 
 export type ActiveRoom = RoomDescriptor & {
+  /** Local entry instant in Unix milliseconds. */
   joinedAt: number;
   visibility: 'quiet' | 'visible';
   intent: RoomIntent;

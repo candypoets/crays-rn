@@ -42,7 +42,7 @@ describe('DiscoverHandoffScreen', () => {
 
   it('defaults the newcomer to Nearby with the consent truth and one action', () => {
     render(<DiscoverHandoffScreen mapAvailable={false} mode="nearby" onChangeMode={jest.fn()} />);
-    expect(screen.getByRole('header', { name: 'Discover rooms' })).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Rooms around you' })).toBeOnTheScreen();
     expect(screen.getByText(/never enters one for you/)).toBeOnTheScreen();
     expect(screen.getByText(/Account ready/i)).toBeOnTheScreen();
     expect(screen.getByText(/No Bluetooth or location permission asked/)).toBeOnTheScreen();
@@ -54,8 +54,8 @@ describe('DiscoverHandoffScreen', () => {
   it('shows a relay-backed verified room result', () => {
     render(<DiscoverHandoffScreen mode="map" onChangeMode={jest.fn()} room={room} />);
     expect(screen.getByText('The Skyline Room')).toBeOnTheScreen();
-    expect(screen.getByText('Verified room')).toBeOnTheScreen();
-    expect(screen.getByText('View room →')).toBeOnTheScreen();
+    expect(screen.getByText('Verified')).toBeOnTheScreen();
+    expect(screen.getByText('Preview room →')).toBeOnTheScreen();
   });
 
   it('exposes the development Test Room as a subordinate dev row when online', () => {

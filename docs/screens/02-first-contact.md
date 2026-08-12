@@ -2,14 +2,17 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/01-room-and-feed-v1.png`, panel 04. The Night Playlist Maya sheet supersedes the incumbent dark profile PNG for composition and signal colors; consent and relay rules below remain authoritative.
+
 This screen is the consent boundary between seeing a visible room profile and contacting that person. **Message** is primary. **Send a drink** is secondary and explicitly non-anonymous. The person remains identified by pubkey and active-room projection, not by display name.
 
 ## UI and interaction
 
-- Show display name, intent, one-line room context, and supplementary live state.
+- Open as a portrait-led native sheet: full-bleed selected portrait, text-labelled lime **In the room now** sticker, display name, intent, one-line room context, and room name.
 - Do not show distance, table, followers, popularity, or activity outside this room.
 - Message opens screen 22 unless an accepted conversation already exists; accepted contacts open the thread directly.
 - Send a drink opens screen 04 only after the recipient has accepted the NIP-04 conversation. A future signed recipient/venue gift-first policy may relax this conservative default (D-004).
+- **Browse quietly** is a visible outlined privacy action. Block and venue report live in the labelled overflow menu and remain one tap beyond opening it.
 - Back returns to the exact People state and filter position.
 
 ## State and data ownership
@@ -20,7 +23,7 @@ Required states include active visible profile, profile disappearing while open,
 
 ## Accessibility and safety
 
-Both actions are labelled buttons with minimum touch targets. The consent explanation is readable text, not a tooltip. Venue hide, global block, and venue report are one-tap actions here and remain reachable in the request/thread. The live dot is not the only evidence that the person is in this room.
+All actions are labelled buttons with minimum 48-point touch targets. The consent explanation is readable text, not a tooltip. Venue hide is visible; global block and venue report remain reachable in the labelled overflow and in the request/thread. The text sticker—not a color-only live dot—states that the person is in this room.
 
 ## QA strategy
 

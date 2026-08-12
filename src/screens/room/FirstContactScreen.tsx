@@ -1,16 +1,18 @@
-// THESIS: First contact is ordinary and consent-led: message first, gift second.
-// OWNED WORLD: A single room profile card keeps context without exposing distance or popularity.
+// THESIS: First contact is a vivid room moment bounded by ordinary, explicit consent.
+// OWNED WORLD: The selected portrait becomes a liner-note sheet with blue, coral, and lime signals.
 // STORY: Recognize the person → understand the contact boundary → choose one respectful action.
-// FIRST VIEWPORT: Identity, live context, Message, and Send a drink fit together.
-// FORM: Missing profile data never invents identity; actions remain explicit.
+// FIRST VIEWPORT: Identity, live context, Message, Send a drink, and Browse quietly stay together.
+// FORM: Missing contact rights never become a visually enabled action; safety remains one menu away.
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AppShell } from '@/components/app/AppShell';
+import { PortraitImage } from '@/components/night/NightPrimitives';
 import type { RoomPerson } from '@/rooms/types';
 import { colors } from '@/theme/colors';
 
-export function FirstContactScreen({ contactState, onBack, onBlock, onHideInRoom, onMessage, onReport, onSendDrink, person, reporting = false, roomName, safetyNotice }: {
+type FirstContactScreenProps = {
   contactState?: 'requested' | 'accepted';
   onBack: () => void;
   onBlock: () => void;
@@ -22,52 +24,152 @@ export function FirstContactScreen({ contactState, onBack, onBlock, onHideInRoom
   reporting?: boolean;
   roomName: string;
   safetyNotice?: string | null;
+};
+
+function portraitIndex(name: string) {
+  return [...name].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 8;
+}
+
+function RoundButton({
+  icon,
+  label,
+  onPress,
+  testID,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  testID: string;
 }) {
+  return (
+    <Pressable
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      className="h-12 w-12 items-center justify-center rounded-full border border-edge bg-surface/95 active:bg-surface-soft"
+      onPress={onPress}
+      testID={testID}
+    >
+      <Ionicons color={colors.ink} name={icon} size={24} />
+    </Pressable>
+  );
+}
+
+function Scribble() {
+  return (
+    <View accessibilityElementsHidden className="absolute right-5 top-28 h-24 w-20 rotate-12">
+      <View className="absolute right-2 top-3 h-1 w-16 rotate-[-35deg] rounded-full bg-ink" />
+      <View className="absolute right-0 top-10 h-1 w-20 rotate-[-18deg] rounded-full bg-ink" />
+      <View className="absolute right-3 top-16 h-1 w-14 rotate-[-42deg] rounded-full bg-ink" />
+    </View>
+  );
+}
+
+export function FirstContactScreen({
+  contactState,
+  onBack,
+  onBlock,
+  onHideInRoom,
+  onMessage,
+  onReport,
+  onSendDrink,
+  person,
+  reporting = false,
+  roomName,
+  safetyNotice,
+}: FirstContactScreenProps) {
+  const [showSafety, setShowSafety] = useState(false);
   const waiting = contactState === 'requested';
   const canSendDrink = contactState === 'accepted';
-  return (
-    <AppShell
-      eyebrow={roomName}
-      headerAction={<Pressable accessibilityLabel="Back to people" className="h-12 w-12 items-center justify-center rounded-full bg-base-200" onPress={onBack}><Ionicons color={colors.accent} name="close" size={24} /></Pressable>}
-      testID="first-contact-screen"
-      title="Room profile"
-    >
-      <View className="mt-5 overflow-hidden rounded-[34px] border border-base-300 bg-base-200">
-        <View className="h-56 items-center justify-center bg-primary/10">
-          <View className="h-28 w-28 items-center justify-center rounded-full border-4 border-base-100 bg-primary/20">
-            <Text className="text-5xl font-black text-primary">{person.name.slice(0, 1).toUpperCase()}</Text>
-          </View>
-          <View className="absolute bottom-5 right-5 flex-row items-center gap-2 rounded-full bg-base-100 px-3 py-2">
-            <View className="h-2.5 w-2.5 rounded-full bg-success" />
-            <Text className="text-xs font-black uppercase tracking-[1px] text-base-content">In the room</Text>
-          </View>
-        </View>
-        <View className="p-6">
-          <Text accessibilityRole="header" className="text-4xl font-black text-base-content">{person.name}</Text>
-          <Text className="mt-2 text-sm font-black uppercase tracking-[2px] text-primary">{person.intent}</Text>
-          {person.context ? <Text className="mt-4 text-lg leading-7 text-base-content">“{person.context}”</Text> : null}
-        </View>
-      </View>
 
-      <Pressable accessibilityRole="button" accessibilityState={{ disabled: waiting }} className="mt-6 min-h-14 flex-row items-center justify-center gap-3 rounded-2xl bg-primary px-6 disabled:opacity-50" disabled={waiting} onPress={onMessage} testID="message-person">
-        <Ionicons color="white" name="chatbubble-outline" size={22} />
-        <Text className="text-base font-black text-white">{contactState === 'accepted' ? `Open conversation with ${person.name}` : waiting ? 'Waiting for a response' : `Message ${person.name}`}</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" accessibilityState={{ disabled: !canSendDrink }} className="mt-3 min-h-14 flex-row items-center justify-center gap-3 rounded-2xl border border-base-300 bg-base-200 px-6 disabled:opacity-50" disabled={!canSendDrink} onPress={onSendDrink} testID="send-drink-person">
-        <Ionicons color={colors.accent} name="wine-outline" size={22} />
-        <Text className="text-base font-black text-base-content">Send a drink</Text>
-      </Pressable>
-      <View className="mt-6 flex-row gap-3 rounded-2xl bg-base-200 p-4">
-        <Ionicons color={colors.accent} name="shield-checkmark-outline" size={22} />
-        <Text className="flex-1 text-sm leading-5 text-muted">One first message only. They can accept, reply, dismiss, block, or report. Drink gifting unlocks after acceptance. A drink is never anonymous.</Text>
-      </View>
-      <Text className="mb-3 mt-8 text-xl font-black text-base-content">Privacy & safety</Text>
-      <View className="gap-2">
-        <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center rounded-2xl bg-base-200 px-4" onPress={onHideInRoom} testID="person-hide-room"><Ionicons color={colors.accent} name="eye-off-outline" size={22} /><Text className="ml-3 flex-1 font-bold text-base-content">Hide in this room</Text></Pressable>
-        <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center rounded-2xl bg-base-200 px-4" onPress={onBlock} testID="person-block-global"><Ionicons color={colors.accent} name="ban-outline" size={22} /><Text className="ml-3 flex-1 font-bold text-base-content">Block everywhere</Text></Pressable>
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: reporting }} className="min-h-12 flex-row items-center rounded-2xl bg-base-200 px-4 disabled:opacity-50" disabled={reporting} onPress={onReport} testID="person-report"><Ionicons color={colors.accent} name="flag-outline" size={22} /><Text className="ml-3 flex-1 font-bold text-base-content">{reporting ? 'Reporting…' : 'Report to this venue'}</Text></Pressable>
-      </View>
-      {safetyNotice ? <Text accessibilityRole="alert" className="mt-3 leading-6 text-muted">{safetyNotice}</Text> : null}
-    </AppShell>
+  return (
+    <SafeAreaView className="flex-1 bg-surface-soft" edges={['top', 'left', 'right', 'bottom']} testID="first-contact-screen">
+      <ScrollView contentContainerClassName="grow" showsVerticalScrollIndicator={false}>
+        <View className="relative h-[390px] overflow-hidden bg-surface-soft">
+          <PortraitImage className="absolute inset-0" index={portraitIndex(person.name)} label={`Portrait of ${person.name}`} />
+          <View className="absolute inset-x-0 top-0 flex-row items-center justify-between px-5 pt-3">
+            <RoundButton icon="chevron-back" label="Back to people" onPress={onBack} testID="first-contact-back" />
+            <RoundButton icon="ellipsis-horizontal" label="Privacy and safety" onPress={() => setShowSafety((value) => !value)} testID="first-contact-more" />
+          </View>
+          <Scribble />
+          <View className="absolute bottom-5 left-5 max-w-28 -rotate-6 rounded-lg bg-verified px-3 py-3 shadow-sm">
+            <Text className="text-center text-[11px] font-black uppercase leading-4 text-ink">In the room now</Text>
+          </View>
+        </View>
+
+        <View className="-mt-5 grow rounded-t-[28px] bg-surface px-5 pb-7 pt-6">
+          <View className="flex-row flex-wrap items-baseline gap-x-3">
+            <Text accessibilityRole="header" className="text-[40px] font-black uppercase leading-[42px] tracking-[-1px] text-primary">{person.name}</Text>
+            <Text className="text-lg font-black uppercase text-commitment">/ {person.intent}</Text>
+          </View>
+          {person.context ? <Text className="mt-3 text-lg leading-7 text-ink">{person.context}</Text> : null}
+          <Text className="mt-1 text-xs font-semibold text-muted">Visible in {roomName}</Text>
+
+          <View className="mt-5 rounded-2xl bg-surface-soft px-4 py-3">
+            <Text className="text-sm leading-5 text-ink">
+              One first message only. Drink gifting unlocks after acceptance. A drink is never anonymous.
+            </Text>
+          </View>
+
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: waiting }}
+            className="mt-5 min-h-14 flex-row items-center justify-center gap-3 rounded-2xl bg-primary px-6 disabled:opacity-45"
+            disabled={waiting}
+            onPress={onMessage}
+            testID="message-person"
+          >
+            <Ionicons color={colors.surface} name="chatbubble" size={22} />
+            <Text className="text-base font-black uppercase text-white">
+              {contactState === 'accepted' ? `Open conversation with ${person.name}` : waiting ? 'Waiting for a response' : `Message ${person.name}`}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityHint={canSendDrink ? 'Opens the room gift menu' : 'Available after this person accepts your message request'}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: !canSendDrink }}
+            className="mt-3 min-h-14 flex-row items-center justify-center gap-3 rounded-2xl bg-commitment px-6 disabled:opacity-40"
+            disabled={!canSendDrink}
+            onPress={onSendDrink}
+            testID="send-drink-person"
+          >
+            <Ionicons color={colors.ink} name="wine" size={22} />
+            <Text className="text-base font-black uppercase text-ink">Send a drink</Text>
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            className="mt-5 min-h-14 flex-row items-center justify-center gap-3 rounded-2xl border border-ink px-6 active:bg-surface-soft"
+            onPress={onHideInRoom}
+            testID="person-hide-room"
+          >
+            <Ionicons color={colors.ink} name="eye-off-outline" size={22} />
+            <Text className="text-sm font-black uppercase text-ink">Browse quietly</Text>
+          </Pressable>
+
+          {showSafety ? (
+            <View className="mt-5 border-t border-edge pt-4" testID="first-contact-safety-menu">
+              <Text className="mb-2 text-xs font-black uppercase tracking-[0.7px] text-muted">Privacy & safety</Text>
+              <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center px-2" onPress={onBlock} testID="person-block-global">
+                <Ionicons color={colors.error} name="ban-outline" size={22} />
+                <Text className="ml-3 flex-1 font-bold text-ink">Block everywhere</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ disabled: reporting }}
+                className="min-h-12 flex-row items-center px-2 disabled:opacity-50"
+                disabled={reporting}
+                onPress={onReport}
+                testID="person-report"
+              >
+                <Ionicons color={colors.error} name="flag-outline" size={22} />
+                <Text className="ml-3 flex-1 font-bold text-ink">{reporting ? 'Reporting…' : 'Report to this venue'}</Text>
+              </Pressable>
+            </View>
+          ) : null}
+          {safetyNotice ? <Text accessibilityRole="alert" className="mt-3 leading-6 text-muted">{safetyNotice}</Text> : null}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }

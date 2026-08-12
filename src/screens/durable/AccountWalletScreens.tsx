@@ -4,18 +4,368 @@
 // FIRST VIEWPORT: Active-now context and durable categories precede settings.
 // FORM: Empty, hidden balance, recovering, mint unavailable, and unconfigured states are explicit.
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, View } from 'react-native';
-import { AppShell, RaisedRow, SectionTitle } from '@/components/app/AppShell';
-import { PrimaryButton } from '@/components/onboarding/OnboardingPrimitives';
-import type { RoomOrder } from '@/rooms/types';
+import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { AppShell, SectionTitle } from '@/components/app/AppShell';
+import { DrinkImage, NightBadge, NightCard, VenueImage } from '@/components/night/NightPrimitives';
+import { ErrorBanner, PrimaryButton } from '@/components/onboarding/OnboardingPrimitives';
+import type { RoomEntitlement, RoomOrder } from '@/rooms/types';
 import { colors } from '@/theme/colors';
 import { orderSummaryLabel } from '@/screens/durable/NightAndOrderScreens';
 
-export function MeScreen({ activeOrder, error, hasMembership, onMemberships, onOrders, onProfile, onTickets, onWallet, roomName, ticketCount }: { activeOrder?: RoomOrder; error?: string | null; hasMembership: boolean; onMemberships: () => void; onOrders: () => void; onProfile: () => void; onTickets: () => void; onWallet: () => void; roomName?: string; ticketCount: number }) {
-  const row = (icon: keyof typeof Ionicons.glyphMap, title: string, detail: string, action: () => void, id: string) => <Pressable accessibilityLabel={title} accessibilityRole="button" onPress={action} testID={id}><RaisedRow><Ionicons color={colors.accent} name={icon} size={25} /><View className="ml-4 flex-1"><Text className="text-base font-black text-base-content">{title}</Text><Text className="mt-1 text-sm text-muted">{detail}</Text></View><Ionicons color={colors.accent} name="chevron-forward" size={21} /></RaisedRow></Pressable>;
-  return <AppShell eyebrow="Your Crays" testID="me-screen" title="Me">{error ? <Text accessibilityRole="alert" className="mt-4 text-sm text-error">{error}</Text> : null}{activeOrder ? <><SectionTitle>Active now</SectionTitle><Pressable accessibilityLabel="Track active order" accessibilityRole="button" onPress={onOrders}><View className="rounded-[24px] bg-primary p-5"><Text className="text-xs font-black uppercase tracking-[2px] text-white/80">{roomName || 'Current room'}</Text><Text className="mt-2 text-xl font-black text-white">{activeOrder.product.name}</Text><Text className="mt-1 text-white/90">{orderSummaryLabel(activeOrder)}</Text></View></Pressable></> : null}<SectionTitle>Keep and manage</SectionTitle><View className="gap-3">{row('receipt-outline', 'Orders', activeOrder ? 'Track active order and receipts' : 'History, receipts and support', onOrders, 'me-orders')}{row('ribbon-outline', 'Memberships & passes', hasMembership ? 'Active room membership' : 'Offers and durable access', onMemberships, 'me-memberships')}{row('ticket-outline', 'Tickets', ticketCount ? `${ticketCount} saved ${ticketCount === 1 ? 'ticket' : 'tickets'}` : 'Upcoming and past event access', onTickets, 'me-tickets')}{row('wallet-outline', 'Wallet', 'Not set up · balance unavailable', onWallet, 'me-wallet')}</View><SectionTitle>Profile & settings</SectionTitle>{row('person-circle-outline', 'Profile, privacy & account', 'Identity, recovery, notifications and blocks', onProfile, 'me-profile')}</AppShell>;
+const activeOrderPriority: Record<RoomOrder['status'], number> = {
+  ready: 0,
+  processing: 1,
+  accepted: 2,
+  pending: 3,
+  fulfilled: 4,
+  cancelled: 5,
+};
+
+export function selectActiveOrder(orders: RoomOrder[]) {
+  return [...orders]
+    .filter((order) => !['fulfilled', 'cancelled'].includes(order.status))
+    .sort((left, right) => activeOrderPriority[left.status] - activeOrderPriority[right.status]
+      || right.updatedAt - left.updatedAt
+      || left.id.localeCompare(right.id))[0];
 }
 
-export function WalletScreen({ onAddFunds, onBack }: { onAddFunds: () => void; onBack: () => void }) { return <AppShell eyebrow="Me" testID="wallet-screen" title="Wallet"><Pressable accessibilityRole="button" className="mt-1 flex-row items-center gap-2 self-start" onPress={onBack}><Ionicons color={colors.accent} name="arrow-back" size={18} /><Text className="font-bold text-primary">Back to Me</Text></Pressable><View className="mt-7 rounded-[30px] border border-base-300 bg-base-200 p-6"><Text className="text-xs font-black uppercase tracking-[2px] text-muted">Spendable balance</Text><Text className="mt-3 text-[44px] font-black text-base-content">Unavailable</Text><Text className="mt-2 leading-6 text-muted">No trusted Cashu mint or encrypted NIP-60 wallet has been configured for this build.</Text></View><View className="mt-5"><PrimaryButton disabled label="Wallet setup required" onPress={onAddFunds} testID="wallet-setup-disabled" /></View><SectionTitle>Actions</SectionTitle><View className="gap-3"><Pressable accessibilityRole="button" onPress={onAddFunds} testID="wallet-add-funds"><RaisedRow><Ionicons color={colors.accent} name="add-circle-outline" size={26} /><Text className="ml-4 flex-1 font-bold text-base-content">Add funds</Text><Ionicons color={colors.accent} name="chevron-forward" size={21} /></RaisedRow></Pressable><RaisedRow><Ionicons color={colors.placeholder} name="arrow-down-circle-outline" size={26} /><View className="ml-4 flex-1"><Text className="font-bold text-muted">Receive</Text><Text className="mt-1 text-sm text-muted">Available after wallet setup</Text></View></RaisedRow></View><SectionTitle>Recovery & activity</SectionTitle><RaisedRow><Ionicons color={colors.accent} name="cloud-offline-outline" size={25} /><View className="ml-4 flex-1"><Text className="font-bold text-base-content">Nostr sync not configured</Text><Text className="mt-1 text-sm leading-5 text-muted">No balance or proof state is fabricated. Recovery remains unavailable until an encrypted wallet is created.</Text></View></RaisedRow></AppShell>; }
+export function hasUsableDurableAccess(entitlements: RoomEntitlement[]) {
+  return entitlements.some((item) => (item.type === 'membership' || item.type === 'pass')
+    && (item.state === 'active' || item.state === 'available'));
+}
 
-export function AddFundsScreen({ onBack }: { onBack: () => void }) { return <AppShell eyebrow="Wallet" testID="add-funds-screen" title="Add funds"><Pressable accessibilityRole="button" className="mt-1 flex-row items-center gap-2 self-start" onPress={onBack}><Ionicons color={colors.accent} name="arrow-back" size={18} /><Text className="font-bold text-primary">Back to Wallet</Text></Pressable><View className="mt-8 items-center rounded-[30px] border border-base-300 bg-base-200 p-7"><View className="h-16 w-16 items-center justify-center rounded-full bg-primary/15"><Ionicons color={colors.accent} name="flash-outline" size={32} /></View><Text className="mt-5 text-2xl font-black text-base-content">Lightning funding is not configured</Text><Text className="mt-3 text-center leading-6 text-muted">A funding request needs a selected Cashu mint, a real Lightning quote, expiry, and recoverable proof state. This build creates none of those.</Text></View><SectionTitle>When enabled</SectionTitle>{['Enter an amount in EUR', 'Review the live Lightning quote and expiry', 'Credit only after mint proofs verify and sync safely'].map((text, index) => <View className="mb-3 flex-row items-center" key={text}><View className="h-8 w-8 items-center justify-center rounded-full bg-primary"><Text className="font-black text-white">{index + 1}</Text></View><Text className="ml-3 flex-1 leading-6 text-base-content">{text}</Text></View>)}<View className="mt-6"><PrimaryButton disabled label="Mint configuration required" onPress={() => {}} testID="add-funds-disabled" /></View></AppShell>; }
+export function countUsableEventAccess(entitlements: RoomEntitlement[]) {
+  return entitlements.filter((item) => item.type === 'event_access'
+    && (item.state === 'active' || item.state === 'available')).length;
+}
+
+type MeRowProps = {
+  action: () => void;
+  detail: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  id: string;
+  title: string;
+};
+
+function MeRow({ action, detail, icon, id, title }: MeRowProps) {
+  return (
+    <Pressable
+      accessibilityLabel={`${title}. ${detail}`}
+      accessibilityRole="button"
+      className="min-h-16 flex-row items-center border-b border-edge px-3 py-3"
+      onPress={action}
+      testID={id}
+    >
+      <View className="h-10 w-10 items-center justify-center rounded-xl bg-surface-soft">
+        <Ionicons color={colors.ink} name={icon} size={22} />
+      </View>
+      <View className="ml-3 min-w-0 flex-1">
+        <Text className="text-base font-extrabold text-ink">{title}</Text>
+        <Text className="mt-0.5 text-sm text-muted">{detail}</Text>
+      </View>
+      <Ionicons color={colors.primary} name="chevron-forward" size={20} />
+    </Pressable>
+  );
+}
+
+export function MeScreen({
+  activeOrder,
+  error,
+  hasMembership,
+  loading = false,
+  onMemberships,
+  onMessages,
+  onOrders,
+  onProfile,
+  onTickets,
+  onWallet,
+  roomName,
+  offline = false,
+  refreshing = false,
+  ticketCount,
+}: {
+  activeOrder?: RoomOrder;
+  error?: string | null;
+  hasMembership: boolean;
+  loading?: boolean;
+  onMemberships: () => void;
+  onMessages?: () => void;
+  onOrders: () => void;
+  onProfile: () => void;
+  onTickets: () => void;
+  onWallet: () => void;
+  roomName?: string;
+  offline?: boolean;
+  refreshing?: boolean;
+  ticketCount: number;
+}) {
+  const orderDetail = loading
+    ? 'Loading saved orders…'
+    : refreshing && !activeOrder
+      ? 'Checking the room…'
+      : activeOrder
+        ? 'Track active order and history'
+        : offline
+          ? 'Saved history · room unavailable'
+          : 'Order history and receipts';
+  const membershipDetail = loading
+    ? 'Loading saved access…'
+    : refreshing && !hasMembership
+      ? 'Checking the room…'
+      : hasMembership
+        ? 'Membership or pass ready'
+        : offline
+          ? 'No saved access · room unavailable'
+          : 'No active access';
+  const ticketDetail = loading
+    ? 'Loading saved tickets…'
+    : ticketCount
+      ? `${ticketCount} saved ${ticketCount === 1 ? 'ticket' : 'tickets'}`
+      : 'No saved tickets';
+
+  return (
+    <AppShell
+      headerAction={(
+        <View
+          accessibilityElementsHidden
+          className="h-12 w-12 items-center justify-center rounded-full bg-surface-soft"
+          importantForAccessibility="no-hide-descendants"
+        >
+          <Ionicons color={colors.ink} name="notifications-outline" size={22} />
+        </View>
+      )}
+      testID="me-screen"
+    >
+      <Text accessibilityRole="header" className="mt-2 text-[40px] font-black uppercase tracking-[-1px] text-ink">
+        Me
+      </Text>
+      <Text className="text-xs font-black uppercase tracking-[1.4px] text-ink">Keeping the night</Text>
+
+      {error ? <View className="mt-5"><ErrorBanner message={error} /></View> : null}
+      {loading ? (
+        <View accessible accessibilityLabel="Loading saved night" className="mt-5 flex-row items-center rounded-2xl bg-surface-soft p-4" testID="me-durable-loading">
+          <ActivityIndicator color={colors.primary} />
+          <Text className="ml-3 flex-1 font-semibold text-muted">Loading saved night…</Text>
+        </View>
+      ) : refreshing ? (
+        <View accessible className="mt-5 flex-row items-center rounded-2xl bg-surface-soft p-4" testID="me-durable-refreshing">
+          <ActivityIndicator color={colors.primary} />
+          <Text className="ml-3 flex-1 font-semibold text-muted">Refreshing room status…</Text>
+        </View>
+      ) : offline ? (
+        <View accessible accessibilityRole="alert" className="mt-5 flex-row items-start rounded-2xl bg-attention/25 p-4" testID="me-durable-offline">
+          <Ionicons color={colors.ink} name="cloud-offline-outline" size={21} />
+          <Text className="ml-3 flex-1 text-sm font-semibold leading-5 text-ink">Room updates are unavailable. Saved items remain visible.</Text>
+        </View>
+      ) : null}
+
+      <Text className="mb-2 mt-5 text-[11px] font-black uppercase tracking-[0.8px] text-ink">Current room</Text>
+      {roomName ? (
+        <NightCard className="p-0">
+          <View className="flex-row overflow-hidden rounded-2xl">
+            <VenueImage className="h-24 w-32" index={0} label={`${roomName} interior`} testID="me-room-image" />
+            <View className="min-w-0 flex-1 justify-center px-4 py-3">
+              <Text className="text-lg font-black text-ink">{roomName}</Text>
+              <View className="mt-2 flex-row items-center gap-2">
+                <View className="h-2 w-2 rounded-full bg-success" />
+                <Text className="text-sm font-semibold text-muted">You’re inside</Text>
+              </View>
+            </View>
+          </View>
+        </NightCard>
+      ) : (
+        <NightCard>
+          <Text className="font-extrabold text-ink">No room selected</Text>
+          <Text className="mt-1 text-sm leading-5 text-muted">Join a nearby room to see live context here.</Text>
+        </NightCard>
+      )}
+
+      {activeOrder ? (
+        <View>
+          <Text className="mb-2 mt-5 text-[11px] font-black uppercase tracking-[0.8px] text-ink">Active order</Text>
+          <Pressable
+            accessibilityLabel={`${activeOrder.product.name}. ${orderSummaryLabel(activeOrder)}. Open orders`}
+            accessibilityRole="button"
+            className="rounded-2xl border border-edge bg-surface"
+            onPress={onOrders}
+            testID="me-active-order"
+          >
+            <View className="flex-row items-center p-3">
+              <DrinkImage className="h-16 w-16 rounded-xl" index={activeOrder.product.position % 4} label={activeOrder.product.name} />
+              <View className="ml-3 min-w-0 flex-1">
+                <Text className="text-base font-black text-ink">{activeOrder.product.name}</Text>
+                <Text className="mt-1 text-sm font-semibold text-primary">{orderSummaryLabel(activeOrder)}</Text>
+                <View accessibilityElementsHidden className="mt-3 flex-row items-center" importantForAccessibility="no-hide-descendants">
+                  <View className="h-1 flex-1 rounded-full bg-primary" />
+                  <View className="h-2.5 w-2.5 rounded-full border-2 border-primary bg-surface" />
+                  <View className="h-1 flex-1 rounded-full bg-edge" />
+                </View>
+              </View>
+              <Ionicons color={colors.primary} name="chevron-forward" size={20} />
+            </View>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <View className="mt-5 overflow-hidden rounded-2xl border border-edge bg-surface">
+        <MeRow action={onOrders} detail={orderDetail} icon="receipt-outline" id="me-orders" title="Orders" />
+        <MeRow action={onMemberships} detail={membershipDetail} icon="ribbon-outline" id="me-memberships" title="Memberships & passes" />
+        <MeRow action={onTickets} detail={ticketDetail} icon="ticket-outline" id="me-tickets" title="Tickets" />
+        <MeRow action={onWallet} detail="Setup required · balance unavailable" icon="wallet-outline" id="me-wallet" title="Wallet" />
+        {onMessages ? <MeRow action={onMessages} detail="Conversations stay after you leave" icon="chatbox-ellipses-outline" id="me-messages" title="Messages" /> : null}
+      </View>
+
+      <View className="mt-5">
+        <Pressable
+          accessibilityLabel="Open profile, privacy, and settings"
+          accessibilityRole="button"
+          className="min-h-14 flex-row items-center rounded-2xl border border-edge bg-surface px-4"
+          onPress={onProfile}
+          testID="me-profile"
+        >
+          <Ionicons color={colors.ink} name="settings-outline" size={22} />
+          <View className="ml-3 min-w-0 flex-1">
+            <Text className="font-extrabold text-ink">Profile & settings</Text>
+            <View className="mt-2 flex-row items-center justify-between">
+              <NightBadge>Account</NightBadge>
+              <Ionicons color={colors.primary} name="chevron-forward" size={20} />
+            </View>
+          </View>
+        </Pressable>
+      </View>
+    </AppShell>
+  );
+}
+
+export function WalletScreen({ onAddFunds, onBack }: { onAddFunds: () => void; onBack: () => void }) {
+  const disabledAction = (icon: keyof typeof Ionicons.glyphMap, label: string, detail: string, testID: string) => (
+    <Pressable
+      accessibilityLabel={`${label}. ${detail}`}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: true }}
+      className="min-h-24 flex-1 items-center justify-center rounded-2xl border border-edge bg-surface px-2 py-3 opacity-60"
+      disabled
+      testID={testID}
+    >
+      <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-soft">
+        <Ionicons color={colors.inkMuted} name={icon} size={22} />
+      </View>
+      <Text className="mt-2 text-center text-sm font-extrabold text-muted">{label}</Text>
+      <Text className="mt-1 text-center text-xs font-semibold text-muted">{detail}</Text>
+    </Pressable>
+  );
+
+  return (
+    <AppShell chrome="child" testID="wallet-screen">
+      <Pressable
+        accessibilityLabel="Back to Me"
+        accessibilityRole="button"
+        className="-ml-3 mt-1 min-h-12 flex-row items-center gap-2 self-start px-3"
+        onPress={onBack}
+        testID="wallet-back"
+      >
+        <Ionicons color={colors.primary} name="arrow-back" size={20} />
+        <Text className="font-bold text-primary">Back to Me</Text>
+      </Pressable>
+      <Text accessibilityRole="header" className="mt-2 text-[36px] font-black uppercase tracking-[-0.8px] text-ink">Wallet</Text>
+      <Text className="text-sm font-semibold text-ink">Simple. Private. Yours.</Text>
+
+      <NightCard className="mt-6">
+        <Text className="text-[11px] font-black uppercase tracking-[0.8px] text-ink">Wallet status</Text>
+        <Text className="mt-4 text-[40px] font-black tracking-[-1px] text-ink">Unavailable</Text>
+        <Text className="mt-2 leading-6 text-muted">No trusted Cashu mint or encrypted NIP-60 wallet has been configured for this build.</Text>
+        <View className="mt-5">
+          <PrimaryButton label="Review add funds setup" onPress={onAddFunds} testID="wallet-add-funds" />
+        </View>
+      </NightCard>
+
+      <View className="mt-5 flex-row gap-3">
+        <Pressable
+          accessibilityLabel="Add funds. Opens setup requirements"
+          accessibilityRole="button"
+          className="min-h-24 flex-1 items-center justify-center rounded-2xl border border-edge bg-surface px-2 py-3"
+          onPress={onAddFunds}
+          testID="wallet-add-funds-tile"
+        >
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-primary">
+            <Ionicons color={colors.paper} name="add" size={22} />
+          </View>
+          <Text className="mt-2 text-center text-sm font-extrabold text-ink">Add funds</Text>
+        </Pressable>
+        {disabledAction('arrow-down', 'Receive', 'After wallet setup', 'wallet-receive-disabled')}
+        {disabledAction('list', 'Activity', 'After wallet setup', 'wallet-activity-disabled')}
+      </View>
+
+      <Text className="mb-2 mt-7 text-[11px] font-black uppercase tracking-[0.8px] text-ink">Recovery</Text>
+      <NightCard>
+        <View className="flex-row items-start">
+          <View className="h-11 w-11 items-center justify-center rounded-xl bg-surface-soft">
+            <Ionicons color={colors.ink} name="lock-closed-outline" size={22} />
+          </View>
+          <View className="ml-3 min-w-0 flex-1">
+            <Text className="font-extrabold text-ink">Set up recovery</Text>
+            <Text className="mt-1 text-sm leading-5 text-muted">Recovery remains unavailable until an encrypted wallet and proof-sync contract exist.</Text>
+          </View>
+          <NightBadge>Not configured</NightBadge>
+        </View>
+      </NightCard>
+
+      <View className="mt-5 rounded-2xl bg-surface-soft p-4">
+        <Text className="text-center text-sm font-semibold text-muted">Nostr sync not configured</Text>
+        <Text className="mt-1 text-center text-xs leading-5 text-muted">No balance, proofs, or activity are fabricated.</Text>
+      </View>
+    </AppShell>
+  );
+}
+
+export function AddFundsScreen({ onBack }: { onBack: () => void }) {
+  const steps = [
+    'Enter an amount in EUR',
+    'Review the live Lightning quote and expiry',
+    'Credit only after mint proofs verify and sync safely',
+  ];
+  return (
+    <AppShell chrome="child" showTempoRail testID="add-funds-screen">
+      <Pressable
+        accessibilityLabel="Back to Wallet"
+        accessibilityRole="button"
+        className="-ml-3 mt-1 min-h-12 flex-row items-center gap-2 self-start px-3"
+        onPress={onBack}
+        testID="add-funds-back"
+      >
+        <Ionicons color={colors.primary} name="arrow-back" size={20} />
+        <Text className="font-bold text-primary">Back to Wallet</Text>
+      </Pressable>
+      <Text accessibilityRole="header" className="mt-2 text-[36px] font-black uppercase tracking-[-0.8px] text-ink">Add funds</Text>
+      <Text className="text-sm font-semibold text-ink">A verified path into your wallet.</Text>
+
+      <NightCard className="mt-6">
+        <View className="h-16 w-16 items-center justify-center rounded-full bg-attention">
+          <Ionicons color={colors.ink} name="flash-outline" size={32} />
+        </View>
+        <Text className="mt-5 text-2xl font-black leading-8 text-ink">Lightning funding is not configured</Text>
+        <Text className="mt-3 leading-6 text-muted">A funding request needs a selected Cashu mint, a real Lightning quote, an expiry, and recoverable proof state. This build creates none of those.</Text>
+      </NightCard>
+
+      <SectionTitle>When enabled</SectionTitle>
+      <View className="overflow-hidden rounded-2xl border border-edge bg-surface">
+        {steps.map((text, index) => (
+          <View className={`min-h-16 flex-row items-center px-4 py-3 ${index ? 'border-t border-edge' : ''}`} key={text}>
+            <View className="h-9 w-9 items-center justify-center rounded-full bg-primary">
+              <Text className="font-black text-surface">{index + 1}</Text>
+            </View>
+            <Text className="ml-3 flex-1 leading-6 text-ink">{text}</Text>
+          </View>
+        ))}
+      </View>
+
+      <View className="mt-5 flex-row items-start rounded-2xl bg-surface-soft p-4">
+        <Ionicons color={colors.ink} name="shield-checkmark-outline" size={22} />
+        <Text className="ml-3 flex-1 text-sm leading-5 text-muted">No invoice, QR code, token, or spendable balance is created on this screen.</Text>
+      </View>
+      <View className="mt-6">
+        <PrimaryButton disabled label="Mint configuration required" onPress={() => {}} testID="add-funds-disabled" tone="commitment" />
+      </View>
+    </AppShell>
+  );
+}

@@ -5,7 +5,7 @@ appId: life.crays
     id: "create-account-button"
 - assertVisible:
     id: "account-access-screen"
-- assertVisible: "Create your Crays account"
+- assertVisible: "Make a Crays identity"
 - assertVisible: "Create on this device"
 - assertNotVisible: "Continue with Apple"
 - assertNotVisible: "Continue with Google"

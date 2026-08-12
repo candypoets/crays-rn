@@ -7,6 +7,9 @@ appId: life.crays
     visible:
       id: "messages-screen"
     timeout: 15000
+- extendedWaitUntil:
+    visible: "Want to hear the second set?"
+    timeout: 15000
 - tapOn:
     text: "Jonas"
     index: 0
@@ -19,7 +22,8 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "Conversation · accepted"
     timeout: 15000
-- tapOn: "Messages"
+- tapOn:
+    id: "conversation-back"
 - tapOn:
     id: "tab-room"
 - tapOn: "Jonas"
@@ -34,7 +38,9 @@ appId: life.crays
       id: "gift-select-screen"
     timeout: 15000
 - assertVisible: "The gift is from you. The bar gets the order. Jonas gets the ticket and can decline before fulfillment."
-- assertVisible: "Mezcal Negroni"
+- extendedWaitUntil:
+    visible: "Mezcal Negroni"
+    timeout: 15000
 - assertVisible: "Rooftop Lager"
 - assertNotVisible: "Marinated olives"
 - takeScreenshot: 04-gift-select-relay

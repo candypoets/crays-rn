@@ -18,6 +18,8 @@ it('keeps message primary and gates a non-anonymous drink until acceptance', () 
   expect(onMessage).toHaveBeenCalledTimes(1);
   expect(onSendDrink).not.toHaveBeenCalled();
   fireEvent.press(screen.getByTestId('person-hide-room'));
+  fireEvent.press(screen.getByTestId('first-contact-more'));
+  expect(screen.getByTestId('first-contact-safety-menu')).toBeOnTheScreen();
   fireEvent.press(screen.getByTestId('person-block-global'));
   fireEvent.press(screen.getByTestId('person-report'));
   expect(onHideInRoom).toHaveBeenCalledTimes(1);

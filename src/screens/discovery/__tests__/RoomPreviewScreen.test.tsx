@@ -16,6 +16,9 @@ describe('RoomPreviewScreen', () => {
     expect(screen.getByText('Rooftop jazz.')).toBeOnTheScreen();
     expect(screen.getByTestId('enter-room-button')).toBeEnabled();
     expect(screen.getByText(/do not require Bluetooth/)).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('room-preview-details'));
+    expect(screen.getByText('Inside this room')).toBeOnTheScreen();
+    expect(screen.getByText(/does not open the live feed or publish presence/)).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId('enter-room-button'));
     expect(onEnter).toHaveBeenCalledTimes(1);
   });

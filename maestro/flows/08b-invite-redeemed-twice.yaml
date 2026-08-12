@@ -17,6 +17,9 @@ appId: life.crays
     visible:
       id: "invite-preview-screen"
     timeout: 30000
+- extendedWaitUntil:
+    visible: "Accept invite"
+    timeout: 30000
 - tapOn:
     id: "invite-accept-button"
 - extendedWaitUntil:
@@ -35,6 +38,9 @@ appId: life.crays
 - extendedWaitUntil:
     visible:
       id: "invite-preview-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Accept invite"
     timeout: 30000
 - tapOn:
     id: "invite-accept-button"

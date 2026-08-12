@@ -7,12 +7,19 @@ appId: life.crays
     visible:
       id: "me-screen"
     timeout: 15000
-- assertVisible: "Active now"
+- assertVisible: "Active order"
+- assertVisible: "Current room"
 - assertVisible: "Ready for pickup"
 - assertVisible: "1 saved ticket"
 - assertNotVisible: "CR-QA-READY"
 - assertNotVisible: ".*relay-confirmed.*"
+- scrollUntilVisible:
+    element:
+      id: "me-wallet"
+    direction: DOWN
+    timeout: 8000
 - assertVisible: "Orders"
 - assertVisible: "Memberships & passes"
 - assertVisible: "Wallet"
+- assertVisible: "Messages"
 - takeScreenshot: 16-me-relay

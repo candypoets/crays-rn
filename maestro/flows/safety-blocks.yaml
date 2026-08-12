@@ -6,6 +6,8 @@ appId: life.crays
     visible:
       id: "first-contact-screen"
     timeout: 15000
+- tapOn:
+    id: "first-contact-more"
 - scrollUntilVisible:
     element:
       id: "person-block-global"
@@ -39,6 +41,8 @@ appId: life.crays
 - assertVisible: "Jonas"
 - tapOn:
     id: "unblock-${JONAS_PUBKEY}-global"
+- assertVisible: "Unblock Jonas everywhere?"
+- tapOn: "Unblock"
 - extendedWaitUntil:
     visible: "Nobody is blocked"
     timeout: 15000
@@ -72,5 +76,7 @@ appId: life.crays
 - assertVisible: "Hidden in room.*"
 - tapOn:
     id: "unblock-${JONAS_PUBKEY}-venue"
+- assertVisible: "Unblock Jonas in this room?"
+- tapOn: "Unblock"
 - assertVisible: "Nobody is blocked"
 - takeScreenshot: safety-block-scopes

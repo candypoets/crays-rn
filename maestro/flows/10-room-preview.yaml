@@ -12,6 +12,9 @@ appId: life.crays
 # ${QA_ROOM_ABOUT} comes from .qa/flow-fixtures.mjs (ROOM_ABOUT, seeded into the
 # manifest by relay-bootstrap.mjs); standalone runs need -e QA_ROOM_ABOUT=...
 - assertVisible: ${QA_ROOM_ABOUT}
+- assertVisible: "Preview room"
+- tapOn:
+    id: "room-preview-details"
 - assertVisible: "Inside this room"
 - assertVisible:
     id: "enter-room-button"

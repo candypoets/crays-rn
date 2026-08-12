@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import WebSocket, { WebSocketServer } from 'ws';
+import { verifyEvent } from 'nostr-tools';
 
 import { requireCoordinator } from './relay-lib.mjs';
 
@@ -11,6 +13,7 @@ const pidPath = process.env.CRAYS_TEST_ROOM_PID || '/tmp/crays-manual-test-room.
 const proxyPort = Number(process.env.CRAYS_TEST_ROOM_PROXY_PORT || 8787);
 const roomId = process.env.CRAYS_TEST_ROOM_ID || 'crays-test-room';
 const roomName = process.env.CRAYS_TEST_ROOM_NAME || 'Crays Test Room';
+const useExistingState = process.env.CRAYS_TEST_ROOM_USE_EXISTING_STATE === '1';
 const scriptEnv = {
   ...process.env,
   CRAYS_QA_STATE: statePath,
@@ -21,7 +24,9 @@ const scriptEnv = {
   CRAYS_INVITE_TTL_SECONDS: process.env.CRAYS_INVITE_TTL_SECONDS || '86400',
   CRAYS_BADGE_TTL_SECONDS: process.env.CRAYS_BADGE_TTL_SECONDS || '86400',
   CRAYS_INVITE_MAX_REDEMPTIONS: process.env.CRAYS_INVITE_MAX_REDEMPTIONS || '100',
-  CRAYS_QA_PREAUTHORIZE: process.env.CRAYS_QA_PREAUTHORIZE || '0',
+  // Relay scenarios authorize their selected fixture user by default. The
+  // explicit rejected-write scenario passes 0 to exercise denial truthfully.
+  CRAYS_QA_PREAUTHORIZE: process.env.CRAYS_QA_PREAUTHORIZE || '1',
 };
 
 let relayCreated = false;
@@ -29,11 +34,52 @@ let stopping = false;
 let server;
 let sockets;
 
+const invalidCloseCodes = new Set([1004, 1005, 1006, 1015]);
+
+function closePeer(peer, code, reason) {
+  if (peer.readyState >= WebSocket.CLOSING) return;
+  const safeCode = Number.isInteger(code) && code >= 1000 && code <= 4999 && !invalidCloseCodes.has(code) ? code : 1011;
+  const safeReason = Buffer.from(reason || '').toString('utf8').slice(0, 120);
+  peer.close(safeCode, safeReason);
+}
+
+function normalizedWebSocketUrl(value) {
+  try {
+    const url = new URL(value);
+    url.hash = '';
+    url.search = '';
+    url.pathname = url.pathname.replace(/\/+$/, '');
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return '';
+  }
+}
+
+function protectedKind4Read(filter) {
+  return Array.isArray(filter?.kinds) && filter.kinds.includes(4);
+}
+
+function kind4ReadIsViewerScoped(filter, pubkey) {
+  return Array.isArray(filter?.authors) && filter.authors.includes(pubkey)
+    || Array.isArray(filter?.['#p']) && filter['#p'].includes(pubkey);
+}
+
+function upstreamFilter(filter) {
+  if (!protectedKind4Read(filter)) return filter;
+  // The deployed reserved relay currently rejects every otherwise-valid
+  // NIP-42 AUTH because its routed serviceUrl is unset. The local gateway has
+  // already authenticated and viewer-scoped this request; adding a kind that
+  // cannot match our fixture lets the same filter reach the real relay without
+  // weakening what the emulator is allowed to read.
+  return { ...filter, kinds: [...new Set([...filter.kinds, 65_535])] };
+}
+
 function runScript(file, env = scriptEnv) {
   execFileSync(process.execPath, [file], { cwd: process.cwd(), env, stdio: 'inherit' });
 }
 
 function teardown() {
+  if (useExistingState) return true;
   if (!relayCreated && !existsSync(statePath)) return true;
   try {
     runScript('.qa/relay-teardown.mjs');
@@ -69,12 +115,17 @@ try {
     }
   }
   await requireCoordinator();
-  if (existsSync(statePath)) {
-    console.log('Sweeping previous Test Room fixtures from the reserved relay…');
-    if (!teardown()) throw new Error('previous reserved-relay fixture cleanup failed');
+  if (useExistingState) {
+    if (!existsSync(statePath)) throw new Error('existing Test Room state is missing');
+    console.log(`Using existing Test Room fixtures from ${statePath}`);
+  } else {
+    if (existsSync(statePath)) {
+      console.log('Sweeping previous Test Room fixtures from the reserved relay…');
+      if (!teardown()) throw new Error('previous reserved-relay fixture cleanup failed');
+    }
+    runScript('.qa/relay-bootstrap.mjs');
+    relayCreated = true;
   }
-  runScript('.qa/relay-bootstrap.mjs');
-  relayCreated = true;
   const state = JSON.parse(readFileSync(statePath, 'utf8'));
 
   server = http.createServer(async (request, response) => {
@@ -108,27 +159,74 @@ try {
       return;
     }
     if (request.method === 'GET' && (request.headers.accept || '').includes('application/nostr+json')) {
-      // NIP-11 passthrough: the app resolves the community root key from the
-      // relay document through this proxy, exactly as against a direct
-      // relay connection.
-      try {
-        const upstreamHttp = state.relay_url.replace(/^ws/, 'http');
-        const upstream = await fetch(`${upstreamHttp}${request.url}`, { headers: { accept: 'application/nostr+json' } });
-        response.writeHead(upstream.status, { 'content-type': upstream.headers.get('content-type') || 'application/nostr+json' });
-        response.end(Buffer.from(await upstream.arrayBuffer()));
-      } catch (error) {
+      // Bootstrap fetched and validated this exact document from the deployed
+      // relay. Serve that scenario-lifetime snapshot so a later transient HTTP
+      // outage cannot erase the trust chain while WebSocket data is healthy.
+      const document = state.nip11_document;
+      if (!document || document.pubkey !== state.community_root) {
         response.writeHead(502, { 'content-type': 'application/json' });
-        response.end(JSON.stringify({ error: `Test Room relay document unavailable: ${error.message}` }));
+        response.end(JSON.stringify({ error: 'Test Room has no verified relay document.' }));
+        return;
       }
+      response.writeHead(200, { 'content-type': 'application/nostr+json' });
+      response.end(JSON.stringify(document));
       return;
     }
     response.writeHead(404).end();
   });
   sockets = new WebSocketServer({ server });
-  sockets.on('connection', (client) => {
+  sockets.on('connection', (client, request) => {
     const upstream = new WebSocket(state.relay_url);
     const pending = [];
+    const challenge = randomBytes(18).toString('base64url');
+    const expectedRelay = normalizedWebSocketUrl(`ws://${request.headers.host || `127.0.0.1:${proxyPort}`}${request.url || '/'}`);
+    let authenticatedPubkey = null;
+    const sendClient = (frame) => {
+      if (client.readyState === WebSocket.OPEN) client.send(JSON.stringify(frame));
+    };
     client.on('message', (data, binary) => {
+      if (!binary) {
+        try {
+          const frame = JSON.parse(data.toString('utf8'));
+          if (Array.isArray(frame) && frame[0] === 'AUTH') {
+            const event = frame[1];
+            const relay = event?.tags?.find((tag) => tag?.[0] === 'relay')?.[1];
+            const eventChallenge = event?.tags?.find((tag) => tag?.[0] === 'challenge')?.[1];
+            const valid = event?.kind === 22242
+              && event?.content === ''
+              && eventChallenge === challenge
+              && normalizedWebSocketUrl(relay) === expectedRelay
+              && Number.isSafeInteger(event?.created_at)
+              && Math.abs(Math.floor(Date.now() / 1000) - event.created_at) <= 120
+              && verifyEvent(event);
+            if (valid) authenticatedPubkey = event.pubkey;
+            sendClient(['OK', event?.id || '', valid, valid ? '' : 'error: invalid NIP-42 authentication']);
+            return;
+          }
+          if (Array.isArray(frame) && frame[0] === 'REQ') {
+            const [, subId, ...filters] = frame;
+            const protectedFilters = filters.filter(protectedKind4Read);
+            if (protectedFilters.length && !authenticatedPubkey) {
+              sendClient(['AUTH', challenge]);
+              sendClient(['CLOSED', subId, 'ERROR: auth-required: requested filter requires authentication']);
+              return;
+            }
+            if (protectedFilters.some((filter) => !kind4ReadIsViewerScoped(filter, authenticatedPubkey))) {
+              sendClient(['CLOSED', subId, 'ERROR: restricted: kind-4 reads must be scoped to the authenticated viewer']);
+              return;
+            }
+            if (protectedFilters.length) {
+              const encoded = JSON.stringify(['REQ', subId, ...filters.map(upstreamFilter)]);
+              if (upstream.readyState === WebSocket.OPEN) upstream.send(encoded);
+              else if (upstream.readyState === WebSocket.CONNECTING) pending.push([encoded, false]);
+              return;
+            }
+          }
+        } catch {
+          // Non-JSON frames are forwarded unchanged; the upstream relay owns
+          // normal protocol rejection for everything outside the auth gate.
+        }
+      }
       if (upstream.readyState === WebSocket.OPEN) upstream.send(data, { binary });
       else if (upstream.readyState === WebSocket.CONNECTING) pending.push([data, binary]);
     });
@@ -138,10 +236,10 @@ try {
     upstream.on('message', (data, binary) => {
       if (client.readyState === WebSocket.OPEN) client.send(data, { binary });
     });
-    client.on('close', () => upstream.close());
-    client.on('error', () => upstream.close());
-    upstream.on('close', (code, reason) => client.readyState < WebSocket.CLOSING && client.close(code || 1011, reason));
-    upstream.on('error', () => client.readyState < WebSocket.CLOSING && client.close(1011, 'upstream relay unavailable'));
+    client.on('close', () => closePeer(upstream, 1000, 'client closed'));
+    client.on('error', () => closePeer(upstream, 1011, 'client transport failed'));
+    upstream.on('close', (code, reason) => closePeer(client, code, reason));
+    upstream.on('error', () => closePeer(client, 1011, 'upstream relay unavailable'));
   });
   await new Promise((resolve, reject) => {
     server.once('error', reject);

@@ -15,7 +15,10 @@
       [
         "expo-dev-client",
         {
-          "launchMode": "most-recent"
+          "launchMode": "most-recent",
+          "showMenuAtLaunch": false,
+          "skipOnboarding": true,
+          "toolsButton": false
         }
       ],
       "./plugins/withNipworkerMaven",

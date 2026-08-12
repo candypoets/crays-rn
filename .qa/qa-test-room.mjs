@@ -3,16 +3,22 @@ import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
 import { loadKeys } from './relay-lib.mjs';
+import { deviceArgs, selectProxyPort } from './relay-screen-scenario.mjs';
 
 const statePath = '/tmp/qa-crays-test-room-card.json';
 const pidPath = '/tmp/qa-crays-test-room-card.pid';
 const qaUserIndex = 3;
+const proxyPort = selectProxyPort(Number(process.env.CRAYS_TEST_ROOM_PROXY_PORT || 8787));
 const env = {
   ...process.env,
   CRAYS_TEST_ROOM_STATE: statePath,
   CRAYS_TEST_ROOM_PID: pidPath,
   CRAYS_QA_STATE: statePath,
   CRAYS_QA_USER_INDEX: String(qaUserIndex),
+  CRAYS_TEST_ROOM_PROXY_PORT: String(proxyPort),
+  // This journey proves the invite grants access. User 3 is deliberately
+  // outside the three fixture members and must not receive a bootstrap award.
+  CRAYS_QA_PREAUTHORIZE: '0',
 };
 
 function run(command, args) {
@@ -65,8 +71,9 @@ try {
   const fixtureNsec = loadKeys().users[qaUserIndex].nsec;
   run(process.env.MAESTRO_CLI || 'maestro', [
     'test',
-    ...(process.env.ANDROID_SERIAL ? ['--device', process.env.ANDROID_SERIAL] : []),
+    ...deviceArgs(),
     '-e', `QA_NSEC=${fixtureNsec}`,
+    '-e', `TEST_ROOM_RELAY_URL=ws://10.0.2.2:${proxyPort}`,
     'maestro/flows/test-room.yaml',
   ]);
   run(process.execPath, ['.qa/relay-verify.mjs']);
