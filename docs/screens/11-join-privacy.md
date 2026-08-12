@@ -5,8 +5,11 @@
 Canonical visual reference: `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`, panel 04. The Night Playlist board's equal white choice cards and blue icon discs replace the incumbent selected-radio composition.
 
 Purpose: separate selecting the one room relay from volunteering social
-presence. Neither choice is preselected; the person must deliberately choose quiet or visible before confirmation is enabled. Quiet users can read announcements, order,
-and use credentials but never appear in People. Visible users explicitly choose
+presence. Neither choice is preselected; the person must deliberately choose
+quiet or visible before confirmation is enabled. Quiet users can read
+announcements, menu listings, and available room data but never appear in
+People. Writes and payment-dependent actions are separate and require whatever
+authorization and payment contract the action defines. Visible users explicitly choose
 Social, Business, Dating, or Just curious; may add an 80-character room-only
 context; and publish one short-lived, room-scoped presence event.
 
@@ -15,13 +18,17 @@ Before selection the disabled action says **Choose how to enter**. Primary actio
 Every entry chooses a one-, two-, or four-hour automatic leave time (two hours
 by default). Repeated taps are disabled while entry/publish is in progress.
 
-When discovery supplies an opaque invite-handoff URL, entry first retrieves
-the unrendered token, validates its community metadata against the signed room,
-and redeems it for the current account. Redemption must return a real kind-8
-award before either quiet entry or visible presence continues. Missing,
-expired, exhausted, wrong-room, issuer-mismatched, and offline grants remain on
-this screen with a retryable error. Repeated entry reuses the locally persisted
-nonce/account redemption and cannot consume the invite twice.
+When an invite or an invite-handoff URL is supplied, entry first retrieves the
+unrendered token, validates its community metadata against the signed room, and
+redeems it for the current account. Redemption must return a real kind-8 award
+before either quiet entry or visible presence continues. Missing, expired,
+exhausted, wrong-room, issuer-mismatched, and offline grants remain on this
+screen with a retryable error. Repeated entry reuses the locally persisted
+nonce/account redemption and cannot consume the invite twice. A normal Nearby
+pointer, QR-free direct room link, and the development Test Room carry no
+invite; they select the verified relay and proceed directly to the privacy
+choice. The development Test Room is a synthetic Nearby result, not an invite
+redemption test.
 
 ## Mutation and lifecycle
 
@@ -63,8 +70,8 @@ also a seeded visible guest:
 Explicit leave and relay switching remain independently verified by screens 21
 and 28. `.qa/qa-11c-join-relay-unavailable.mjs` covers the dead-relay path:
 joining against an unreachable relay renders the unverified-room error state
-and the enter action stays inert. The long-running Test Room scenario additionally proves hidden-handoff
-redemption produced exactly one real issuer-signed, 24-hour kind-8 badge for an
-identity that was not pre-authorized. Component/fake-clock coverage owns automatic local expiry; a future BLE
+and the enter action stays inert. The long-running Test Room scenario additionally
+proves synthetic Nearby entry without an invite or required-membership award for
+an identity that was not pre-authorized. Component/fake-clock coverage owns automatic local expiry; a future BLE
 gateway harness must additionally force credential-renewal loss and verify the
 Signal weak → Reconnecting → Room locked sequence.

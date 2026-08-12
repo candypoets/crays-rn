@@ -1,9 +1,9 @@
 // THESIS: Method selection is an operational pause, never a payment carousel.
 // OWNED WORLD: One clean grouped list where every rail tells its true configuration state.
 // STORY: Read the honest rails → choose a preference → return to the owning checkout.
-// FIRST VIEWPORT: All peer methods, the selected state, and the no-charge truth are visible.
-// FORM: Night Playlist board 03 panel 04 — no balance, capability, or success is fabricated;
-// selecting a row never initiates a charge.
+// FIRST VIEWPORT: All peer methods, the selected state, and the hosted-checkout truth are visible.
+// FORM: Night Playlist board 03 panel 04 — hosted Stripe owns payment entry and
+// capability detection; selecting a row never initiates a charge.
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 
@@ -11,10 +11,10 @@ import { AppShell } from '@/components/app/AppShell';
 import { colors } from '@/theme/colors';
 
 const METHODS = [
-  { id: 'Wallet', icon: 'wallet-outline' as const, detail: 'Cashu wallet · setup required' },
-  { id: 'Apple Pay', icon: 'logo-apple' as const, detail: 'Not connected in this pilot' },
-  { id: 'Google Pay', icon: 'logo-google' as const, detail: 'Not connected in this pilot' },
-  { id: 'Card', icon: 'card-outline' as const, detail: 'Processor not connected in this pilot' },
+  { id: 'Wallet', icon: 'wallet-outline' as const, detail: 'Cashu wallet · not connected here' },
+  { id: 'Apple Pay', icon: 'logo-apple' as const, detail: 'Offered by Stripe when available' },
+  { id: 'Google Pay', icon: 'logo-google' as const, detail: 'Offered by Stripe when available' },
+  { id: 'Card', icon: 'card-outline' as const, detail: 'Secure hosted Stripe checkout' },
 ];
 
 export function PaymentMethodsScreen({ onBack, onSelect, selected }: { onBack: () => void; onSelect: (method: string) => void; selected: string }) {
@@ -25,7 +25,7 @@ export function PaymentMethodsScreen({ onBack, onSelect, selected }: { onBack: (
         <Text className="font-bold text-primary">Review</Text>
       </Pressable>
       <Text className="mt-5 text-base leading-6 text-muted">
-        Choose how you would pay when the venue enables that rail. Selection does not initiate a charge.
+        Stripe opens the secure payment page. This selection records your preference; the hosted page decides which methods are available on this device.
       </Text>
 
       <View className="mt-6 gap-3">
@@ -60,7 +60,7 @@ export function PaymentMethodsScreen({ onBack, onSelect, selected }: { onBack: (
       <View className="mt-6 flex-row items-start gap-3">
         <Ionicons color={colors.inkMuted} name="shield-checkmark-outline" size={20} />
         <Text className="flex-1 text-sm leading-5 text-muted">
-          No payment details are collected or shared in this build.
+          Crays does not collect payment details. The hosted Stripe page owns payment entry and the methods it offers.
         </Text>
       </View>
     </AppShell>

@@ -2,9 +2,18 @@
 
 ## Product contract
 
-Review is the final, fiat-first truth before a charge. It shows venue, every line and recipient, editable quantities, included taxes/fees, total, and selected payment method. The commitment CTA must name the charge amount only when a real rail is configured.
+Review is the final, fiat-first truth before a charge. It shows venue, every
+line and recipient, editable quantities, included taxes/fees, total, and the
+selected payment preference. The primary action opens the hosted Stripe
+checkout provided by the shared Nuts payment service; it never collects card
+data inside the native app.
 
-Apple Pay, Google Pay, and card/Stripe are explicitly deferred by product direction. Wallet payment is also not simulated without spendable proofs. This implementation therefore disables commitment and states that no charge or order will be created. It must never show a success, order number, or receipt from a local-only tap.
+The current payment-service contract accepts one self-order line at quantity
+one: `{ community, eventAddress, returnTo }` plus a kind-27235 NIP-98
+Authorization header. The signed community relay URL is sent as `community`,
+not a local transport proxy. Gift orders, Cashu wallet checkout, and carts with
+multiple lines or quantities are explicit disabled states until their payment
+contracts exist.
 
 Visual authority: the Night Playlist commerce/messages board `docs/design-explorations/night-playlist/mockups/03-commerce-and-messages-v1.png`, **panel 03**, with the treatment notes in `docs/design-explorations/night-playlist/screens/14-review-pay.md`. Night Playlist supersedes the older dark styling.
 
@@ -14,23 +23,56 @@ Visual authority: the Night Playlist commerce/messages board `docs/design-explor
 - **Order** section: one white card per cart line with name, recipient (**For {name}** / **For me**), exact line total, a 48 dp quantity stepper, and Remove. Quantity edits and removals go straight to the cart callbacks with the line's product id and recipient; a quantity reduced below 1 is handed to the cart (removal semantics live there, not on screen). **Add another item** returns to the menu via the same Back callback.
 - Totals card: Subtotal, **Taxes and fees — Included**, then the bold **Total**.
 - **Payment method** row opens the child route and returns with the chosen method; it never charges.
-- Honest deferral banner, verbatim: **Payments are intentionally not connected in this pilot. No charge or venue order will be created from this build.**
-- The one commitment-shaped control is disabled and reads **Payment unavailable · {total}** — a statement, not a button. There is no place-order success path in this build.
+- The secure-browser banner explains that Stripe owns payment entry and that a
+  room order appears only after a signed product award reaches the relay.
+- The one commitment action reads **Continue to Stripe · {total}**. It is
+  enabled only for the supported one-line, quantity-one self order, disabled
+  during request/browser-open states, and accompanied by visible guard or
+  request errors when checkout cannot begin.
 
 ## Data and reconciliation
 
-Cart is local operational state; live kind-30402 listings remain price/availability authority. Before enabling future payment, compare every address, price, currency, and availability. Once a rail reports payment but venue award is uncertain, enter **Confirming with the venue** and suppress all second-pay actions until reconciliation.
+Cart is local operational state; live kind-30402 listings remain price and
+availability authority. The payment service independently resolves the same
+address from the community relay before creating a Stripe Session. After Stripe
+confirms payment, its webhook calls the room's payment redemption endpoint,
+which publishes the badge-issuer-signed kind-8 product award. Crays only treats
+the order as confirmed after that award is observed on the active relay and
+derives its status from kind 37237.
+
+Opening the hosted page is not payment success. If the browser returns before
+the award arrives, show the pending/reconciliation state and suppress a second
+attempt until the user deliberately retries from the review surface.
 
 ## Paths
 
-Valid cart, empty cart, self/gift mix, quantity edit/removal, different-room cart, item unavailable, price drift, method selection, no configured methods, payment cancelled, failed, uncertain, succeeded awaiting kind-8 award, refund pending/refunded. Current pilot covers the honest no-rail branch.
+Valid one-line self cart, empty cart, self/gift mix, quantity edit/removal,
+different-room cart, item unavailable, price drift, method selection, no
+connected Stripe account, payment page opened, payment cancelled, failed,
+uncertain, succeeded awaiting kind-8 award, award confirmed, and refund
+pending/refunded. The browser handoff and relay-confirming branches are the
+normal path; unsupported cart shapes remain actionable explanations rather
+than silently charging a different amount.
 
 ## Accessibility
 
 - Line names, recipients, quantities, and totals are plain text; steppers carry per-line labels and 48 dp targets.
-- The method row exposes a button role; the disabled commitment reports its disabled state and reads as a status, not an action.
-- The deferral truth is text in reading order, not color or icon alone.
+- The method row and checkout control expose button roles and disabled states;
+  progress is announced without relying on color or icon alone.
+- Hosted-payment, unsupported-cart, request-error, and browser-open truth is
+  text in reading order.
 
 ## QA strategy
 
-Unit coverage asserts total, mixed-recipient line routing, quantity boundaries, empty cart, and disabled honest payment. `maestro/flows/14-review-pay.yaml` builds a cart from a relay definition and verifies exact total plus deferred-payment copy. `.qa/qa-14-review-pay.mjs` verifies signed source data and cleanup. Future rail QA must use provider/mint sandboxes, deterministic idempotency keys, one charge after repeated taps, app-background return, price drift rejection, award reconciliation, and no second CTA while uncertain.
+Unit coverage asserts totals, mixed-recipient line routing, quantity boundaries,
+empty-cart behavior, the one-line checkout guard, NIP-98 request construction,
+browser-open state, request errors, and award reconciliation.
+`maestro/flows/14-review-pay.yaml` builds a self cart from the live relay,
+opens the hosted checkout adapter, and waits for the signed award to appear.
+Run that scenario with Metro started using
+`EXPO_PUBLIC_PAYMENT_SERVICE_URL=http://10.0.2.2:8790 npm run start:maestro`.
+`.qa/qa-14-review-pay.mjs` provisions the real coordinator/relay contract,
+uses the checkout contract's deterministic QA adapter to perform the real
+payment redemption, and independently queries the relay for the new award and
+its order reference before teardown. No UI success text or in-memory cart is
+protocol proof.

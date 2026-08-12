@@ -16,8 +16,10 @@ const env = {
   CRAYS_QA_STATE: statePath,
   CRAYS_QA_USER_INDEX: String(qaUserIndex),
   CRAYS_TEST_ROOM_PROXY_PORT: String(proxyPort),
-  // This journey proves the invite grants access. User 3 is deliberately
-  // outside the three fixture members and must not receive a bootstrap award.
+  CRAYS_TEST_ROOM_PROXY: '1',
+  // The synthetic Nearby card carries no invite and user 3 is deliberately
+  // outside the three fixture members, so entry must not mint an award.
+  CRAYS_QA_MINT_INVITE: '0',
   CRAYS_QA_PREAUTHORIZE: '0',
 };
 
@@ -78,7 +80,7 @@ try {
   ]);
   run(process.execPath, ['.qa/relay-verify.mjs']);
   run(process.execPath, ['.qa/verify-manifest-consumed.mjs']);
-  run(process.execPath, ['.qa/verify-night-access.mjs']);
+  run(process.execPath, ['.qa/verify-no-invite-redemption.mjs']);
   run(process.execPath, ['.qa/verify-quiet-entry.mjs']);
   console.log(`QA PASS: development-test-room (${state.room_id})`);
 } finally {

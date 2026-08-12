@@ -11,6 +11,7 @@ import { requireCoordinator } from './relay-lib.mjs';
 const statePath = process.env.CRAYS_TEST_ROOM_STATE || '/tmp/crays-manual-test-room.json';
 const pidPath = process.env.CRAYS_TEST_ROOM_PID || '/tmp/crays-manual-test-room.pid';
 const proxyPort = Number(process.env.CRAYS_TEST_ROOM_PROXY_PORT || 8787);
+const proxyEnabled = process.env.CRAYS_TEST_ROOM_PROXY === '1';
 const roomId = process.env.CRAYS_TEST_ROOM_ID || 'crays-test-room';
 const roomName = process.env.CRAYS_TEST_ROOM_NAME || 'Crays Test Room';
 const useExistingState = process.env.CRAYS_TEST_ROOM_USE_EXISTING_STATE === '1';
@@ -24,15 +25,15 @@ const scriptEnv = {
   CRAYS_INVITE_TTL_SECONDS: process.env.CRAYS_INVITE_TTL_SECONDS || '86400',
   CRAYS_BADGE_TTL_SECONDS: process.env.CRAYS_BADGE_TTL_SECONDS || '86400',
   CRAYS_INVITE_MAX_REDEMPTIONS: process.env.CRAYS_INVITE_MAX_REDEMPTIONS || '100',
-  // Relay scenarios authorize their selected fixture user by default. The
-  // explicit rejected-write scenario passes 0 to exercise denial truthfully.
-  CRAYS_QA_PREAUTHORIZE: process.env.CRAYS_QA_PREAUTHORIZE || '1',
+  CRAYS_QA_PREAUTHORIZE: process.env.CRAYS_QA_PREAUTHORIZE || '0',
+  CRAYS_QA_MINT_INVITE: process.env.CRAYS_QA_MINT_INVITE || '0',
 };
 
 let relayCreated = false;
 let stopping = false;
 let server;
 let sockets;
+let keepAlive;
 
 const invalidCloseCodes = new Set([1004, 1005, 1006, 1015]);
 
@@ -97,13 +98,14 @@ async function stop(signal, exitCode = 0) {
   console.log(`\nStopping Crays Test Room (${signal})…`);
   for (const socket of sockets?.clients || []) socket.terminate();
   await new Promise((resolve) => server?.close(resolve) || resolve());
+  if (keepAlive) clearInterval(keepAlive);
   const clean = teardown();
   rmSync(pidPath, { force: true });
   process.exit(clean ? exitCode : 1);
 }
 
 try {
-  if (!Number.isInteger(proxyPort) || proxyPort < 1024 || proxyPort > 65535) throw new Error('CRAYS_TEST_ROOM_PROXY_PORT must be a valid non-privileged port');
+  if (proxyEnabled && (!Number.isInteger(proxyPort) || proxyPort < 1024 || proxyPort > 65535)) throw new Error('CRAYS_TEST_ROOM_PROXY_PORT must be a valid non-privileged port');
   if (existsSync(pidPath)) {
     const previousPid = Number(readFileSync(pidPath, 'utf8').trim());
     try {
@@ -128,19 +130,20 @@ try {
   }
   const state = JSON.parse(readFileSync(statePath, 'utf8'));
 
-  server = http.createServer(async (request, response) => {
+  if (proxyEnabled) {
+    server = http.createServer(async (request, response) => {
     if (request.url === '/healthz') {
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ ok: true, room_id: state.room_id, relay_url: state.relay_url }));
       return;
     }
-    if (request.url === '/invite' && request.method === 'GET') {
+    if (state.invite_token && request.url === '/invite' && request.method === 'GET') {
       const host = request.headers.host || `127.0.0.1:${proxyPort}`;
       response.writeHead(200, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ service_url: `http://${host}`, token: state.invite_token }));
       return;
     }
-    if ((request.url === '/community/info' && request.method === 'GET') || (request.url === '/redeem' && request.method === 'POST')) {
+    if (state.invite_token && ((request.url === '/community/info' && request.method === 'GET') || (request.url === '/redeem' && request.method === 'POST'))) {
       try {
         const chunks = [];
         for await (const chunk of request) chunks.push(chunk);
@@ -173,9 +176,9 @@ try {
       return;
     }
     response.writeHead(404).end();
-  });
-  sockets = new WebSocketServer({ server });
-  sockets.on('connection', (client, request) => {
+    });
+    sockets = new WebSocketServer({ server });
+    sockets.on('connection', (client, request) => {
     const upstream = new WebSocket(state.relay_url);
     const pending = [];
     const challenge = randomBytes(18).toString('base64url');
@@ -240,18 +243,27 @@ try {
     client.on('error', () => closePeer(upstream, 1011, 'client transport failed'));
     upstream.on('close', (code, reason) => closePeer(client, code, reason));
     upstream.on('error', () => closePeer(client, 1011, 'upstream relay unavailable'));
-  });
-  await new Promise((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(proxyPort, '0.0.0.0', resolve);
-  });
+    });
+    await new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(proxyPort, '0.0.0.0', resolve);
+    });
+  } else {
+    // Keep the fixture alive until stopped while the app connects directly to
+    // the hosted relay. No local WebSocket or invite endpoint is involved.
+    keepAlive = setInterval(() => {}, 60_000);
+  }
   writeFileSync(pidPath, `${process.pid}\n`, { flag: 'wx' });
   process.on('SIGINT', () => void stop('SIGINT'));
   process.on('SIGTERM', () => void stop('SIGTERM'));
   console.log('\nTEST ROOM READY');
   console.log(`Room: ${roomName} (${roomId})`);
-  console.log(`Android emulator relay: ws://10.0.2.2:${proxyPort}`);
-  console.log(`iOS simulator relay: ws://127.0.0.1:${proxyPort}`);
+  if (proxyEnabled) {
+    console.log(`Proxy relay (Android emulator): ws://10.0.2.2:${proxyPort}`);
+    console.log(`Proxy relay (iOS simulator): ws://127.0.0.1:${proxyPort}`);
+  } else {
+    console.log(`Direct relay: ${state.relay_url}`);
+  }
   console.log('Keep this process running. A normal developer identity should enter quietly.');
 } catch (error) {
   console.error(`Test room failed: ${error.message}`);

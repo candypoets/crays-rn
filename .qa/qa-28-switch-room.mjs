@@ -36,6 +36,7 @@ try {
     CRAYS_TEST_ROOM_STATE: pathB,
     CRAYS_TEST_ROOM_PID: '/tmp/qa-crays-switch-room-proxy.pid',
     CRAYS_TEST_ROOM_PROXY_PORT: String(proxyPort),
+    CRAYS_TEST_ROOM_PROXY: '1',
     CRAYS_TEST_ROOM_USE_EXISTING_STATE: '1',
   };
   proxy = spawn(process.execPath, ['.qa/test-room.mjs'], { cwd: root, env: { ...process.env, ...proxyEnv }, stdio: 'inherit' });

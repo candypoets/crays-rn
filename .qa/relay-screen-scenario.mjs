@@ -70,11 +70,34 @@ export function waitForProxy(child, port, expectedRoomId, statePath) {
 }
 
 export function stopProxy(child) {
+  stopChild(child, 'Test Room proxy');
+}
+
+function stopChild(child, label) {
+  if (!child) return;
   if (!processIsRunning(child.pid)) return;
   process.kill(child.pid, 'SIGTERM');
   const deadline = Date.now() + 60_000;
   while (Date.now() < deadline && processIsRunning(child.pid)) execFileSync('sleep', ['0.25']);
-  if (processIsRunning(child.pid)) process.kill(child.pid, 'SIGKILL');
+  if (processIsRunning(child.pid)) {
+    console.warn(`${label} did not stop after SIGTERM; sending SIGKILL`);
+    process.kill(child.pid, 'SIGKILL');
+  }
+}
+
+function waitForHttp(child, port, path, label) {
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    if (!processIsRunning(child.pid)) throw new Error(`${label} exited before readiness (pid ${child.pid})`);
+    try {
+      execFileSync('curl', ['-sf', `http://127.0.0.1:${port}${path}`], { encoding: 'utf8', timeout: 2000 });
+      return;
+    } catch {
+      // The child may still be binding its HTTP listener.
+    }
+    execFileSync('sleep', ['0.5']);
+  }
+  throw new Error(`${label} did not become ready within 30 seconds`);
 }
 
 // Flow-typed strings live in .qa/flow-fixtures.mjs so verifiers and flows
@@ -89,7 +112,7 @@ const fixtureEnv = {
   QA_ROOM_ABOUT: ROOM_ABOUT,
 };
 
-export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyManifest = true }) {
+export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyManifest = true, checkoutAdapter = false }) {
   const statePath = `/tmp/qa-crays-${scenario}.json`;
   const preferredProxyPort = Number(process.env.CRAYS_TEST_ROOM_PROXY_PORT || 8787);
   const proxyPort = selectProxyPort(preferredProxyPort);
@@ -99,8 +122,10 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     CRAYS_TEST_ROOM_STATE: statePath,
     CRAYS_TEST_ROOM_PID: '/tmp/qa-crays-relay-proxy.pid',
     CRAYS_TEST_ROOM_PROXY_PORT: String(proxyPort),
+    CRAYS_TEST_ROOM_PROXY: '1',
     CRAYS_TEST_ROOM_ID: roomId,
     CRAYS_TEST_ROOM_NAME: 'The Skyline Room',
+    CRAYS_QA_MINT_INVITE: '1',
     CRAYS_QA_USER_INDEX: String(qaUserIndex),
     ...bootstrapEnv,
   };
@@ -113,10 +138,27 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     env: { ...process.env, ...env },
     stdio: 'inherit',
   });
+  let checkoutAdapterProcess;
   try {
     waitForProxy(testRoom, proxyPort, roomId, statePath);
     if (!existsSync(statePath)) throw new Error(`bootstrap did not write ${statePath}`);
     state = JSON.parse(readFileSync(statePath, 'utf8'));
+    if (checkoutAdapter) {
+      const checkoutPort = Number(process.env.CRAYS_CHECKOUT_ADAPTER_PORT || 8790);
+      if (portIsListening(checkoutPort)) throw new Error(`checkout adapter port ${checkoutPort} is already in use`);
+      checkoutAdapterProcess = spawn(process.execPath, ['.qa/checkout-adapter.mjs'], {
+        cwd: root,
+        env: {
+          ...process.env,
+          ...env,
+          CRAYS_CHECKOUT_STATE: statePath,
+          CRAYS_CHECKOUT_ADAPTER_PORT: String(checkoutPort),
+          CRAYS_CHECKOUT_ADAPTER_PUBLIC_URL: `http://10.0.2.2:${checkoutPort}`,
+        },
+        stdio: 'inherit',
+      });
+      waitForHttp(checkoutAdapterProcess, checkoutPort, '/healthz', 'checkout adapter');
+    }
     const fixtureNsec = loadKeys().users[qaUserIndex].nsec;
     run(process.env.MAESTRO_CLI || 'maestro', [
       'test',
@@ -145,6 +187,7 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     scenarioFailed = true;
     throw error;
   } finally {
+    stopChild(checkoutAdapterProcess, 'checkout adapter');
     stopProxy(testRoom);
     try {
       // The proxy owns normal teardown. A second idempotent sweep independently

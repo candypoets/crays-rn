@@ -11,7 +11,7 @@ import type { RoomPerson, RoomProduct } from '@/rooms/types';
 
 jest.mock('expo-router', () => ({ router: { replace: jest.fn() }, usePathname: () => '/menu' }));
 
-const product: RoomProduct = { id: 'drink-1', address: `30009:${'a'.repeat(64)}:drink`, name: 'Mezcal Negroni', description: 'Smoky and bitter', price: 12, currency: 'EUR', section: 'Cocktails', productKind: 'drink', available: true, position: 0 };
+const product: RoomProduct = { id: 'drink-1', address: `30402:${'a'.repeat(64)}:drink`, name: 'Mezcal Negroni', description: 'Smoky and bitter', price: 12, currency: 'EUR', section: 'Cocktails', productKind: 'drink', available: true, position: 0 };
 const person: RoomPerson = { pubkey: 'b'.repeat(64), name: 'Maya', about: '', intent: 'Open to chat', context: '', expiresAt: 2_000_000_000, createdAt: 1 };
 const line: CartLine = { productId: product.id, address: product.address, name: product.name, price: product.price, currency: 'EUR', quantity: 2, recipientPubkey: person.pubkey, recipientName: person.name };
 const cart: CartState = { roomId: 'skyline', roomName: 'The Skyline Room', lines: [line] };
@@ -68,14 +68,27 @@ describe('commerce screens', () => {
     expect(screen.getByText('The cart could not be saved.')).toBeOnTheScreen();
   });
 
-  it('reviews cart but never fakes payment availability', () => {
-    render(<ReviewPayScreen cart={cart} method="Wallet" onBack={jest.fn()} onChangeMethod={jest.fn()} onChangeQuantity={jest.fn()} onRemove={jest.fn()} total={24} />);
+  it('opens hosted Stripe checkout for a supported self order', () => {
+    const onCheckout = jest.fn();
+    const selfCart: CartState = {
+      ...cart,
+      lines: [{ ...line, quantity: 1, recipientPubkey: undefined, recipientName: undefined }],
+    };
+    render(<ReviewPayScreen cart={selfCart} method="Card" onBack={jest.fn()} onCheckout={onCheckout} onChangeMethod={jest.fn()} onChangeQuantity={jest.fn()} onRemove={jest.fn()} total={12} />);
     expect(screen.getByText('Total')).toBeOnTheScreen();
-    expect(screen.getAllByText('€24.00').length).toBeGreaterThan(0);
-    expect(screen.getByText('For Maya')).toBeOnTheScreen();
-    expect(screen.getByText('Wallet')).toBeOnTheScreen();
-    expect(screen.getByText(/Payments are intentionally not connected/)).toBeOnTheScreen();
-    expect(screen.getByTestId('place-order-disabled')).toBeDisabled();
+    expect(screen.getAllByText('€12.00').length).toBeGreaterThan(0);
+    expect(screen.getByText('For me')).toBeOnTheScreen();
+    expect(screen.getByText('Card')).toBeOnTheScreen();
+    expect(screen.getByText(/Stripe opens in a secure browser/)).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('place-order'));
+    expect(onCheckout).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps unsupported quantity explicit instead of charging a different amount', () => {
+    const reason = 'Stripe checkout currently supports one serving per payment.';
+    render(<ReviewPayScreen cart={cart} checkoutDisabledReason={reason} method="Card" onBack={jest.fn()} onCheckout={jest.fn()} onChangeMethod={jest.fn()} onChangeQuantity={jest.fn()} onRemove={jest.fn()} total={24} />);
+    expect(screen.getByTestId('checkout-disabled-reason')).toHaveTextContent(reason);
+    expect(screen.getByTestId('place-order')).toBeDisabled();
   });
 
   it('renders mixed recipients and routes line edits to their owners', () => {
@@ -96,7 +109,7 @@ describe('commerce screens', () => {
   it('states an empty cart total without enabling payment', () => {
     render(<ReviewPayScreen cart={{ ...cart, lines: [] }} method="Wallet" onBack={jest.fn()} onChangeMethod={jest.fn()} onChangeQuantity={jest.fn()} onRemove={jest.fn()} total={0} />);
     expect(screen.getAllByText('€0.00').length).toBeGreaterThan(0);
-    expect(screen.getByTestId('place-order-disabled')).toBeDisabled();
+    expect(screen.getByTestId('place-order')).toBeDisabled();
   });
 
   it('shows all configured payment rails equally and returns selection', () => {
@@ -106,8 +119,8 @@ describe('commerce screens', () => {
     expect(screen.getByText('Google Pay')).toBeOnTheScreen();
     expect(screen.getByText('Card')).toBeOnTheScreen();
     expect(screen.getByTestId('payment-wallet')).toBeSelected();
-    expect(screen.getByText(/Selection does not initiate a charge/)).toBeOnTheScreen();
-    expect(screen.getByText(/No payment details are collected/)).toBeOnTheScreen();
+    expect(screen.getByText(/hosted page decides which methods are available/)).toBeOnTheScreen();
+    expect(screen.getByText(/Crays does not collect payment details/)).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId('payment-card'));
     expect(onSelect).toHaveBeenCalledWith('Card');
   });
