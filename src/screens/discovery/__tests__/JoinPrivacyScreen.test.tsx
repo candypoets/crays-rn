@@ -22,4 +22,15 @@ describe('JoinPrivacyScreen', () => {
     fireEvent.press(screen.getByTestId('join-room-button'));
     expect(onEnter).toHaveBeenCalledWith({ visibility: 'visible', intent: 'business', context: 'Here for the founders meetup', leaveAfterMinutes: 240 });
   });
+
+  it('names the visible access check and keeps a failed attempt retryable', () => {
+    const { rerender } = render(<JoinPrivacyScreen loading onBack={jest.fn()} onEnter={jest.fn()} roomName="Test Room" />);
+    fireEvent.press(screen.getByTestId('visibility-visible'));
+    expect(screen.getByText('Confirming access…')).toBeTruthy();
+    expect(screen.getByTestId('join-room-button')).toHaveProp('accessibilityState', { disabled: true, busy: true });
+
+    rerender(<JoinPrivacyScreen error="The room did not confirm access. Try again." onBack={jest.fn()} onEnter={jest.fn()} roomName="Test Room" />);
+    expect(screen.getByText('The room did not confirm access. Try again.')).toBeOnTheScreen();
+    expect(screen.getByTestId('join-room-button')).toHaveProp('accessibilityState', { disabled: false, busy: false });
+  });
 });

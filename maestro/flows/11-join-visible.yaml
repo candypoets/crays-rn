@@ -40,6 +40,8 @@ appId: life.crays
     visible:
       id: "room-people-screen"
     timeout: 30000
+- assertVisible: "Maya"
+- assertVisible: "Jonas"
 - extendedWaitUntil:
     visible: "Maya QA"
     timeout: 15000

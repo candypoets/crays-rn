@@ -14,12 +14,19 @@ learn why Nearby permission is useful. Neither action joins a room.
 
 ## Data and state
 
+The bullets below describe the current legacy implementation, not the target
+protocol. Kind `30078` has no community/discovery authority. Community identity
+must migrate to the relay's NIP-11 root and root-signed NIP-97 `31727` anchor;
+geographic discovery remains undecided and must not receive another arbitrary
+namespace.
+
 - A direct result subscribes to kind `30078`, optionally filtered by
   `d=life.crays/room/v1/<room-id>`, on the supplied search/direct relay.
 - The screen copies only the verified room selector fields required to cross
   into navigation: id, name, relay, operator, expiry and capabilities.
-- Verification requires schema v1, unexpired timestamp, signer=operator, and a
-  relay URL. Failure never produces a room card or Verified label.
+- The compatibility parser requires schema v1, unexpired timestamp,
+  signer=operator, and a relay URL. This self-consistency is not NIP-97 trust
+  proof; displaying **Verified** from it is a migration risk to remove.
 - Map and Nearby resolve to the same `RoomDescriptor`; Nearby is a discovery
   channel, not a second room record.
 
@@ -40,21 +47,25 @@ actions (a signed room link from the venue, or Nearby). It does not ship a
 fake place list or pretend retry can reach a nonexistent service, and it does
 not size or style the note as an error. The internal diagnostic
 `Search service design pending · D-001` lives only inside the Developer
-section, which itself renders in development builds only. Direct relay links
-and GATT manifests continue through the implemented signature validator.
+section. Direct relay links and GATT pointers currently continue through that
+legacy selector while the anchor-backed projection and discovery schema are
+pending.
 
-Development builds also render a compact **Developer** section at the bottom
-of the screen, visually subordinate to every newcomer state. It exposes the
+Development builds and builds compiled with `EXPO_PUBLIC_CRAYS_TEST_BUILD=1`
+also render a compact **Developer** or **Test build** section at the bottom of
+the screen, visually subordinate to every newcomer state. It exposes the
 reserved live signed relay fixture at `wss://crays-test.relays.nuts.cash` as
 one **Test room** row: room name when the fixture is online, `Connecting…`
-while waiting, and `Offline — run npm run test-room` with the Open action
-disabled while the fixture is down. This row is a synthetic Nearby result for
-the development client: it follows the room-pointer path without requesting
-Bluetooth permission and without carrying or redeeming an invite. Internal
+while waiting, and context-appropriate unavailable copy with the Open action
+disabled while the fixture is down. This row is a synthetic Nearby result: it
+constructs and parses the same version-2 pointer as the BLE characteristic,
+including the hosted service URL and public invite token, without requesting
+Bluetooth permission. The invite is carried through preview and switch routes,
+but Join privacy redeems it only after explicit visible selection. Internal
 labels ("Development test mode", "local signed test relay", "Waiting for test
 relay") never appear on the newcomer surface. This section and its
-subscription are absent from release builds; they are not a substitute for
-D-001 or a fabricated production listing. When a direct link already targets
+subscription are absent from ordinary release builds; they are not a
+substitute for D-001 or a fabricated production listing. When a direct link already targets
 the test room's relay and id, the duplicate card and its subscription are
 suppressed because relays replace a REQ that reuses a subscription ID.
 
@@ -76,14 +87,15 @@ is `maestro/flows/27-discover-handoff.yaml`, owned by
 identity and no relay connection or subscription before exercising Nearby's
 rationale and the honest disabled-Map state.
 
-Required paths: cold account → newcomer Nearby with Map disabled; development
-Test Room online → synthetic Nearby result → preview → quiet join without
-Bluetooth or invite redemption; Test Room offline → disabled recovery copy;
-release build → no Test Room; Nearby → rationale; direct fresh manifest →
+Required paths: cold account → newcomer Nearby with Map disabled; Test Room
+online → synthetic Nearby result → preview → visible join with direct invite
+redemption and no Bluetooth prompt; quiet selection → no redemption; Test Room
+offline → disabled recovery copy appropriate to developer or TestFlight;
+ordinary release build → no Test Room; Nearby → rationale; direct fresh manifest →
 preview; stale/wrong signer → no card; relay unavailable → retry copy while
 Messages/Me remain; relaunch of direct link; repeated tap does not change
 active room; no permissions before rationale.
 
-Pass criteria: the displayed id/operator/relay equal the signed event queried
-independently, exactly zero room selection/presence mutations occur, and
+Pass criteria for the legacy regression suite: the displayed id/operator/relay
+equal the compatibility event queried independently, exactly zero room selection/presence mutations occur, and
 teardown leaves no `craysqa-*` relay or state file for the run.

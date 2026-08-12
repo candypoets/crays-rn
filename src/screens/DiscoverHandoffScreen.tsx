@@ -26,6 +26,7 @@ type Props = {
     error?: string | null;
     loading: boolean;
     room?: RoomDescriptor | null;
+    testBuild?: boolean;
   };
 };
 
@@ -48,7 +49,7 @@ export function DiscoverHandoffScreen({ accountReady = true, error, loading = fa
           const disabled = value === 'map' && !mapAvailable;
           return (
             <Pressable accessibilityRole="tab" accessibilityState={{ selected: active, disabled }} className={`min-h-12 flex-1 items-center justify-center rounded-full ${active ? 'bg-base-300' : ''}`} disabled={disabled} key={value} onPress={() => !disabled && onChangeMode(value)} testID={`discover-${value}-tab`}>
-              <Text className={`text-base font-bold ${disabled ? 'text-muted/60' : active ? 'text-base-content' : 'text-muted'}`}>{value === 'map' ? 'Map' : 'Nearby'}</Text>
+              <Text className={`text-base font-bold ${disabled ? 'text-muted/80' : active ? 'text-base-content' : 'text-muted'}`}>{value === 'map' ? 'Map' : 'Nearby'}</Text>
             </Pressable>
           );
         })}
@@ -72,17 +73,18 @@ export function DiscoverHandoffScreen({ accountReady = true, error, loading = fa
       {error ? <Text accessibilityLiveRegion="polite" className="mt-5 text-base text-error">{error}</Text> : null}
       {testRoom ? (
         <View className="mt-8 border-t border-base-300 pt-4" testID="dev-test-room-card">
-          <Text className="text-[11px] font-bold uppercase tracking-[2px] text-muted">Developer</Text>
+          <Text className="text-[11px] font-bold uppercase tracking-[2px] text-muted">{testRoom.testBuild ? 'Test build' : 'Developer'}</Text>
           <View className="mt-3 flex-row items-center rounded-2xl border border-base-300 bg-base-200 p-4">
             <Ionicons color={colors.placeholder} name="flask-outline" size={22} />
             <View className="ml-3 min-w-0 flex-1">
               <Text className="font-bold text-base-content">Test room</Text>
-              <Text className="mt-0.5 text-sm text-muted">{testRoom.room ? `${testRoom.room.name || 'Crays Test Room'} is online` : testRoom.loading ? 'Connecting…' : 'Offline — run npm run test-room'}</Text>
+              <Text className="mt-0.5 text-sm text-muted">{testRoom.room ? `${testRoom.room.name || 'Crays Test Room'} is online` : testRoom.loading ? 'Connecting…' : testRoom.testBuild ? 'Test Room is unavailable' : 'Offline — run npm run test-room'}</Text>
             </View>
             <Pressable accessibilityRole="button" accessibilityState={{ disabled: !testRoom.room }} className="min-h-12 items-center justify-center rounded-full border border-base-300 px-5" disabled={!testRoom.room} onPress={() => testRoom.room && onOpenTestRoom?.(testRoom.room)} testID="open-test-room">
               <Text className={`font-bold ${testRoom.room ? 'text-primary' : 'text-muted/60'}`}>{testRoom.room ? 'Open' : 'Offline'}</Text>
             </Pressable>
           </View>
+          <Text className="mt-3 text-xs leading-5 text-muted">Bluetooth is not required. Visible entry redeems the reusable test invite through the same Nearby pointer path.</Text>
           {!mapAvailable ? <Text className="mt-3 text-xs text-muted" testID="search-unavailable-dev-note">Search service design pending · D-001</Text> : null}
         </View>
       ) : null}

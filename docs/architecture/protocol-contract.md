@@ -19,7 +19,8 @@ only from, the pinned community relay.
 
 | Capability | Kind | Contract |
 | --- | ---: | --- |
-| Identity/profile | `0` | NIP-01 profile JSON. |
+| Identity/profile | `0` | NIP-01 profile JSON. The current client republishes it to the pinned room relay on visible entry so People and feed posts remain attributable after presence ends. |
+| Room presence | `10312` | NIP-53 regular replaceable presence, linked with `a=31727:<NIP-11-root>:community`, NIP-40 expiry, and bounded heartbeat freshness. |
 | Room feed | `1` | NIP-29 `h=<room-id>` context plus NIP-40 `expiration`. |
 | Community anchor | `31727` | NIP-97 anchor, `d=community`, root-signed: admin `p` tags, `badge_issuer`. |
 | Membership definition | `30009` | NIP-58 definition with `t=membership`, optional NIP-99 `price` (recurrence in the 4th element) and `permission` tags. |
@@ -37,53 +38,99 @@ is a NIP-09 kind `5` from the award issuer or an anchor admin. Fulfillment
 signers are anchor admins or the `badge_issuer` (the relay write gate enforces
 37237-write role holders relay-side).
 
-## Versioned Crays pilot records
+## Community identity and unresolved dynamic records
 
-NIP-78 is used precisely because these shapes are not standardized yet. The
-namespace is `life.crays`; clients must reject an unknown schema version.
+### Authoritative community metadata — kind `31727`
 
-### Room manifest/highlight — kind `30078`
+Community identity and trust come from the NIP-11 root key and that root's
+current NIP-97 anchor. The anchor's `name`, `description`, and `image` are the
+core display metadata; its `p` and `badge_issuer` tags are the authority set.
+A client MUST NOT label a room or community verified merely because an
+operator self-signed an app-data event.
 
-- `d=life.crays/room/v1/<room-id>`
-- `schema=life.crays/room/v1`
-- `name`, `about`, `picture`, optional `banner`
-- `relay=<wss-url>` and `operator=<pubkey>`
-- `g=<geohash>` only at the precision required for the map viewport
-- repeated `capability` tags (`social`, `menu`, `events`, `membership`)
-- `open=<open|closed>` and `expiration=<unix-seconds>`
-- signer must equal the operator identity trusted for that relay
+The NIP-97 anchor does not itself define geospatial indexing, live/open state,
+or a multi-room hierarchy. Those remain open protocol decisions, not fields to
+smuggle into arbitrary app-data records. Social presence uses the explicit
+NIP-53 binding below.
 
-The search relay may index this event but is not its authority. The client
-verifies signature, operator, relay URL, and expiry before showing Verified.
+Participant display metadata and live presence have different lifetimes and
+MUST remain separate. Kind `0` is the current durable display projection: it
+keeps names, avatars, and feed attribution available after a person leaves.
+Removing it without a durable room-persona replacement would turn historical
+posts into anonymous pubkeys. Presence is the short-lived, volunteered state
+that controls roster inclusion; it must not be inferred from kind `0` or from
+a non-expiring membership award.
 
-### Presence — kind `78`
+### Room presence — NIP-53 kind `10312`
 
-- `d=life.crays/presence/v1/<room-id>/<pubkey>`
-- `schema=life.crays/presence/v1`, `type=presence`, `h=<room-id>`
-- `visibility=visible` only when the person explicitly opted in
-- `expiration=<unix-seconds>`; clients ignore expired entries even if retained
-- leaving writes `status=left` with a near-term expiration
+Visible entry publishes a NIP-53 regular replaceable event with an exact root
+link:
 
-Quiet browsing never publishes this record. Presence is stored only on the
-selected room relay and is not a location-proof or a durable attendance log.
+```text
+["a", "31727:<NIP-11-root>:community", "<pinned-relay-url>", "root"]
+```
 
-### Proximity credential — kind `30078`
+The event has empty content, selected `intent`, optional `context` bounded to
+80 characters, and NIP-40 `expiration` equal to the user's fixed automatic
+leave time. Presence is refreshed every 60 seconds and when the app returns to
+the foreground; a refresh never extends that leave time. Interoperable NIP-53
+events without `expiration` receive a five-minute client freshness window.
+The event itself is the visible opt-in—there is no `visibility` tag.
 
-- `d=life.crays/credential/v1/<room-id>/<nonce>`
-- signed by the room operator, short-lived, and bound to the advertised
-  challenge and room manifest hash
-- presented during NIP-42/relay access negotiation, never rendered as social
-  presence by itself
+Explicit leave publishes a newer kind-10312 replacement with the same anchor
+`a`, `status=left`, and the original scheduled expiry (or at least a short
+future bound if that time already passed). The roster applies NIP-01
+replacement ordering: newest `created_at`, then lowest event id. It accepts
+only the exact current anchor address. Kind `0` remains separate, durable
+display/feed metadata and is never interpreted as presence.
 
-The pilot harness does not claim BLE anti-relay security; it proves expiry,
-room binding, signer binding, and one-active-room subscription behavior.
+This contract deliberately supports the current invariant of one physical
+room/community relay per active session. Because kind `10312` allows only one
+current room per author on a relay, a future community containing multiple
+simultaneous physical rooms needs an anchor-authorized room-address schema and
+a coordinated migration. It must not reuse the legacy discovery selector as a
+presence address.
+
+### Deprecated Crays discovery pilot — not a protocol contract
+
+The current app still contains a compatibility reader for:
+
+- kind `30078`, `d=life.crays/room/v1/<room-id>`, previously called a room
+  manifest.
+
+Upstream defines `30078` as arbitrary addressable application data, normally
+for custom client/user state that does not require interoperability. That does
+not give the Crays selector community or discovery semantics. The legacy
+selector is a migration liability only:
+
+- do not add new writers, indexers, relay policies, or integrations that treat
+  either shape as authoritative;
+- do not introduce another `30078` proximity credential;
+- do not use a legacy manifest signature as community trust proof;
+
+### Remaining protocol decisions
+
+Before replacing the legacy paths, a NIP-97-compatible proposal must decide:
+
+- geographic discovery: event kind/schema, signer authority, relay indexing,
+  precision/privacy, expiry, and whether one community can expose many rooms;
+- participant persona: retain standard kind `0` as the durable identity
+  projection, or—only if room-specific names/privacy are a product
+  requirement—standardize a separate addressable room-persona kind. Do not
+  overload the short-lived presence record with durable feed metadata;
+- proximity: what the BLE transport advertises, what is merely a pointer or
+  bearer invite, and whether any signed Nostr proof is needed at all.
+
+The BLE Test Room pointer is transport input only. NIP-11 plus the `31727`
+anchor and NIP-97 entitlement events remain the authority; the pointer does
+not create a Nostr discovery or presence namespace.
 
 ## Required client invariants
 
 1. Exactly one room relay owns room-scoped subscriptions at a time.
 2. A room switch writes/observes leave before the old subscriptions close and
    before the new room becomes active.
-3. Expired feed, presence, discovery, and credentials are ignored client-side.
+3. Expired feed and stale/expired/left NIP-53 presence are ignored client-side.
 4. Success requires at least one relay acceptance; a rendered success state is
    never independent protocol proof.
 5. Unknown schema versions render an unsupported state, never Verified.
@@ -92,9 +139,11 @@ room binding, signer binding, and one-active-room subscription behavior.
 
 ## Migration
 
-When a standard replaces one of these pilot records, add a dual-read period,
-write only the new shape, independently verify both projections, then remove
-pilot reads in a named protocol version. Never silently reinterpret v1 data.
+The `30078` selector must not be silently reinterpreted. Community metadata
+migrated to the root-and-anchor projection first. Presence uses only
+anchor-bound kind `10312`, with no dual read/write compatibility path.
+Geographic discovery still needs its own approved migration away from the
+remaining selector.
 
 ### NIP-97 cut-over
 

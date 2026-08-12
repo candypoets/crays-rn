@@ -1,49 +1,94 @@
-# Workflow — Manual development Test Room
+# Workflow — Test Room for development and TestFlight
 
 ## Product contract
 
-Development builds show one fixed **Crays Test Room** card on Discover. The
-card is a developer affordance, not a production Map result: it is compiled
-out when `__DEV__` is false and it becomes actionable only after the app has
-consumed a fresh, operator-signed `life.crays/room/v1` manifest from the
-reserved live relay.
+The Test Room is an intentionally permissive test community. Development
+clients and builds compiled with `EXPO_PUBLIC_CRAYS_TEST_BUILD=1` show one
+fixed **Crays Test Room** card on Discover. Ordinary release builds do not
+subscribe to or display it.
 
-The card is the synthetic Nearby result for the development client. It uses
-the same verified room-pointer outcome as a nearby gateway—room id plus relay
-URL—but does not request Bluetooth permission and does not carry an invite
-token. Opening it goes through Room preview and Join privacy directly. Quiet
-entry persists the selected room and starts its live subscriptions without
-redeeming an invite or publishing presence. A normal developer identity should
-choose quiet entry because the Nuts fixture relay permits reads but gates
-visible writes on its membership badge.
+The card is a synthetic Nearby result. It constructs the same version-2 nearby
+pointer that a real BLE GATT characteristic exposes: relay URL,
+room id, public invite-service URL, and the broadcast invite token. It then
+uses the normal pointer parser and navigation parameters. It bypasses only the
+radio scan and permission prompt; it does not bypass invite, NIP-11, anchor,
+award, or relay verification. The current preview still consumes the
+deprecated kind-30078 room-selector pilot as a compatibility step. That event
+is not community authority and must be replaced by an anchor-backed projection.
 
-Run `npm run test-room` while developing. The command provisions the reserved
-live Nuts relay, publishes the complete signed fixture family, and keeps the
-fixture alive while the app connects directly to its hosted WSS URL. It remains
-alive until the command receives SIGINT/SIGTERM, then removes exactly the
-fixture-authored events. It does not mint or redeem an invite for Test Room
-entry; invite minting remains owned by the separate invite QA scenarios.
-`npm run test-room:stop` safely signals the recorded process.
+The credential is public by design because a physical room advertises it to
+anyone nearby. It expires 90 days after minting and allows
+`Number.MAX_SAFE_INTEGER` redemptions, which is effectively unlimited for this
+test community. The token itself expires; membership awards redeemed from it
+do not. A new token must be compiled into a TestFlight build before the
+90-day deadline.
 
-If a device cannot reach the hosted relay, opt into the compatibility proxy
-with `CRAYS_TEST_ROOM_PROXY=1 npm run test-room`, then start Metro with
-`EXPO_PUBLIC_CRAYS_TEST_RELAY_URL=ws://<development-host-LAN-IP>:8787`.
+Entry remains a privacy boundary:
+
+- Quiet entry never resolves, previews, or redeems the invite and never
+  publishes presence.
+- Visible entry redeems for the current account, reads the exact returned
+  kind-8 award back from the pinned room relay, validates it against the
+  relay's NIP-11 root and root-signed community anchor, and only then exercises
+  the normal kind-0 profile plus anchor-bound NIP-53 presence path.
+- A failed, expired, exhausted, wrong-room, wrong-issuer, or delayed award stays
+  on Join privacy with a retryable error. It never shows false entry.
+
+No local invite endpoint or handoff proxy is part of this workflow. TestFlight
+users contact the hosted community invite service directly.
+
+## Publishing and building
+
+Run this once to publish a 90-day signed fixture and mint its public credential:
+
+```sh
+npm run test-room:publish
+```
+
+The command queries the real coordinator, publishes to the hosted Test Room,
+and writes ignored `.env.test-room-build`. It fails if the invite service
+silently clamps the requested lifetime below 90 days. Export that generated
+file into the process that creates the TestFlight bundle; Expo replaces the
+`EXPO_PUBLIC_*` values at bundle time. The resulting app needs no developer
+machine or proxy at runtime.
+
+For a teardown-owned local session, run `npm run test-room`. It provisions the
+same real contract and stays alive only to own fixture cleanup on Ctrl-C or
+`npm run test-room:stop`; app traffic still goes directly to the hosted relay
+and invite service. `CRAYS_TEST_ROOM_PROXY=1` is an optional WebSocket relay
+compatibility aid for a development device that cannot reach hosted WSS. It
+does not expose or forward invite endpoints.
 
 ## QA strategy
 
-`.qa/qa-test-room.mjs` provisions the real relay, seeds a development-only
-signer identity, and drives `maestro/flows/test-room.yaml` through Discover →
-Test Room (synthetic Nearby) → preview → quiet join → People. The flow asserts
-that Bluetooth rationale never appears, invite redemption does not occur, and
-signed fixture people render.
+`.qa/qa-test-room.mjs` owns bootstrap, native exercise, independent
+verification, and teardown. Bootstrap asks the real invite service for exactly
+7,776,000 seconds, omits membership-award expiry, requests
+9,007,199,254,740,991 redemptions, and rejects a clamped response. The QA-only
+seed route injects that per-run public credential into `createTestRoomPointer`;
+release builds cannot use this route.
 
-Independent verification then queries the underlying relay, verifies every
-fixture signature and fresh manifest, checks the app's consumed manifest log,
-proves that no invite token or required-membership award was created for the
-app identity, and proves quiet entry published no presence. Teardown is scoped
-to the exact state/PID files and reserved relay fixture events.
+`maestro/flows/test-room.yaml` provides these inputs: hosted service URL,
+hosted WSS relay, Test Room id, direct invite token, signer identity, visible
+intent, and context. Its expected output is Discover card → verified preview →
+visible privacy choice → People, without the Bluetooth rationale.
 
-Additional required paths: relay offline card and recovery command; relay
-restart with a changed underlying port; closed or expired manifest disables
-entry; visible join explains membership-gated failure; physical-device LAN
-address; release build contains no Test Room subscription or card.
+Independent verifiers then require:
+
+- the exact fresh operator-signed legacy room selector (compatibility evidence,
+  never community trust proof);
+- an issuer-signed membership award with the token nonce, badge address, app
+  pubkey, no award expiry, and the exact event id the app confirmed;
+- one valid app-authored kind-10312 visible-presence event, published only
+  after that award, linked to `31727:<NIP-11-root>:community`, with the selected
+  intent, context, and one-hour expiry;
+- one valid app-authored kind-0 profile carrying the exact test display name;
+- complete author-scoped fixture teardown from the shared reserved relay.
+
+Additional manual paths are quiet entry with zero redemption, token expiry,
+wrong-room service metadata, missing root anchor, delayed award read-back,
+relay offline, ordinary release build with no card, and a TestFlight install on
+a device that has no access to the development host.
+
+The Test Room keeps a root-signed membership permission for kind `10312` so
+the TestFlight build exercises the same relay gate as production.

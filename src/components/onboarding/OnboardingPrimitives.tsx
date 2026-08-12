@@ -82,6 +82,7 @@ type PrimaryButtonProps = {
   icon?: ReactNode;
   label: string;
   loading?: boolean;
+  loadingLabel?: string;
   onPress: () => void;
   testID?: string;
 };
@@ -91,6 +92,7 @@ export function PrimaryButton({
   icon,
   label,
   loading = false,
+  loadingLabel = 'Working…',
   onPress,
   testID,
 }: PrimaryButtonProps) {
@@ -114,7 +116,7 @@ export function PrimaryButton({
         <View className="min-h-14 flex-row items-center justify-center gap-3 px-6 py-3">
           {loading ? <ActivityIndicator color={colors.night} /> : icon}
           <Text className="text-center text-lg font-bold text-base-content">
-            {loading ? 'Working…' : label}
+            {loading ? loadingLabel : label}
           </Text>
         </View>
       </LinearGradient>

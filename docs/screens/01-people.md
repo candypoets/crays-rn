@@ -17,17 +17,19 @@ Entry requires a persisted `ActiveRoom`. With no active room, route to Discover.
 
 ## State and relay contract
 
-`RoomSessionProvider` owns only the durable active-room selection. `RoomDataProvider` owns the live projection and subscribes with stable ID `room_data_<room id>` to the one device transport URL.
+`RoomSessionProvider` owns only the durable active-room selection. `RoomDataProvider` owns the live projection and gives each concurrent event family a stable room-scoped subscription ID on the one device transport URL.
 
 Relevant events:
 
-- kind 78, `schema=life.crays/presence/v1`, `type=presence`, `h=<room id>`;
+- NIP-53 kind `10312` with exact `a=31727:<NIP-11-root>:community`;
 - kind 0 profiles from the same relay;
-- latest presence and latest profile win by `created_at`;
-- `visibility=visible`, no `status=left`, and future `expiration` are all required;
+- latest presence and latest profile win by `created_at`, then the NIP-01
+  lowest-id tie-break;
+- the presence event is the opt-in; `status=left`, an elapsed NIP-40 expiry,
+  or a stale five-minute fallback window excludes it;
 - missing profiles do not produce fabricated roster entries.
 
-The versioned kind-78 format is a Crays pilot contract, not a standardized NIP. FlatBuffer views are validated in the subscription callback and reduced to the smallest stable UI projection.
+Presence is refreshed every 60 seconds and on foreground without extending the fixed automatic-leave time. FlatBuffer views are validated in the subscription callback and reduced to the smallest stable UI projection.
 
 ## Required states
 
@@ -51,10 +53,10 @@ Unit coverage in `RoomScreen.test.tsx` verifies populated and quiet-empty paths 
 
 1. create an isolated Nuts coordinator relay and record its exact relay/volume IDs;
 2. issue fixture membership awards through the same gate as production;
-3. publish signed manifest, profiles, visible presences, feed, catalog, membership, and event fixtures;
+3. publish the compatibility selector plus signed profiles, anchor-bound NIP-53 presences, feed, catalog, membership, and event fixtures;
 4. enter the room on Android using the emulator transport alias;
 5. assert the screen consumed profile and presence FlatBuffers;
 6. independently query every fixture and verify all Nostr signatures;
 7. delete the exact relay and Docker volume in `finally`.
 
-Additional implementation QA must cover: zero profiles, profile without presence, quiet presence, left tombstone, expired presence, newer/older replacement ordering, malformed profile, wrong room `h`, reconnect, background/foreground, and switching to a second relay without mixed roster data.
+Additional implementation QA must cover: zero profiles, profile without presence, left replacement, expired/fallback-stale presence, newer/older/equal-time replacement ordering, malformed profile, wrong community `a`, reconnect, background/foreground heartbeat, and switching to a second relay without mixed roster data.

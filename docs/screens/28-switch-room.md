@@ -2,7 +2,7 @@
 
 ## Product + implementation contract
 
-Exactly one room relay may be active. Selecting another signed room while one is active shows current and destination names, verifies the destination manifest first, explains what ends/remains, and requires “Leave and enter new room.” Visible presence must receive a confirmed `left` replacement before active-room state clears. The app then opens the destination Join privacy screen; it does not silently join or copy visibility. Cancel and destination failure retain the current room and subscriptions.
+Exactly one room relay may be active. Selecting another signed room while one is active shows current and destination names, verifies the destination manifest first, explains what ends/remains, and requires “Leave and enter new room.” Visible presence must receive a confirmed anchor-bound kind-10312 `left` replacement before active-room state clears. The app then opens the destination Join privacy screen; it does not silently join or copy visibility. Cancel and destination failure retain the current room and subscriptions.
 
 States include destination loading/invalid/closed/offline, current leave rejected, switch in progress, cancel, quiet current room, visible current room, and successful handoff. Messages/durable data remain available; two room feed subscriptions may never overlap.
 

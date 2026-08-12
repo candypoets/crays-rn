@@ -180,19 +180,27 @@ signed room fixture and the app's relay-derived projections after UI exercise.
 
 Join privacy uses separate identities. `qa-11-join-quiet.mjs` proves zero
 presence writes; `qa-11-join-visible.mjs` proves exactly one signed visible
-presence with selected intent, context, stable replacement key, and expiry.
+NIP-53 kind-10312 presence with selected intent, context, exact NIP-97 anchor
+link, and expiry, plus the exact kind-0 profile used by People and feed
+projections.
 
-## Long-running development Test Room
+## Development and TestFlight Test Room
 
 `npm run test-room` seeds the same real signed fixture family on the reserved
-live relay and keeps it available until stopped. The manual-development Test
-Room connects directly to `wss://crays-test.relays.nuts.cash`; it is not a mock
-store and it does not redeem an invite. Use `npm run test-room:stop` for
-author-scoped fixture cleanup. The reserved relay itself remains running.
+live relay and keeps a teardown owner alive until stopped. The app connects
+directly to `wss://crays-test.relays.nuts.cash`; it is not a mock store. Visible
+entry redeems the direct public invite and quiet entry does not. Use
+`npm run test-room:stop` for author-scoped fixture cleanup. The reserved relay
+itself remains running. `npm run test-room:publish` instead leaves the hosted
+90-day fixture in place and writes ignored `.env.test-room-build` for the
+TestFlight bundle. `npm run start:maestro` sources that file when present, and
+`qa-27-discover-handoff.mjs` refuses to run without it (the flow asserts the
+Developer/Test room section, which the bundle only renders with the token).
 
-The local proxy is an explicit compatibility mode (`CRAYS_TEST_ROOM_PROXY=1`)
-for devices that cannot reach the hosted relay and remains enabled by the
-invite-oriented relay screen scenarios, which need a local handoff endpoint.
+The local proxy is an explicit relay-only compatibility mode
+(`CRAYS_TEST_ROOM_PROXY=1`) for development devices that cannot reach hosted
+WSS. It has no invite, community-info, or redemption routes. TestFlight and the
+Test Room QA scenario call the hosted invite service directly.
 
 The checkout scenario keeps the app's payment default pointed at
 `https://payments.nuts.cash`. Its deterministic QA variant is an explicit
@@ -205,7 +213,13 @@ request and calls the live room `/redeem` endpoint with the shared
 JavaScript mock award. The adapter is stopped in the scenario teardown.
 
 The executable lifecycle is `.qa/qa-test-room.mjs` with
-`maestro/flows/test-room.yaml`. It proves Discover card availability, entry
-through the synthetic Nearby result, quiet join, fixture rendering, manifest
-consumption, signature validity, no invite redemption, zero presence writes,
-and exact fixture teardown while the reserved relay remains available.
+`maestro/flows/test-room.yaml`. It proves Discover card availability, direct
+invite input through the synthetic Nearby pointer, visible selection, exact
+membership-award read-back, fixture rendering,
+joining-account kind-0 projection, anchor-bound kind-10312 presence, legacy
+selector consumption, and exact fixture teardown while the reserved relay
+remains available. Bootstrap rejects any invite response shorter than the
+requested 90 days or smaller than the effectively unlimited redemption count.
+The Test Room's root-signed membership definition grants kind `10312`. The
+kind-30078 selector remains discovery compatibility, not a new protocol
+contract.

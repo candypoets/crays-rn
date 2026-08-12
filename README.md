@@ -51,19 +51,36 @@ and waits up to three minutes for a cold bundle.
 
 ## Development Test Room
 
-For a room that is always discoverable during local development, keep this in
-a second terminal:
+For a teardown-owned room during local development, keep this in a second
+terminal:
 
 ```sh
 npm run test-room
 ```
 
-Discover will show **Crays Test Room** after its signed manifest arrives. The
-developer card simulates a Nearby room result: open it and choose quiet entry;
-Bluetooth and invite redemption are not involved. The command uses the live
-reserved Nuts relay, seeds the signed room/feed/menu fixture, and removes its
-fixture events when stopped. Stop it with Ctrl-C or
+Discover will show **Crays Test Room** after its legacy signed room selector
+arrives. That kind-30078 selector is temporary compatibility, not community
+authority; the direct invite is verified through NIP-11, the root-signed
+NIP-97 anchor, and the returned award. The
+card simulates a version-2 Nearby result with the hosted service and direct
+broadcast invite. Quiet entry never redeems it; visible entry confirms the
+exact relay award before publishing presence. Bluetooth is not involved. The
+command uses the live reserved Nuts relay, seeds the signed fixture, and
+removes its fixture events when stopped. Stop it with Ctrl-C or
 `npm run test-room:stop`.
+
+For a TestFlight build, publish the 90-day fixture and public, effectively
+unlimited invite once:
+
+```sh
+npm run test-room:publish
+```
+
+This writes ignored `.env.test-room-build`. Export those `EXPO_PUBLIC_*`
+values into the TestFlight bundle process. The installed app talks directly to
+the hosted relay and invite service; no developer-host proxy is required.
+`npm run start:maestro` sources the same file automatically when present, so
+the local dev/QA bundle gets the token without a manual export.
 
 The Android emulator, iOS simulator, and physical devices use the hosted relay
 with the defaults. If a device cannot reach it, opt into the local compatibility
@@ -74,7 +91,8 @@ CRAYS_TEST_ROOM_PROXY=1 npm run test-room
 EXPO_PUBLIC_CRAYS_TEST_RELAY_URL=ws://192.168.1.20:8787 npm run start
 ```
 
-The card and its relay subscription exist only in development builds.
+The card and its relay subscription exist in development builds and explicit
+test builds (`EXPO_PUBLIC_CRAYS_TEST_BUILD=1`), never ordinary releases.
 
 Self-orders with one menu item at quantity one can continue to the shared Nuts
 hosted Stripe checkout. The payment service re-reads the signed room listing,

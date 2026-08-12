@@ -166,7 +166,10 @@ The runner records infrastructure ownership immediately after each successful cr
 | `membership` | membership `30009` / pass `30402`, kind-8 award, `37237` uses | 05, 16, 18, 19 |
 | `wallet` | encrypted wallet-sync fixtures and deterministic local mint/shim state | 25, 26 and recovery/conflict paths |
 
-Unknown PRD event shapes—room discovery, presence, and room-feed expiration—must be isolated behind versioned Crays contracts and explicitly labelled pilot contracts. They may not masquerade as established NIPs.
+The unresolved room-discovery shape must remain isolated behind an explicitly
+deprecated Crays compatibility contract. Presence uses anchor-bound NIP-53
+kind `10312`; room-feed expiration uses NIP-40. Neither may be represented as
+arbitrary app data.
 
 ## Per-screen scenario contract
 

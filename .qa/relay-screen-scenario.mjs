@@ -126,6 +126,10 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     CRAYS_TEST_ROOM_ID: roomId,
     CRAYS_TEST_ROOM_NAME: 'The Skyline Room',
     CRAYS_QA_MINT_INVITE: '1',
+    // Ordinary screen scenarios exercise already-authorized room members.
+    // The Test Room card scenario deliberately leaves this at 0 so its public
+    // invite redemption is the only grant for the joining identity.
+    CRAYS_QA_PREAUTHORIZE: '1',
     CRAYS_QA_USER_INDEX: String(qaUserIndex),
     ...bootstrapEnv,
   };

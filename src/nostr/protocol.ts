@@ -1,14 +1,16 @@
 import type { EventTemplate } from 'nostr-tools';
 
 /**
- * Stable NIP kinds stay literal. The unresolved room primitives use NIP-78's
- * application-data kinds and a versioned namespace so pilot data can migrate
- * without being mistaken for a standardized NIP.
+ * Stable NIP kinds stay literal. `roomManifestKind` exposes the remaining
+ * pre-migration discovery pilot only so existing screens can remove it in a
+ * deliberate cut-over. It is not authoritative community/discovery semantics
+ * and MUST NOT be copied into new product or relay contracts.
  */
 export const CRAYS_PROTOCOL = {
   appNamespace: 'life.crays',
+  /** @deprecated Legacy Crays pilot; community identity belongs in NIP-97 kind 31727. */
   roomManifestKind: 30078,
-  roomActivityKind: 78,
+  roomPresenceKind: 10312,
   roomFeedKind: 1,
   profileKind: 0,
   badgeAwardKind: 8,
@@ -23,10 +25,12 @@ export const CRAYS_PROTOCOL = {
   rsvpKind: 31925,
 } as const;
 
+export const PRESENCE_HEARTBEAT_INTERVAL_MS = 60_000;
+export const PRESENCE_FALLBACK_FRESHNESS_SECONDS = 5 * 60;
+
+/** @deprecated Address for the remaining legacy kind-30078 room selector. */
 export const pilotD = {
   room: (roomId: string) => `${CRAYS_PROTOCOL.appNamespace}/room/v1/${roomId}`,
-  presence: (roomId: string, pubkey: string) =>
-    `${CRAYS_PROTOCOL.appNamespace}/presence/v1/${roomId}/${pubkey}`,
 } as const;
 
 export type PresenceVisibility = 'visible' | 'quiet';
@@ -49,51 +53,57 @@ export function roomFeedTemplate(
   };
 }
 
+export function communityAnchorAddress(rootPubkey: string): string {
+  if (!/^[0-9a-f]{64}$/i.test(rootPubkey)) throw new Error('The community root key is invalid.');
+  return `${CRAYS_PROTOCOL.anchorKind}:${rootPubkey.toLowerCase()}:community`;
+}
+
+/** NIP-53 Room Presence bound to the root-signed NIP-97 community anchor. */
 export function presenceTemplate({
-  roomId,
-  pubkey,
-  visibility,
+  communityRootPubkey,
+  relayUrl,
   intent,
   context,
   expiresAt,
 }: {
-  roomId: string;
-  pubkey: string;
-  visibility: PresenceVisibility;
-  intent?: PresenceIntent;
+  communityRootPubkey: string;
+  relayUrl: string;
+  intent: PresenceIntent;
   context?: string;
   expiresAt: number;
 }): EventTemplate {
   const normalizedContext = context?.trim().slice(0, 80) ?? '';
   return {
-    kind: CRAYS_PROTOCOL.roomActivityKind,
+    kind: CRAYS_PROTOCOL.roomPresenceKind,
     created_at: Math.floor(Date.now() / 1000),
     content: '',
     tags: [
-      ['d', pilotD.presence(roomId, pubkey)],
-      ['h', roomId],
-      ['type', 'presence'],
-      ['visibility', visibility],
-      ...(visibility === 'visible' && intent ? [['intent', intent]] : []),
-      ...(visibility === 'visible' && normalizedContext ? [['context', normalizedContext]] : []),
+      ['a', communityAnchorAddress(communityRootPubkey), relayUrl, 'root'],
+      ['intent', intent],
+      ...(normalizedContext ? [['context', normalizedContext]] : []),
       ['expiration', String(expiresAt)],
-      ['schema', 'life.crays/presence/v1'],
     ],
   };
 }
 
-export function leaveTemplate(roomId: string, pubkey: string): EventTemplate {
+/** A newer same-kind/same-author replacement makes leave visible immediately. */
+export function leaveTemplate({
+  communityRootPubkey,
+  relayUrl,
+  expiresAt,
+}: {
+  communityRootPubkey: string;
+  relayUrl: string;
+  expiresAt: number;
+}): EventTemplate {
   return {
-    kind: CRAYS_PROTOCOL.roomActivityKind,
+    kind: CRAYS_PROTOCOL.roomPresenceKind,
     created_at: Math.floor(Date.now() / 1000),
     content: '',
     tags: [
-      ['d', pilotD.presence(roomId, pubkey)],
-      ['h', roomId],
-      ['type', 'presence'],
+      ['a', communityAnchorAddress(communityRootPubkey), relayUrl, 'root'],
       ['status', 'left'],
-      ['expiration', String(Math.floor(Date.now() / 1000) + 60)],
-      ['schema', 'life.crays/presence/v1'],
+      ['expiration', String(expiresAt)],
     ],
   };
 }

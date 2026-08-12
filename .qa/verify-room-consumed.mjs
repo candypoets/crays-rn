@@ -25,7 +25,7 @@ const pool = makePool();
 const { events } = await queryUntil(
   pool,
   state.relay_url,
-  { kinds: [0, 1, 78, 30009, 30402, 31923], limit: 200 },
+  { kinds: [0, 1, 10312, 30009, 30402, 31923], limit: 200 },
   (polled) => fixtureIds.every((id) => polled.some((event) => event.id === id)),
   'projected fixture family is stored on the scenario relay',
 );
@@ -41,11 +41,11 @@ for (const [name, about] of FIXTURE_PEOPLE) {
   assert(JSON.parse(profile.content).about === about, `${name} profile carries the seeded bio`);
 }
 
-const presence = events.filter((event) => event.kind === 78 && state.presence_ids.includes(event.id));
+const presence = events.filter((event) => event.kind === 10312 && state.presence_ids.includes(event.id));
 assert(presence.length === FIXTURE_PEOPLE.length, 'all seeded visible presence fixtures exist on the relay');
 assert(
-  presence.every((event) => event.tags.some((tag) => tag[0] === 'visibility' && tag[1] === 'visible') && event.tags.some((tag) => tag[0] === 'h' && tag[1] === state.room_id)),
-  'seeded presence fixtures are visible and scoped to the scenario room',
+  presence.every((event) => event.tags.some((tag) => tag[0] === 'a' && tag[1] === `31727:${state.community_root}:community` && tag[2] === state.relay_url && tag[3] === 'root')),
+  'seeded NIP-53 presence fixtures are bound to the root-signed community anchor',
 );
 
 assert(state.feed_ids.every((id) => events.some((event) => event.id === id && event.kind === 1)), 'all seeded room feed posts exist on the relay');

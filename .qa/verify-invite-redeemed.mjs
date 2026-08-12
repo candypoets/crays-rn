@@ -15,6 +15,8 @@ const { result: award } = await queryUntil(
 pool.close([state.relay_url]);
 assert(Boolean(award), 'invite redemption issued an award with the exact token nonce');
 assert(verifyEvent(award), 'invite award signature is cryptographically valid');
-assert(award.pubkey === state.required_badge?.split(':')[1] || award.tags.some((tag) => tag[0] === 'a' && tag[1] === claims.badge), 'award is bound to the invited membership');
+assert(award.pubkey === state.badge_issuer_pubkey, 'award is signed by the root-delegated badge issuer');
+assert(award.tags.some((tag) => tag[0] === 'a' && tag[1] === claims.badge), 'award is bound to the invited membership');
 assert(award.tags.some((tag) => tag[0] === 'p' && tag[1] === state.qa_pubkey), 'award belongs to the QA account selected in the app');
+assert(award.tags.some((tag) => tag[0] === 't' && tag[1] === 'membership'), 'award is explicitly a membership');
 console.log('CRAYS INVITE REDEMPTION VERIFY PASS');

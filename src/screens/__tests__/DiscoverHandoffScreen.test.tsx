@@ -75,6 +75,14 @@ describe('DiscoverHandoffScreen', () => {
     expect(screen.getByTestId('open-test-room')).toBeDisabled();
   });
 
+  it('uses actionable TestFlight copy in a release test build', () => {
+    render(<DiscoverHandoffScreen mode="nearby" onChangeMode={jest.fn()} testRoom={{ error: 'offline', loading: false, testBuild: true }} />);
+    expect(screen.getByText('Test build')).toBeOnTheScreen();
+    expect(screen.getByText('Test Room is unavailable')).toBeOnTheScreen();
+    expect(screen.queryByText(/npm run/)).toBeNull();
+    expect(screen.getByText(/Visible entry redeems the reusable test invite/)).toBeOnTheScreen();
+  });
+
   it('lets Nearby explain itself before any permission request', () => {
     const onChangeMode = jest.fn();
     render(<DiscoverHandoffScreen mapAvailable mode="nearby" onChangeMode={onChangeMode} />);

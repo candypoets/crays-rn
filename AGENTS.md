@@ -60,10 +60,11 @@ Every screen change must include all of the following in the same change:
    or an in-memory JavaScript store are never proof of protocol success.
 
 Shared Maestro startup lives in `maestro/flows/launch.yaml`. Start Metro with
-`npm run start:maestro`, run `adb reverse tcp:8085 tcp:8085`, and then run the
-screen flow. Port 8085 intentionally avoids the `nuts-rn` Metro process on
-8084. Do not set `CI=1` for Metro; the dev-client launcher discovery and
-bundle freshness are unreliable in that mode on this host.
+`npm run start:maestro` (it sources `.env.test-room-build` when present, so the
+Test Room token reaches the bundle), run `adb reverse tcp:8085 tcp:8085`, and
+then run the screen flow. Port 8085 intentionally avoids the `nuts-rn` Metro
+process on 8084. Do not set `CI=1` for Metro; the dev-client launcher discovery
+and bundle freshness are unreliable in that mode on this host.
 
 ## QA harness conventions
 

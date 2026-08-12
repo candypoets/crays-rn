@@ -16,6 +16,13 @@ This is Crays Mobile's only public feed. It reads and writes against exactly the
 
 Read kind 1 with `#h=<active room id>` from only `connectionRelayUrl`. Require non-empty ID, pubkey, content, and a future NIP-40 `expiration` when present. Display newest first; relay arrival order must not reorder history incorrectly.
 
+Resolve each author from the latest kind-0 profile on that same pinned relay.
+Kind-0 is display metadata, not evidence that the author is currently present;
+it intentionally remains usable after presence ends so existing feed posts do
+not lose their name and avatar. A missing profile may fall back to **Room
+guest** in the feed, but it must never fabricate a name or make the author
+appear in People.
+
 Publish with `roomFeedTemplate`: kind 1, room `h`, `client=life.crays`, and expiration no later than the active room's expiry. The configured nipworker signer signs; success is shown only after one target relay explicitly returns OK. A false response or timeout preserves the draft and offers retry. The screen never provides a second send path while an outcome is uncertain.
 
 ## Required states

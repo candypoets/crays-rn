@@ -8,43 +8,55 @@ listings, and available room data but never appear in People. Writes and
 payment-dependent actions are separate and require whatever authorization and
 payment contract the action defines. Visible users explicitly choose
 Social, Business, Dating, or Just curious; may add an 80-character room-only
-context; and publish one short-lived, room-scoped presence event.
+context. Visible presence is NIP-53 kind `10312`, linked to the root-signed
+NIP-97 community anchor.
 
 Primary action wording follows the current selection: **Enter quietly** or
 **Enter and be visible**. Back leaves the current room selection unchanged.
 Every entry chooses a one-, two-, or four-hour automatic leave time (two hours
 by default). Repeated taps are disabled while entry/publish is in progress.
 
-When an invite or an invite-handoff URL is supplied, entry first retrieves the
-unrendered token, validates its community metadata against the signed room, and
-redeems it for the current account. Redemption must return a real kind-8 award
-before either quiet entry or visible presence continues. Missing, expired,
-exhausted, wrong-room, issuer-mismatched, and offline grants remain on this
-screen with a retryable error. Repeated entry reuses the locally persisted
-nonce/account redemption and cannot consume the invite twice. A normal Nearby
-pointer, QR-free direct room link, and the development Test Room carry no
-invite; they select the verified relay and proceed directly to the privacy
-choice. The development Test Room is a synthetic Nearby result, not an invite
-redemption test.
+An entry may carry either a legacy invite-handoff URL or the direct service URL
+and broadcast token from a version-2 Nearby pointer. Quiet entry deliberately
+does not resolve or redeem either form. Visible entry validates the token and
+community metadata against the pinned relay and NIP-97 trust chain, redeems it for the current account,
+then independently reads the exact returned kind-8 award from the pinned relay.
+The award must match the event id, token nonce, account, membership address,
+root-delegated issuer, and live expiry rules before profile or presence is published.
+Missing, expired, exhausted, wrong-room, issuer-mismatched, delayed,
+and offline grants remain on this screen with a retryable error. Repeated entry
+reuses the locally persisted nonce/account redemption and confirms it again.
+
+The Test Room uses this same direct Nearby pointer in development and special
+TestFlight builds. Its public token lasts 90 days with an effectively unlimited
+safe-integer redemption count; redeemed test membership does not expire.
 
 ## Mutation and lifecycle
 
 - Quiet: persist `ActiveRoom(visibility=quiet, leaveAt=…)`; open only that
-  relay's room subscriptions; do not sign or publish kind `78` presence.
-- Granted entry: redeem the handoff before the visibility branch. The badge is
+  relay's room subscriptions; do not sign or publish kind `10312`.
+- Granted visible entry: redeem only inside the visible branch and confirm the
+  exact award against the NIP-11 root and root-signed anchor. The badge is
   authorization for the room and never implies visible presence by itself.
-- Visible: publish the local kind-0 profile, then sign/publish the versioned
-  presence template with the exact room id, stable `d`, selected intent,
-  bounded optional context, and automatic-leave expiry. Persist the room only
+- Visible: resolve the pinned relay's NIP-11 root, publish the local kind-0
+  profile, then sign/publish NIP-53 kind `10312` with
+  `a=31727:<root>:community`, the pinned relay hint, selected intent, bounded
+  optional context, and automatic-leave expiry. Persist the room only
   after both writes receive a relay `OK`, so rejection cannot produce false
-  local entry.
+  local entry. Kind-0 remains the durable feed/persona projection; it is never
+  presence by itself.
 - On automatic leave, protected active-room state is removed, all room-scoped
   subscriptions are torn down, the feed locks, and the Room ended surface
-  explains why. Natural NIP-40 expiry removes visible presence without a social
-  leave announcement; explicit leave still writes the short-lived `status=left`
-  replacement.
+  explains why. NIP-40 expiry removes visible presence without a social leave
+  announcement; explicit leave writes a newer `status=left` kind-10312
+  replacement. While active, the app refreshes presence every 60 seconds and
+  on foreground without extending the fixed leave time.
 - Any required publish succeeds after one intended relay accepts it. Rejection
   keeps a retryable state and must never show the user in People.
+- Immediately after a confirmed invite award, profile and presence use a
+  bounded retry window for the relay gate to observe the new NIP-97 award.
+  This retry wrapper is never used without exact award confirmation, and
+  exhausting the window remains a retryable screen error.
 - Relay switch must complete old leave/lock before new selection.
 
 ## QA strategy
@@ -58,17 +70,21 @@ fixture presence, avoiding the false proof created when the app identity is
 also a seeded visible guest:
 
 - `.qa/qa-11-join-quiet.mjs` enters through public UI and independently proves
-  the app authored zero kind-78 room events.
+  the app authored zero kind-10312 room events.
 - `.qa/qa-11-join-visible.mjs` selects Business, exact context, and one hour;
   the independent verifier requires exactly one valid signature, exact
-  address/schema/room tags, the chosen fields, and an expiry matching that
-  window.
+  anchor address/relay/root marker, the chosen fields, and an expiry matching
+  that window. It also verifies the exact app-authored kind-0 profile that
+  keeps People and feed projections resolvable.
 
 Explicit leave and relay switching remain independently verified by screens 21
 and 28. `.qa/qa-11c-join-relay-unavailable.mjs` covers the dead-relay path:
 joining against an unreachable relay renders the unverified-room error state
-and the enter action stays inert. The long-running Test Room scenario additionally
-proves synthetic Nearby entry without an invite or required-membership award for
-an identity that was not pre-authorized. Component/fake-clock coverage owns automatic local expiry; a future BLE
+and the enter action stays inert. The Test Room scenario additionally proves
+the direct broadcast pointer, 90-day effectively unlimited credential,
+non-expiring redeemed membership, exact award confirmation, anchor-bound
+kind-10312 presence, and exact profile projection. Pure-logic
+coverage proves that quiet visibility removes the invite source before any
+network operation. Component/fake-clock coverage owns automatic local expiry; a future BLE
 gateway harness must additionally force credential-renewal loss and verify the
 Signal weak → Reconnecting → Room locked sequence.
