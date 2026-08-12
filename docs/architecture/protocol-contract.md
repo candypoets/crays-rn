@@ -19,7 +19,9 @@ only from, the pinned community relay.
 
 | Capability | Kind | Contract |
 | --- | ---: | --- |
-| Identity/profile | `0` | NIP-01 profile JSON. |
+| Identity/profile | `0` | NIP-01 profile JSON. The current client republishes it to the pinned room relay on visible entry so People and feed posts remain attributable after presence ends. |
+| Room definition | `30312` | NIP-53 addressable room definition, accepted only when its author is the pinned relay root or a current admin declared by the root-signed `31727` anchor. Its exact `30312:<author>:<d>` address is the room boundary. |
+| Room presence | `10312` | NIP-53 regular replaceable presence, linked to the exact `30312:<room-author>:<room-d>` address with a pinned-relay hint, NIP-40 expiry, and bounded heartbeat freshness. |
 | Room feed | `1` | NIP-29 `h=<room-id>` context plus NIP-40 `expiration`. |
 | Community anchor | `31727` | NIP-97 anchor, `d=community`, root-signed: admin `p` tags, `badge_issuer`. |
 | Membership definition | `30009` | NIP-58 definition with `t=membership`, optional NIP-99 `price` (recurrence in the 4th element) and `permission` tags. |
@@ -37,53 +39,116 @@ is a NIP-09 kind `5` from the award issuer or an anchor admin. Fulfillment
 signers are anchor admins or the `badge_issuer` (the relay write gate enforces
 37237-write role holders relay-side).
 
-## Versioned Crays pilot records
+## Community identity and unresolved dynamic records
 
-NIP-78 is used precisely because these shapes are not standardized yet. The
-namespace is `life.crays`; clients must reject an unknown schema version.
+### Authoritative community metadata — kind `31727`
 
-### Room manifest/highlight — kind `30078`
+Community identity and trust come from the NIP-11 root key and that root's
+current NIP-97 anchor. The anchor's `name`, `description`, and `image` are the
+core display metadata; its `p` and `badge_issuer` tags are the authority set.
+A client MUST NOT label a room or community verified merely because an
+operator self-signed an app-data event.
 
-- `d=life.crays/room/v1/<room-id>`
-- `schema=life.crays/room/v1`
-- `name`, `about`, `picture`, optional `banner`
-- `relay=<wss-url>` and `operator=<pubkey>`
-- `g=<geohash>` only at the precision required for the map viewport
-- repeated `capability` tags (`social`, `menu`, `events`, `membership`)
-- `open=<open|closed>` and `expiration=<unix-seconds>`
-- signer must equal the operator identity trusted for that relay
+The NIP-97 anchor does not itself define geospatial indexing, live/open state,
+or a multi-room hierarchy. Those remain open protocol decisions, not fields to
+smuggle into arbitrary app-data records. Social presence uses the explicit
+NIP-53 binding below.
 
-The search relay may index this event but is not its authority. The client
-verifies signature, operator, relay URL, and expiry before showing Verified.
+### Authorized room definition — NIP-53 kind `30312`
 
-### Presence — kind `78`
+The pinned relay's NIP-11 `pubkey` is the only out-of-band trust root. The
+client reads the latest root-signed kind `31727` anchor with `d=community`,
+derives its current admin set, and then accepts a kind `30312` room definition
+only when its author is the relay root or one of those current admins. The
+definition must round-trip from the same pinned relay and carry the NIP-53 room
+fields needed for navigation, including `d`, `room`, `status`, `service`, and a
+Host provider. Its exact address is `30312:<author>:<d>`; relay hints on the
+event are metadata, not an additional trust source.
 
-- `d=life.crays/presence/v1/<room-id>/<pubkey>`
-- `schema=life.crays/presence/v1`, `type=presence`, `h=<room-id>`
-- `visibility=visible` only when the person explicitly opted in
-- `expiration=<unix-seconds>`; clients ignore expired entries even if retained
-- leaving writes `status=left` with a near-term expiration
+This is the complete room trust path:
 
-Quiet browsing never publishes this record. Presence is stored only on the
-selected room relay and is not a location-proof or a durable attendance log.
+```text
+pinned relay NIP-11 root
+  -> root-signed kind-31727 community anchor and current admins
+  -> authorized NIP-53 kind-30312 room definition
+  -> exact kind-30312 address used by kind-10312 presence
+```
 
-### Proximity credential — kind `30078`
+Participant display metadata and live presence have different lifetimes and
+MUST remain separate. Kind `0` is the current durable display projection: it
+keeps names, avatars, and feed attribution available after a person leaves.
+Removing it without a durable room-persona replacement would turn historical
+posts into anonymous pubkeys. Presence is the short-lived, volunteered state
+that controls roster inclusion; it must not be inferred from kind `0` or from
+a non-expiring membership award.
 
-- `d=life.crays/credential/v1/<room-id>/<nonce>`
-- signed by the room operator, short-lived, and bound to the advertised
-  challenge and room manifest hash
-- presented during NIP-42/relay access negotiation, never rendered as social
-  presence by itself
+### Room presence — NIP-53 kind `10312`
 
-The pilot harness does not claim BLE anti-relay security; it proves expiry,
-room binding, signer binding, and one-active-room subscription behavior.
+Visible entry publishes a NIP-53 regular replaceable event with an exact room
+definition link:
+
+```text
+["a", "30312:<room-author>:<room-d>", "<pinned-relay-url>", "root"]
+```
+
+The event has empty content, selected `intent`, optional `context` bounded to
+80 characters, and NIP-40 `expiration` equal to the user's fixed automatic
+leave time. Presence is refreshed every 60 seconds and when the app returns to
+the foreground; a refresh never extends that leave time. Interoperable NIP-53
+events without `expiration` receive a five-minute client freshness window.
+The event itself is the visible opt-in—there is no `visibility` tag.
+
+Explicit leave publishes a newer kind-10312 replacement with the same exact
+room-definition `a`, `status=left`, and the original scheduled expiry (or at
+least a short future bound if that time already passed). The roster applies NIP-01
+replacement ordering: newest `created_at`, then lowest event id. It accepts
+only the exact current room-definition address. Kind `0` remains separate, durable
+display/feed metadata and is never interpreted as presence.
+
+This contract deliberately supports the current invariant of one physical
+room/community relay per active session. Because kind `10312` allows only one
+current room per author on a relay, a future community containing multiple
+simultaneous physical rooms needs an anchor-authorized room-address schema and
+a coordinated migration. Every presence still references one exact kind-30312
+room-definition address.
+
+### Room discovery and authorization
+
+Room discovery and direct room links are transport inputs only. They identify a
+pinned relay and, when available, a room `d` value; they do not establish
+authority. The client resolves the room through the complete trust path above:
+NIP-11 root, root-signed `31727` anchor and current admins, then an authorized
+NIP-53 kind `30312` room definition. A room is never marked verified from an
+unsigned pointer, a relay hint, or an event authored outside that authority
+set.
+
+Geographic discovery still needs its own approved protocol if it is added. It
+must return the same pinned relay and exact `30312:<author>:<d>` room address
+that a direct link would resolve, rather than introducing a second room
+identity or presence namespace.
+
+### Remaining protocol decisions
+
+- geographic discovery: event kind/schema, signer authority, relay indexing,
+  precision/privacy, expiry, and whether one community can expose many rooms;
+- participant persona: retain standard kind `0` as the durable identity
+  projection, or—only if room-specific names/privacy are a product
+  requirement—standardize a separate addressable room-persona kind. Do not
+  overload the short-lived presence record with durable feed metadata;
+- proximity: what the BLE transport advertises, what is merely a pointer or
+  bearer invite, and whether any signed Nostr proof is needed at all.
+
+The BLE Test Room pointer is transport input only. NIP-11 plus the `31727`
+anchor, authorized `30312` room definition, and NIP-97 entitlement events
+remain the authority; the pointer does not create a Nostr discovery or
+presence namespace.
 
 ## Required client invariants
 
 1. Exactly one room relay owns room-scoped subscriptions at a time.
 2. A room switch writes/observes leave before the old subscriptions close and
    before the new room becomes active.
-3. Expired feed, presence, discovery, and credentials are ignored client-side.
+3. Expired feed and stale/expired/left NIP-53 presence are ignored client-side.
 4. Success requires at least one relay acceptance; a rendered success state is
    never independent protocol proof.
 5. Unknown schema versions render an unsupported state, never Verified.
@@ -92,17 +157,19 @@ room binding, signer binding, and one-active-room subscription behavior.
 
 ## Migration
 
-When a standard replaces one of these pilot records, add a dual-read period,
-write only the new shape, independently verify both projections, then remove
-pilot reads in a named protocol version. Never silently reinterpret v1 data.
+Room metadata and navigation use the root-and-anchor projection followed by an
+authorized kind `30312` room definition. Presence uses only kind `10312` with
+the exact `30312:<author>:<d>` room address, with no dual read/write
+compatibility path. Geographic discovery still needs its own approved protocol
+if it is introduced.
 
 ### NIP-97 cut-over
 
 The entitlement substrate moved from the venue-custom model (everything on
-`30009` with `type` tags, trust from the manifest `operator`/`award_issuer`
-tags) to NIP-97 in one clean cut: pilot QA relays are freshly provisioned per
-scenario, so no dual-read of `30009 type=*` data was kept. The manifest
-`award_issuer` tag is parsed for interop but no longer trusted; entitlement
-trust derives from the NIP-11 root key and the anchor. Local entitlement/order
-archives were versioned (`crays.orders.archive.v2`,
+`30009` with `type` tags, trust from custom `operator`/`award_issuer` tags) to
+NIP-97 in one clean cut: pilot QA relays are freshly provisioned per scenario,
+so no dual-read of `30009 type=*` data was kept. The `award_issuer` tag is
+parsed for interop but no longer trusted; entitlement trust derives from the
+NIP-11 root key and the anchor. Local entitlement/order archives were versioned
+(`crays.orders.archive.v2`,
 `crays.entitlements.archive.v2`) so pre-NIP caches are abandoned, not read.

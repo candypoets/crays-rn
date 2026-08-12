@@ -12,6 +12,10 @@
 // 27-discover-handoff.yaml, cold-signup.yaml). Verified by qa-entry-verify.mjs.
 export const QA_PROFILE_NAME = 'QA Alex';
 
+// Seeded by the dev-only Test Room identity route and asserted by its flow and
+// independent kind-0 verifier.
+export const TEST_ROOM_QA_PROFILE_NAME = 'Maya QA';
+
 // Typed and asserted by maestro/flows/03-room-feed.yaml (${QA_FEED_POST_TEXT}).
 export const FEED_POST_TEXT = 'Meet by the east stairs.';
 
@@ -41,7 +45,7 @@ export const CONVERSATION_ACCEPTANCE_TEXT = 'Conversation accepted';
 // back to this constant for older state files.
 export const ROOM_DISPLAY_NAME = 'The Skyline Room';
 
-// Room "about" tag seeded by relay-bootstrap.mjs into the kind-30078 manifest;
+// Room summary seeded into the root-authorized NIP-53 kind-30312 definition;
 // asserted by maestro/flows/10-room-preview.yaml (${QA_ROOM_ABOUT}).
 export const ROOM_ABOUT = 'Rooftop jazz, cocktails and a view over the city.';
 

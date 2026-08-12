@@ -1,37 +1,45 @@
-import {
-  devTestRoomEntryParams,
-  DEV_TEST_RELAY_URL,
-  resolveDevTestRelayUrl,
-} from '../testRoom';
+import { createTestRoomPointer, setQaTestRoomPointer, testRoomEntryParams } from '@/config/testRoom';
 
-describe('development Test Room entry', () => {
-  it('keeps the configured relay when no per-run override is supplied', () => {
-    expect(resolveDevTestRelayUrl()).toBe(DEV_TEST_RELAY_URL);
+describe('test-build Test Room entry', () => {
+  afterEach(() => setQaTestRoomPointer(null));
+
+  it('uses the same direct-invite nearby pointer as a physical room signal', () => {
+    const pointer = createTestRoomPointer({ token: 'claims.signature' });
+    const params = testRoomEntryParams(pointer);
+
+    expect(pointer).toMatchObject({
+      relayUrl: expect.stringMatching(/^wss?:\/\//),
+      roomId: 'crays-test-room',
+      invite: {
+        serviceUrl: expect.stringMatching(/^https?:\/\//),
+        token: 'claims.signature',
+      },
+    });
+    expect(params).toEqual({
+      relay: pointer!.relayUrl,
+      room: 'crays-test-room',
+      service: pointer!.invite!.serviceUrl,
+      token: 'claims.signature',
+    });
   });
 
-  it('normalizes a valid per-run WebSocket relay', () => {
-    const relayUrl = resolveDevTestRelayUrl('ws://10.0.2.2:8788/');
-
-    expect(relayUrl).toBe('ws://10.0.2.2:8788');
+  it('fails closed when a test build has no compiled invitation', () => {
+    expect(createTestRoomPointer({ token: '' })).toBeNull();
   });
 
-  it.each(['http://10.0.2.2:8788', 'not a URL', 'ws://user:secret@10.0.2.2:8788'])(
-    'rejects unsafe QA relay override %s',
-    (override) => expect(resolveDevTestRelayUrl(override)).toBe(DEV_TEST_RELAY_URL),
-  );
+  it('lets native QA exercise the card with the freshly minted direct credential', () => {
+    setQaTestRoomPointer({
+      relayUrl: 'wss://qa-room.test',
+      roomId: 'qa-room',
+      serviceUrl: 'https://qa-room.test',
+      token: 'qa-claims.qa-signature',
+    });
 
-  it('builds a room pointer without an invite handoff', () => {
-    const params = devTestRoomEntryParams();
-
-    expect(params.relay).toMatch(/^wss?:\/\//);
-    expect(params.room).toBe('crays-test-room');
-    expect(params).not.toHaveProperty('invite');
-  });
-
-  it('uses a validated per-run relay without adding an invite', () => {
-    const relayUrl = resolveDevTestRelayUrl('ws://10.0.2.2:8788/');
-    const params = devTestRoomEntryParams(relayUrl);
-
-    expect(params).toEqual({ relay: 'ws://10.0.2.2:8788', room: 'crays-test-room' });
+    expect(testRoomEntryParams()).toEqual({
+      relay: 'wss://qa-room.test',
+      room: 'qa-room',
+      service: 'https://qa-room.test',
+      token: 'qa-claims.qa-signature',
+    });
   });
 });

@@ -60,6 +60,7 @@ describe('nip11UrlForRelay', () => {
 describe('parseNip11RootPubkey', () => {
   it('accepts a 64-hex pubkey', () => {
     expect(parseNip11RootPubkey({ pubkey: ROOT, name: 'relay' })).toBe(ROOT);
+    expect(parseNip11RootPubkey({ pubkey: ROOT.toUpperCase() })).toBe(ROOT);
   });
 
   it('rejects missing or malformed pubkeys', () => {

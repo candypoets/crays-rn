@@ -158,7 +158,7 @@ The runner records infrastructure ownership immediately after each successful cr
 | --- | --- | --- |
 | `entry` | identity/profile only when a relay publish is required | 06, 06B, 07, 07B, 09 |
 | `invite` | issuer profile, invite, `31727` community anchor, `30009` `t=membership` definition, optional kind-8 prior award | 08, 08B, invite workflows |
-| `discover` | signed expiring room highlights and direct manifests | 10, 27, 28, outage/forgery paths |
+| `discover` | root-authorized NIP-53 kind-30312 room definitions | 10, 27, 28, outage/forgery paths |
 | `room` | venue profile/metadata, visible profiles, presence, announcements, posts | 01, 03, 10B, 11, 21 |
 | `messaging` | sender/recipient profiles, request/contact state, block/report variants | 02, 22, Messages workflows |
 | `commerce` | `30402` product listings, kind-8 orders, `37237` status history | 04, 12–15, 17, 23, 24 |
@@ -166,7 +166,10 @@ The runner records infrastructure ownership immediately after each successful cr
 | `membership` | membership `30009` / pass `30402`, kind-8 award, `37237` uses | 05, 16, 18, 19 |
 | `wallet` | encrypted wallet-sync fixtures and deterministic local mint/shim state | 25, 26 and recovery/conflict paths |
 
-Unknown PRD event shapes—room discovery, presence, and room-feed expiration—must be isolated behind versioned Crays contracts and explicitly labelled pilot contracts. They may not masquerade as established NIPs.
+Geographic room discovery remains isolated behind its explicit search-service
+decision. Direct and proximity pointers resolve through NIP-11, kind 31727,
+and a root/admin-authored NIP-53 kind-30312 definition. Presence uses kind
+`10312` bound to that exact room address; room-feed expiration uses NIP-40.
 
 ## Per-screen scenario contract
 

@@ -27,11 +27,12 @@ the protocol has settled.
 ## Nostr and relay behavior
 
 For visible presence, `src/app/leave-room.tsx` signs and publishes the same
-kind-78 presence identity with `status=left`, the active room `h`, and short
-expiration to the one active room relay. At least one required relay must
-return true before `RoomSessionProvider` clears the room and navigation may
-replace this screen with Room Ended. A quiet visitor has no published presence
-to replace and clears the local session without fabricating a relay event.
+NIP-53 kind-10312 regular-replaceable presence with `status=left`, the exact
+authorized kind-30312 room address in `a`, the pinned relay hint, and a bounded
+expiration. At least one required relay must return true before
+`RoomSessionProvider` clears the room and navigation may replace this screen
+with Room Ended. A quiet visitor has no published presence to replace and
+clears the local session without fabricating a relay event.
 
 An error or timeout remains on this screen, keeps the active room selected,
 restores the action, and never claims that privacy completion occurred.

@@ -18,10 +18,9 @@ appId: life.crays
     timeout: 20000
 - tapOn: "(exp|http)://"
 - inputText: "exp://localhost:8085"
-# The tablet IME covers the launcher action row; dismiss it before selecting
-# Connect so the shared startup does not race an off-screen control.
-- hideKeyboard
-- tapOn: "Connect"
+# Expo 57's launcher submits this URI through the field's native Go action; it
+# no longer renders the older Connect button on the tablet layout.
+- pressKey: ENTER
 # This development client is built with skipOnboarding/showMenuAtLaunch off;
 # waiting for optional launcher overlays adds tens of seconds to every screen
 # scenario and can accidentally target Android system UI.

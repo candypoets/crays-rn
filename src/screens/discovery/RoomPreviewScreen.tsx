@@ -2,7 +2,7 @@
 // OWNED WORLD: One immersive venue hero carries verified identity, signed description, and capabilities.
 // STORY: Verify the room → preview its signed utility → explicitly continue to privacy selection.
 // FIRST VIEWPORT: Atmosphere, verification, description, Preview, and Enter stay together.
-// FORM: Closed, stale, offline, and unsupported manifests never inherit a verified visual state.
+// FORM: Closed, unauthorized, malformed, and offline room definitions never inherit a verified visual state.
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

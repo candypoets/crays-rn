@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { nip04, verifyEvent } from 'nostr-tools';
 import { CONVERSATION_ACCEPTANCE_TEXT, CONVERSATION_REPLY_TEXT } from './flow-fixtures.mjs';
-import { assert, loadKeys, makePool, nowSeconds, queryUntil, readState, settleBeforeAbsence } from './relay-lib.mjs';
+import { assert, loadKeys, makePool, nowSeconds, queryUntil, readState } from './relay-lib.mjs';
 
 const state = readState();
 const keys = loadKeys();
@@ -13,8 +13,6 @@ const { events } = await queryUntil(
   (polled) => polled.length >= 2,
   'acceptance and reply each produce a kind-4 direct message',
 );
-await settleBeforeAbsence('no legacy kind-78 acceptance or reply can still be in flight');
-const legacy = await pool.querySync([state.relay_url], { kinds: [78], authors: [state.qa_pubkey], '#p': [recipient.pub], limit: 30 });
 pool.close([state.relay_url]);
 
 assert(events.length === 2, 'acceptance and reply each produce exactly one kind-4 direct message');
@@ -37,5 +35,4 @@ assert(acceptance.replyTo === state.incoming_message_id, 'acceptance references 
 assert(Boolean(reply), 'recipient decrypts one accepted reply');
 assert(reply.text === CONVERSATION_REPLY_TEXT, 'recipient decrypts the exact reply plaintext');
 assert(reply.replyTo === acceptance.messageId, 'reply references the acceptance inside ciphertext');
-assert(legacy.length === 0, 'acceptance and reply publish no kind-78 messages');
 console.log('CRAYS NIP-04 CONVERSATION ACTIONS VERIFY PASS');

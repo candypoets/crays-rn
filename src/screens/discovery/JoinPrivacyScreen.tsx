@@ -1,7 +1,7 @@
 // THESIS: Joining a venue relay and volunteering social presence are separate decisions.
 // OWNED WORLD: Two equal white door cards make quiet and visible entry consequences tangible.
 // STORY: Compare both choices → select deliberately → configure only what the choice needs → enter.
-// FIRST VIEWPORT: Neither privacy choice is pre-highlighted; both remain fully readable.
+// FIRST VIEWPORT: Quiet is the safe default while both choices remain fully readable.
 // FORM: A relay failure preserves every draft choice and never produces false visible state.
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
@@ -29,12 +29,11 @@ type JoinPrivacyScreenProps = {
 };
 
 export function JoinPrivacyScreen({ error, loading, onBack, onEnter, roomName }: JoinPrivacyScreenProps) {
-  const [choice, setChoice] = useState<Visibility | null>(null);
+  const [choice, setChoice] = useState<Visibility>('quiet');
   const [intent, setIntent] = useState<RoomIntent>('social');
   const [context, setContext] = useState('');
   const [leaveAfterMinutes, setLeaveAfterMinutes] = useState<RoomJoinPreferences['leaveAfterMinutes']>(120);
   const submit = () => {
-    if (!choice) return;
     onEnter({ visibility: choice, intent, context: choice === 'visible' ? context.trim() : '', leaveAfterMinutes });
   };
 
@@ -114,7 +113,7 @@ export function JoinPrivacyScreen({ error, loading, onBack, onEnter, roomName }:
 
       {error ? <View accessibilityRole="alert" className="mt-5 rounded-2xl border border-error/40 bg-error/10 p-4"><Text className="text-sm font-semibold leading-5 text-error">{error}</Text></View> : null}
       <View className="mt-8">
-        <PrimaryButton disabled={!choice} label={!choice ? 'Choose how to enter' : choice === 'quiet' ? 'Enter quietly' : 'Enter and be visible'} loading={loading} onPress={submit} testID="join-room-button" />
+        <PrimaryButton label={choice === 'quiet' ? 'Enter quietly' : 'Enter and be visible'} loading={loading} loadingLabel={choice === 'quiet' ? 'Entering quietly…' : 'Confirming access…'} onPress={submit} testID="join-room-button" />
         <Text className="mt-3 text-center text-sm leading-5 text-muted">Automatic leave: {leaveAfterMinutes === 60 ? '1 hour' : `${leaveAfterMinutes / 60} hours`} after entry.</Text>
         <TextAction label="Back" onPress={onBack} />
       </View>

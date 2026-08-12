@@ -26,7 +26,7 @@ try {
   if (!existsSync(pathA) || !existsSync(pathB)) throw new Error('two-room bootstrap state missing');
   const a = JSON.parse(readFileSync(pathA, 'utf8')); const b = JSON.parse(readFileSync(pathB, 'utf8')); const keys = loadKeys();
   if (!a.room_id || !b.room_id || a.room_id === b.room_id) throw new Error('switch fixtures must use distinct room identities');
-  if (!a.manifest_id || !b.manifest_id || a.manifest_id === b.manifest_id) throw new Error('switch fixtures must publish distinct signed manifests');
+  if (!a.room_definition_id || !b.room_definition_id || a.room_definition_id === b.room_definition_id) throw new Error('switch fixtures must publish distinct signed NIP-53 room definitions');
   if (a.id !== b.id || a.relay_url !== b.relay_url) throw new Error('switch fixtures must share the reserved relay until the coordinator permits a second deployed relay');
   console.log(`ok - seeded distinct room identities ${a.room_id} and ${b.room_id} on real relay ${a.relay_url}`);
   run(process.execPath, ['.qa/verify-switch-room-identities.mjs'], { ...envA, CRAYS_QA_STATE_A: pathA, CRAYS_QA_STATE_B: pathB });
@@ -48,7 +48,7 @@ try {
   run(process.env.MAESTRO_CLI || 'maestro', ['test', ...(process.env.ANDROID_SERIAL ? ['--device', process.env.ANDROID_SERIAL] : []), '-e', `QA_NSEC=${keys.users[3].nsec}`, '-e', `RELAY_A_URL=${emulatorRelay}`, '-e', `ROOM_A_ID=${a.room_id}`, '-e', `RELAY_B_URL=${emulatorRelay}`, '-e', `ROOM_B_ID=${b.room_id}`, 'maestro/flows/28-switch-room.yaml']);
   // B replaces shared addressable catalog/profile definitions on this one
   // relay, so A's old definition event IDs are not expected to survive. The
-  // switch contract instead requires both room manifests, A's confirmed left
+  // switch contract instead requires both room definitions, A's confirmed left
   // replacement, B's complete latest fixture family, then absence in B.
   run(process.execPath, ['.qa/verify-switch-room-identities.mjs'], { ...envA, CRAYS_QA_STATE_A: pathA, CRAYS_QA_STATE_B: pathB });
   run(process.execPath, ['.qa/verify-left-room.mjs'], envA);

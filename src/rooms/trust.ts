@@ -30,7 +30,7 @@ export function nip11UrlForRelay(relayUrl: string): string {
 
 export function parseNip11RootPubkey(document: unknown): string | undefined {
   const pubkey = (document as { pubkey?: unknown })?.pubkey;
-  return typeof pubkey === 'string' && /^[0-9a-f]{64}$/i.test(pubkey) ? pubkey : undefined;
+  return typeof pubkey === 'string' && /^[0-9a-f]{64}$/i.test(pubkey) ? pubkey.toLowerCase() : undefined;
 }
 
 export async function fetchRelayRootPubkey(

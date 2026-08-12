@@ -1,7 +1,7 @@
 appId: life.crays
 ---
 - runFlow: launch.yaml
-- openLink: "crays:///qa-seed?nsec=${QA_NSEC}&testRelay=${TEST_ROOM_RELAY_URL}"
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}&next=test-room&service=${SERVICE_URL}&relay=${RELAY_URL}&room=${ROOM_ID}&token=${INVITE_TOKEN}"
 - extendedWaitUntil:
     visible:
       id: "qa-seed-continue"
@@ -13,8 +13,9 @@ appId: life.crays
       id: "dev-test-room-card"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "Crays Test Room is online"
+    visible: ".*Crays Test Room is online.*"
     timeout: 30000
+- assertVisible: ".*Bluetooth is not required.*"
 - tapOn:
     id: "open-test-room"
 - extendedWaitUntil:
@@ -31,7 +32,23 @@ appId: life.crays
 - assertNotVisible:
     id: "bluetooth-rationale-screen"
 - tapOn:
-    id: "visibility-quiet"
+    id: "visibility-visible"
+- tapOn:
+    id: "intent-${QA_JOIN_INTENT}"
+- tapOn:
+    id: "join-context-input"
+- inputText: "${QA_JOIN_CONTEXT}"
+- pressKey: ENTER
+- scrollUntilVisible:
+    element:
+      id: "leave-after-60"
+    direction: DOWN
+- tapOn:
+    id: "leave-after-60"
+- scrollUntilVisible:
+    element:
+      id: "join-room-button"
+    direction: DOWN
 - tapOn:
     id: "join-room-button"
 - extendedWaitUntil:
@@ -40,4 +57,7 @@ appId: life.crays
     timeout: 30000
 - assertVisible: "Maya"
 - assertVisible: "Jonas"
-- takeScreenshot: development-test-room
+- assertVisible: "${QA_PROFILE_NAME}"
+- assertVisible: "${QA_JOIN_INTENT}"
+- assertVisible: ".*${QA_JOIN_CONTEXT}.*"
+- takeScreenshot: test-build-room-visible-invite

@@ -9,6 +9,11 @@ panel 07, with the retained-item structure from
 `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`,
 panel 08. The older dark screen PNG is no longer authoritative.
 
+Leave is a two-screen privacy workflow. For visible users the app publishes a
+signed NIP-53 kind-10312 replacement with the same kind-30312 room `a` address,
+`status=left`, and bounded expiry; only relay confirmation clears the active
+room. Quiet users publish nothing.
+
 The completion state renders only after explicit leave or automatic expiry
 has settled. It states that presence ended, the live feed is locked, and no
 social announcement was sent. Messages, orders, receipts, tickets, passes,
@@ -46,3 +51,6 @@ Separate QA must prove quiet leave creates zero user presence events, rejected
 write retains session, relaunch after completion routes Discover, stale
 subscriptions close, feed/post writes fail, and screen reader/back behavior is
 safe.
+The dedicated fourth fixture signer prevents regular replacement from
+overwriting a seeded roster identity. The independent verifier requires the
+exact room-bound kind-10312 `left` event before teardown.

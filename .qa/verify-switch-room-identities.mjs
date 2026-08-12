@@ -12,30 +12,31 @@ const stateA = JSON.parse(readFileSync(pathA, 'utf8'));
 const stateB = JSON.parse(readFileSync(pathB, 'utf8'));
 assert(stateA.room_id && stateB.room_id && stateA.room_id !== stateB.room_id, 'room A and B have distinct identities');
 assert(stateA.relay_url === stateB.relay_url, 'room A and B use the coordinator-reserved real relay');
-assert(stateA.manifest_id && stateB.manifest_id && stateA.manifest_id !== stateB.manifest_id, 'room A and B have distinct manifest events');
+assert(stateA.room_definition_id && stateB.room_definition_id && stateA.room_definition_id !== stateB.room_definition_id, 'room A and B have distinct NIP-53 room definitions');
 
 const pool = makePool();
-const { result: manifests } = await queryUntil(
+const { result: definitions } = await queryUntil(
   pool,
   stateA.relay_url,
-  { kinds: [30078], ids: [stateA.manifest_id, stateB.manifest_id], limit: 2 },
+  { kinds: [30312], ids: [stateA.room_definition_id, stateB.room_definition_id], limit: 2 },
   (events) => {
     const byId = new Map(events.map((event) => [event.id, event]));
-    return byId.has(stateA.manifest_id) && byId.has(stateB.manifest_id)
-      ? [byId.get(stateA.manifest_id), byId.get(stateB.manifest_id)]
+    return byId.has(stateA.room_definition_id) && byId.has(stateB.room_definition_id)
+      ? [byId.get(stateA.room_definition_id), byId.get(stateB.room_definition_id)]
       : null;
   },
-  'both switch-room manifests round-trip from the real relay',
+  'both switch-room definitions round-trip from the real relay',
 );
 pool.close([stateA.relay_url]);
 
-for (const [label, state, manifest] of [['A', stateA, manifests[0]], ['B', stateB, manifests[1]]]) {
-  assert(verifyEvent(manifest), `room ${label} manifest has a valid signature`);
-  assert(manifest.pubkey === state.operator_pubkey, `room ${label} manifest has the expected operator`);
-  const d = manifest.tags.find((tag) => tag[0] === 'd')?.[1];
-  const relay = manifest.tags.find((tag) => tag[0] === 'relay')?.[1];
-  assert(d === `life.crays/room/v1/${state.room_id}`, `room ${label} manifest address matches its room identity`);
-  assert(relay === state.relay_url, `room ${label} manifest points at its reserved relay`);
+for (const [label, state, definition] of [['A', stateA, definitions[0]], ['B', stateB, definitions[1]]]) {
+  assert(verifyEvent(definition), `room ${label} definition has a valid signature`);
+  assert(definition.pubkey === state.operator_pubkey, `room ${label} definition has the expected anchor-admin author`);
+  const d = definition.tags.find((tag) => tag[0] === 'd')?.[1];
+  const service = definition.tags.find((tag) => tag[0] === 'service')?.[1];
+  assert(d === state.room_id, `room ${label} definition address matches its room identity`);
+  assert(state.room_address === `30312:${state.operator_pubkey}:${state.room_id}`, `room ${label} state carries the exact NIP-53 address`);
+  assert(service === state.base_url, `room ${label} definition points at its service`);
 }
 
 console.log('CRAYS SWITCH ROOM IDENTITY VERIFY PASS');

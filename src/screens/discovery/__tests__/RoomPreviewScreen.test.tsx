@@ -5,7 +5,7 @@ import { RoomPreviewScreen } from '@/screens/discovery/RoomPreviewScreen';
 
 jest.mock('expo-router', () => ({ router: { back: jest.fn(), push: jest.fn(), replace: jest.fn() }, usePathname: () => '/room-preview' }));
 
-const room: RoomDescriptor = { id: 'skyline', name: 'The Skyline Room', about: 'Rooftop jazz.', relayUrl: 'wss://skyline.test', operatorPubkey: 'a'.repeat(64), capabilities: ['social'], expiresAt: 2_000_000_000, open: true, verified: true };
+const room: RoomDescriptor = { id: 'skyline', address: `30312:${'a'.repeat(64)}:skyline`, communityAddress: `31727:${'b'.repeat(64)}:community`, rootPubkey: 'b'.repeat(64), name: 'The Skyline Room', about: 'Rooftop jazz.', relayUrl: 'wss://skyline.test', operatorPubkey: 'a'.repeat(64), serviceUrl: 'https://skyline.test', capabilities: ['social'], status: 'open', open: true, verified: true };
 
 describe('RoomPreviewScreen', () => {
   it('shows identity, verification, utility, and explicit entry', () => {
@@ -23,7 +23,7 @@ describe('RoomPreviewScreen', () => {
     expect(onEnter).toHaveBeenCalledTimes(1);
   });
 
-  it('never fabricates an event title or schedule the manifest does not carry', () => {
+  it('never fabricates an event title or schedule the room definition does not carry', () => {
     render(<RoomPreviewScreen room={room} />);
     expect(screen.queryByText(/Tonight · Doors/)).toBeNull();
   });

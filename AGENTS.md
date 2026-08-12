@@ -32,8 +32,8 @@ Entitlements and Community Access Control". Pure helpers live in
 - Trust chain: the room relay's NIP-11 `pubkey` is the community root key —
   the only out-of-band fact. The root-signed anchor declares admins and the
   delegated `badge_issuer`. Everything entitlement-related is resolved from
-  the pinned community relay; the manifest `award_issuer` tag is parsed for
-  interop but never trusted.
+  the pinned community relay. Room metadata is a NIP-53 kind-30312 definition
+  authored by the root or a current anchor admin.
 - Issuance: anchor admins may award any definition; the `badge_issuer` may
   award sellable (well-formed `price` tag, zero price included) definitions
   only. Revocation is a kind `5` from the award issuer or an anchor admin.
@@ -60,10 +60,11 @@ Every screen change must include all of the following in the same change:
    or an in-memory JavaScript store are never proof of protocol success.
 
 Shared Maestro startup lives in `maestro/flows/launch.yaml`. Start Metro with
-`npm run start:maestro`, run `adb reverse tcp:8085 tcp:8085`, and then run the
-screen flow. Port 8085 intentionally avoids the `nuts-rn` Metro process on
-8084. Do not set `CI=1` for Metro; the dev-client launcher discovery and
-bundle freshness are unreliable in that mode on this host.
+`npm run start:maestro` (it sources `.env.test-room-build` when present, so the
+Test Room token reaches the bundle), run `adb reverse tcp:8085 tcp:8085`, and
+then run the screen flow. Port 8085 intentionally avoids the `nuts-rn` Metro
+process on 8084. Do not set `CI=1` for Metro; the dev-client launcher discovery
+and bundle freshness are unreliable in that mode on this host.
 
 ## QA harness conventions
 

@@ -1,11 +1,18 @@
-import { extractTagValue, extractTagValues, type ParsedEvent, type RequestObject, type WorkerMessage } from '@candypoets/nipworker';
+import { extractTagValue, extractTagValues, type RequestObject, type WorkerMessage } from '@candypoets/nipworker';
 import { useSubscription as subscribeToNostr } from '@candypoets/nipworker/hooks';
 import { isEoce, isParsedEvent } from '@candypoets/nipworker/utils';
 import type { PropsWithChildren } from 'react';
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { AppState } from 'react-native';
 
-import { CRAYS_PROTOCOL } from '@/nostr/protocol';
+import { ensureLocalIdentity, getLocalPubkey } from '@/account/account';
+import {
+  CRAYS_PROTOCOL,
+  PRESENCE_HEARTBEAT_INTERVAL_MS,
+  presenceTemplate,
+} from '@/nostr/protocol';
+import { publishEvent } from '@/nostr/publish';
 import { isNewerAnchor, parseCommunityAnchor, type CommunityAnchor } from '@/access/nip97';
 import {
   awardIssuerValid,
@@ -40,20 +47,15 @@ import type {
   RoomEntitlement,
 } from '@/rooms/types';
 import { useRoomSession } from '@/session/RoomSession';
-import { getLocalPubkey } from '@/account/account';
 import { saveMessageRelays } from '@/messages/relays';
 import { subscribeNip04Messages } from '@/messages/subscription';
 import { useSafety } from '@/safety/Safety';
 import { canOpenRoomSubscriptions, type RoomRelayAuth } from '@/rooms/relayAuthGate';
-
-type PresenceProjection = {
-  pubkey: string;
-  intent: string;
-  context: string;
-  expiresAt: number;
-  createdAt: number;
-  visible: boolean;
-};
+import {
+  isNewerRoomPresence,
+  projectRoomPresence,
+  type RoomPresenceProjection,
+} from '@/rooms/presence';
 
 export type RoomDataValue = {
   archiveError: string | null;
@@ -101,36 +103,16 @@ function upsertById<T extends { id: string }>(items: T[], value: T): T[] {
   return next;
 }
 
-function presenceFromEvent(event: ParsedEvent, roomId: string): PresenceProjection | null {
-  if (
-    event.kind() !== CRAYS_PROTOCOL.roomActivityKind ||
-    extractTagValue(event, 'schema') !== 'life.crays/presence/v1' ||
-    extractTagValue(event, 'h') !== roomId ||
-    extractTagValue(event, 'type') !== 'presence'
-  ) return null;
-  const pubkey = event.pubkey() ?? '';
-  const expiresAt = Number(extractTagValue(event, 'expiration'));
-  if (!pubkey || !Number.isSafeInteger(expiresAt)) return null;
-  return {
-    pubkey,
-    intent: extractTagValue(event, 'intent') ?? 'Open to chat',
-    context: extractTagValue(event, 'context') ?? '',
-    expiresAt,
-    createdAt: event.createdAt(),
-    visible:
-      extractTagValue(event, 'visibility') === 'visible' &&
-      extractTagValue(event, 'status') !== 'left' &&
-      expiresAt > Math.floor(Date.now() / 1000),
-  };
-}
-
 export function RoomDataProvider({ children }: PropsWithChildren) {
   const { activeRoom } = useRoomSession();
+  const activeSessionKey = activeRoom
+    ? `${activeRoom.address}|${activeRoom.joinedAt}|${activeRoom.connectionRelayUrl || activeRoom.relayUrl}`
+    : '';
   const { isBlocked } = useSafety();
   const [loading, setLoading] = useState(false);
   const [connected, setConnected] = useState(false);
   const [profiles, setProfiles] = useState<Map<string, RoomProfile>>(new Map());
-  const [presences, setPresences] = useState<Map<string, PresenceProjection>>(new Map());
+  const [presences, setPresences] = useState<Map<string, RoomPresenceProjection>>(new Map());
   const [posts, setPosts] = useState<RoomPost[]>([]);
   const [products, setProducts] = useState<RoomProduct[]>([]);
   const [events, setEvents] = useState<RoomCalendarEvent[]>([]);
@@ -151,6 +133,10 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   const archivedOrdersRef = useRef<RoomOrder[]>([]);
   const archivedEntitlementsRef = useRef<RoomEntitlement[]>([]);
   const [projectionNow, setProjectionNow] = useState(() => Math.floor(Date.now() / 1000));
+  const [resolvedCommunity, setResolvedCommunity] = useState<{
+    sessionKey: string;
+    rootPubkey: string;
+  } | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -195,7 +181,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     let stopped = false;
     let unsubscribe: () => void = () => undefined;
     // Joining updates the session immediately before replacing the preview
-    // route. Let its close-on-EOSE manifest lease release first so this private
+    // route. Let its room-definition lookup lease release first so this private
     // request is the first frame on the fresh venue connection.
     const startTimer = setTimeout(() => {
       if (stopped) return;
@@ -248,6 +234,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     setDefinitions(new Map());
     setRevocations(new Map());
     setCommunityTrust(null);
+    setResolvedCommunity(null);
     setConnected(false);
     if (!activeRoom) {
       setLoading(false);
@@ -338,12 +325,12 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        const presence = presenceFromEvent(event, activeRoom.id);
+        const presence = projectRoomPresence(event, activeRoom.address);
         if (presence) {
           if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'presence', pubkey: presence.pubkey, visible: presence.visible })}`);
           setPresences((current) => {
             const previous = current.get(presence.pubkey);
-            if (previous && previous.createdAt >= presence.createdAt) return current;
+            if (previous && !isNewerRoomPresence(presence, previous)) return current;
             const next = new Map(current);
             next.set(presence.pubkey, presence);
             return next;
@@ -416,8 +403,8 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     };
     // Phase 1: member-authored and viewer-scoped families open immediately.
     const subscriptions: [string, RequestObject][] = [
-      ['presence', { kinds: [CRAYS_PROTOCOL.roomActivityKind], tags: { '#h': [activeRoom.id] }, relays: [relayUrl], limit: 200, noCache: true }],
       ['profiles', { kinds: [CRAYS_PROTOCOL.profileKind], relays: [relayUrl], limit: 200, noCache: true }],
+      ['presence', { kinds: [CRAYS_PROTOCOL.roomPresenceKind], tags: { '#a': [activeRoom.address] }, relays: [relayUrl], limit: 200, noCache: true }],
       ['feed', { kinds: [CRAYS_PROTOCOL.roomFeedKind], tags: { '#h': [activeRoom.id] }, relays: [relayUrl], limit: 100, noCache: true }],
     ];
     if (viewerPubkey) subscriptions.push(
@@ -435,6 +422,11 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     // the root-signed anchor declares admins and the delegated badge issuer.
     fetchRelayRootPubkeyWithRetry(relayUrl).then((rootPubkey) => {
       if (cancelled) return;
+      if (rootPubkey !== activeRoom.rootPubkey) {
+        setLoading(false);
+        if (__DEV__) console.warn('[crays-room-data] relay root changed after room entry');
+        return;
+      }
       let currentAnchor: CommunityAnchor | null = null;
       unsubscribes.push(subscribeToNostr(
         `room_anchor_${activeRoom.id}`,
@@ -447,16 +439,24 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           if (currentAnchor && !isNewerAnchor(anchor, currentAnchor)) return;
           currentAnchor = anchor;
           const trust = trustFromAnchor(anchor);
+          if (activeRoom.operatorPubkey !== rootPubkey && !trust.admins.has(activeRoom.operatorPubkey)) {
+            trustHolder.current = null;
+            setCommunityTrust(null);
+            setResolvedCommunity(null);
+            if (__DEV__) console.warn('[crays-room-data] room definition author is no longer authorized by the community anchor');
+            return;
+          }
           trustHolder.current = trust;
           setCommunityTrust(trust);
+          setResolvedCommunity({ sessionKey: activeSessionKey, rootPubkey });
           if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'anchor', admins: anchor.admins.length })}`);
           openPhaseTwo(trust);
         },
         { closeOnEose: false, bytesPerEvent: 12 * 1024 },
       ));
     }).catch((error) => {
-      // The room stays usable for social surfaces; entitlement derivation
-      // simply stays empty until the anchor can be resolved.
+      // Feed/profile reads can remain usable, but room-bound roster and
+      // entitlement projections stay empty until the root resolves.
       if (__DEV__) console.warn(`[crays-room-data] NIP-11 root resolution failed for ${relayUrl}: ${error?.message ?? error}`);
     });
 
@@ -467,7 +467,57 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       unsubscribes.forEach((unsubscribe) => unsubscribe());
       phaseTwoUnsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-  }, [activeRoom, relayAuth, viewerPubkey]);
+  }, [activeRoom, activeSessionKey, relayAuth, viewerPubkey]);
+
+  useEffect(() => {
+    if (
+      !activeRoom ||
+      activeRoom.visibility !== 'visible' ||
+      !resolvedCommunity ||
+      resolvedCommunity.sessionKey !== activeSessionKey
+    ) return;
+
+    let cancelled = false;
+    let publishing = false;
+    const transportRelayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;
+    const refreshPresence = async () => {
+      if (cancelled || publishing || Date.now() >= activeRoom.leaveAt) return;
+      publishing = true;
+      try {
+        await ensureLocalIdentity();
+        if (cancelled) return;
+        await publishEvent(
+          presenceTemplate({
+            roomAddress: activeRoom.address,
+            relayUrl: activeRoom.relayUrl,
+            intent: activeRoom.intent,
+            context: activeRoom.context,
+            expiresAt: Math.floor(activeRoom.leaveAt / 1000),
+          }),
+          [transportRelayUrl],
+          'room_presence_heartbeat',
+        );
+      } catch (error) {
+        // Joining already required a confirmed initial write. A transient
+        // heartbeat failure must not eject the user; freshness/expiry safely
+        // removes presence if the relay remains unavailable.
+        if (__DEV__) console.warn(`[crays-room-presence] heartbeat failed: ${error instanceof Error ? error.message : error}`);
+      } finally {
+        publishing = false;
+      }
+    };
+
+    void refreshPresence();
+    const timer = setInterval(() => void refreshPresence(), PRESENCE_HEARTBEAT_INTERVAL_MS);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void refreshPresence();
+    });
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      appStateSubscription.remove();
+    };
+  }, [activeRoom, activeSessionKey, resolvedCommunity]);
 
   const people = useMemo(() => {
     return Array.from(presences.values())
@@ -523,7 +573,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     revocations,
     trust: communityTrust,
     // Presentation is portable to staff scanners, so it carries the signed
-    // manifest relay URL—not this device's QA/proxy transport override.
+    // definition relay URL—not this device's QA/proxy transport override.
     room: { id: activeRoom.id, name: activeRoom.name, relayUrl: activeRoom.relayUrl },
     now: projectionNow,
   }) : [], [activeRoom, awards, communityTrust, definitions, projectionNow, revocations, statuses]);

@@ -124,7 +124,7 @@ function CurrentMomentRail({ room }: { room: ActiveRoom }) {
   const moments = [
     { label: 'Joined', value: formatMoment(room.joinedAt, 'milliseconds') },
     { label: 'Right now', value: room.about || 'Room live', selected: true },
-    { label: 'Ends', value: formatCredentialExpiry(room.expiresAt) },
+    { label: 'Ends', value: formatCredentialExpiry(Math.floor(room.leaveAt / 1000)) },
   ];
   return (
     <View

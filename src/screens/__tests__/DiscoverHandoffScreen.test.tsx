@@ -10,8 +10,9 @@ jest.mock('expo-router', () => ({
 
 const room: RoomDescriptor = {
   id: 'skyline', name: 'The Skyline Room', about: 'Rooftop jazz.', relayUrl: 'wss://skyline.test',
-  operatorPubkey: 'a'.repeat(64), capabilities: ['social', 'menu'], expiresAt: 2_000_000_000,
-  open: true, verified: true,
+  address: `30312:${'a'.repeat(64)}:skyline`, communityAddress: `31727:${'b'.repeat(64)}:community`,
+  rootPubkey: 'b'.repeat(64), operatorPubkey: 'a'.repeat(64), serviceUrl: 'https://skyline.test',
+  capabilities: ['social', 'menu'], status: 'open', open: true, verified: true,
 };
 
 describe('DiscoverHandoffScreen', () => {
@@ -73,6 +74,14 @@ describe('DiscoverHandoffScreen', () => {
     render(<DiscoverHandoffScreen mode="nearby" onChangeMode={jest.fn()} testRoom={{ error: 'offline', loading: false }} />);
     expect(screen.getByText(/npm run test-room/)).toBeOnTheScreen();
     expect(screen.getByTestId('open-test-room')).toBeDisabled();
+  });
+
+  it('uses actionable TestFlight copy in a release test build', () => {
+    render(<DiscoverHandoffScreen mode="nearby" onChangeMode={jest.fn()} testRoom={{ error: 'offline', loading: false, testBuild: true }} />);
+    expect(screen.getByText('Test build')).toBeOnTheScreen();
+    expect(screen.getByText('Test Room is unavailable')).toBeOnTheScreen();
+    expect(screen.queryByText(/npm run/)).toBeNull();
+    expect(screen.getByText(/Visible entry redeems the reusable test invite/)).toBeOnTheScreen();
   });
 
   it('lets Nearby explain itself before any permission request', () => {

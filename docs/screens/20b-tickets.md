@@ -34,7 +34,7 @@ revoked awards. `maestro/flows/20b-tickets.yaml` signs into the native fixture
 identity, joins an isolated Nuts relay, publishes a real kind-31925 RSVP
 through the public UI, and opens Tickets. `.qa/qa-20b-tickets.mjs`
 independently verifies the exact calendar address, accepted status, signer
-signature, manifest consumption, and teardown. `qa-20c-ticket-detail.mjs`
+signature, room-definition consumption, and teardown. `qa-20c-ticket-detail.mjs`
 separately covers issuer-awarded scanner access and kind-27236 proof. Native
 variants cover leave, cold relaunch, empty storage, two venues, RSVP rejection,
 and revoked/ended records. `.qa/qa-20d-rsvp-rejected.mjs` owns the rejection

@@ -9,21 +9,27 @@ export type RoomJoinPreferences = {
 };
 
 export type RoomDescriptor = {
+  /** NIP-53 kind-30312 `d` identifier. */
   id: string;
+  /** Exact NIP-53 room coordinate used by kind-10312 presence. */
+  address: string;
+  /** Root-signed NIP-97 community coordinate that authorized this room. */
+  communityAddress: string;
+  /** NIP-11 community root key. */
+  rootPubkey: string;
   name: string;
   about: string;
+  image?: string;
+  /** Community relay on which the trusted anchor and room definition resolved. */
   relayUrl: string;
+  /** Root/admin author of the accepted kind-30312 room definition. */
   operatorPubkey: string;
+  /** NIP-53 service URL advertised by the room definition. */
+  serviceUrl: string;
   capabilities: RoomCapability[];
-  expiresAt: number;
+  status: 'open' | 'private' | 'closed';
   open: boolean;
   verified: boolean;
-  /**
-   * @deprecated NIP-97 trust flows from the relay's NIP-11 root key and the
-   * community anchor (kind 31727), resolved by `src/rooms/trust.ts`. The
-   * manifest tag is still parsed for interop but never trusted.
-   */
-  awardIssuerPubkey?: string;
 };
 
 export type ActiveRoom = RoomDescriptor & {

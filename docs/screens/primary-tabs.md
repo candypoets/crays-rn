@@ -88,7 +88,7 @@ never protocol proof and never changes presence.
 Room-local view, visits all four destinations, returns to Room to prove the
 view survived, and opens Menu to prove hierarchical screens do not render a
 second tab bar. `.qa/qa-primary-tabs.mjs` owns relay bootstrap, the Maestro
-exercise, independent relay/manifest and room-projection verification, and
+exercise, independent room-definition and room-projection verification, and
 teardown. Unit tests own destination order, stable automation IDs, selected
 icon state, unknown-route failure, and the absence of manual tabs in
 `AppShell`.

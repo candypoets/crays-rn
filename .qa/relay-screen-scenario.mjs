@@ -112,7 +112,7 @@ const fixtureEnv = {
   QA_ROOM_ABOUT: ROOM_ABOUT,
 };
 
-export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyManifest = true, checkoutAdapter = false }) {
+export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyRoomDefinition = true, checkoutAdapter = false }) {
   const statePath = `/tmp/qa-crays-${scenario}.json`;
   const preferredProxyPort = Number(process.env.CRAYS_TEST_ROOM_PROXY_PORT || 8787);
   const proxyPort = selectProxyPort(preferredProxyPort);
@@ -126,6 +126,10 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     CRAYS_TEST_ROOM_ID: roomId,
     CRAYS_TEST_ROOM_NAME: 'The Skyline Room',
     CRAYS_QA_MINT_INVITE: '1',
+    // Ordinary screen scenarios exercise already-authorized room members.
+    // The Test Room card scenario deliberately leaves this at 0 so its public
+    // invite redemption is the only grant for the joining identity.
+    CRAYS_QA_PREAUTHORIZE: '1',
     CRAYS_QA_USER_INDEX: String(qaUserIndex),
     ...bootstrapEnv,
   };
@@ -178,9 +182,9 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
       flow,
     ], env);
     run(process.execPath, ['.qa/relay-verify.mjs'], env);
-    // Scenarios that never join the scenario room (e.g. returning login) must
-    // pass verifyManifest: false — the app consumes no scenario manifest there.
-    if (verifyManifest) run(process.execPath, ['.qa/verify-manifest-consumed.mjs'], env);
+    // Scenarios that never open the scenario room (e.g. returning login) must
+    // pass verifyRoomDefinition: false — the app consumes no room definition there.
+    if (verifyRoomDefinition) run(process.execPath, ['.qa/verify-room-definition-consumed.mjs'], env);
     for (const verifier of verifiers) run(process.execPath, [verifier], env);
     console.log(`QA PASS: ${scenario}`);
   } catch (error) {

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getLocalPubkey } from '@/account/account';
 import { saveEntryContext } from '@/account/context';
 import { loadInvitePreview, redeemInvite, type InvitePreview, type InviteRedemption } from '@/invites/invites';
-import { useRoomManifest } from '@/rooms/useRoomManifest';
+import { useRoomDefinition } from '@/rooms/useRoomDefinition';
 import { InvitePreviewScreen } from '@/screens/onboarding/InvitePreviewScreen';
 
 export default function InviteRoute() {
@@ -16,7 +16,7 @@ export default function InviteRoute() {
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
   const transportRelay = params.relay || preview?.community.relay_url;
-  const manifest = useRoomManifest(transportRelay, params.room);
+  const definition = useRoomDefinition(transportRelay, params.room);
   const context = useMemo(() => params.service && params.token ? ({ kind: 'invite' as const, serviceUrl: params.service, relayUrl: params.relay, roomId: params.room, token: params.token }) : null, [params.relay, params.room, params.service, params.token]);
 
   useEffect(() => {
@@ -40,9 +40,9 @@ export default function InviteRoute() {
     setRedeeming(true); setError(null);
     try {
       const result: InviteRedemption = await redeemInvite(preview, params.token, pubkey);
-      router.replace({ pathname: '/invite-accepted', params: { event: result.eventId, relay: transportRelay, room: params.room, name: manifest.room?.name || 'this venue' } } as never);
+      router.replace({ pathname: '/invite-accepted', params: { event: result.eventId, relay: transportRelay, room: params.room, name: definition.room?.name || 'this venue' } } as never);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'The invite could not be accepted.'); }
     finally { setRedeeming(false); }
   };
-  return <InvitePreviewScreen error={error || manifest.error} hasIdentity={Boolean(pubkey)} loading={loading} onAccept={accept} onBack={() => router.canGoBack() ? router.back() : router.replace('/welcome')} onCreateAccount={() => void preserveAndGo('/account-access')} onLogIn={() => void preserveAndGo('/login')} preview={preview} redeeming={redeeming} room={manifest.room} />;
+  return <InvitePreviewScreen error={error || definition.error} hasIdentity={Boolean(pubkey)} loading={loading || definition.loading} onAccept={accept} onBack={() => router.canGoBack() ? router.back() : router.replace('/welcome')} onCreateAccount={() => void preserveAndGo('/account-access')} onLogIn={() => void preserveAndGo('/login')} preview={preview} redeeming={redeeming} room={definition.room} />;
 }

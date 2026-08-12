@@ -6,7 +6,7 @@
   "scripts": {
     "postinstall": "patch-package",
     "start": "expo start --dev-client",
-    "start:maestro": "expo start --dev-client --port 8085",
+    "start:maestro": "set -a; [ ! -f .env.test-room-build ] || . ./.env.test-room-build; set +a; expo start --dev-client --port 8085",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "prebuild": "expo prebuild",
@@ -21,6 +21,7 @@
     "qa:relay:verify": "node .qa/relay-verify.mjs",
     "qa:relay:teardown": "node .qa/relay-teardown.mjs",
     "test-room": "node .qa/test-room.mjs",
+    "test-room:publish": "CRAYS_TEST_ROOM_PUBLISH=1 node .qa/test-room.mjs",
     "test-room:stop": "node .qa/test-room-stop.mjs",
     "doctor": "npx expo-doctor"
   },

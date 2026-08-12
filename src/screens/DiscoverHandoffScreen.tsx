@@ -27,6 +27,7 @@ type Props = {
     error?: string | null;
     loading: boolean;
     room?: RoomDescriptor | null;
+    testBuild?: boolean;
   };
 };
 
@@ -154,17 +155,18 @@ export function DiscoverHandoffScreen({
 
           {testRoom ? (
             <View className="mt-8 border-t border-edge pt-4" testID="dev-test-room-card">
-              <Text className="text-[11px] font-bold uppercase tracking-[1px] text-muted">Developer</Text>
+              <Text className="text-[11px] font-bold uppercase tracking-[1px] text-muted">{testRoom.testBuild ? 'Test build' : 'Developer'}</Text>
               <View className="mt-3 flex-row items-center rounded-2xl border border-edge bg-surface p-4">
                 <Ionicons color={colors.placeholder} name="flask-outline" size={22} />
                 <View className="ml-3 min-w-0 flex-1">
                   <Text className="font-bold text-ink">Test room</Text>
-                  <Text className="mt-0.5 text-sm text-muted">{testRoom.room ? `${testRoom.room.name || 'Crays Test Room'} is online` : testRoom.loading ? 'Connecting…' : 'Offline — run npm run test-room'}</Text>
+                  <Text className="mt-0.5 text-sm text-muted">{testRoom.room ? `${testRoom.room.name || 'Crays Test Room'} is online` : testRoom.loading ? 'Connecting…' : testRoom.testBuild ? 'Test Room is unavailable' : 'Offline — run npm run test-room'}</Text>
                 </View>
                 <Pressable accessibilityRole="button" accessibilityState={{ disabled: !testRoom.room }} className="min-h-12 items-center justify-center rounded-xl border border-edge px-4" disabled={!testRoom.room} onPress={() => testRoom.room && onOpenTestRoom?.(testRoom.room)} testID="open-test-room">
                   <Text className={`font-bold ${testRoom.room ? 'text-primary' : 'text-muted/60'}`}>{testRoom.room ? 'Open' : 'Offline'}</Text>
                 </Pressable>
               </View>
+              <Text className="mt-3 text-xs leading-5 text-muted">Bluetooth is not required. Visible entry redeems the reusable test invite through the same Nearby pointer path.</Text>
               {!mapAvailable ? <Text className="mt-3 text-xs text-muted" testID="search-unavailable-dev-note">Search service design pending · D-001</Text> : null}
             </View>
           ) : null}

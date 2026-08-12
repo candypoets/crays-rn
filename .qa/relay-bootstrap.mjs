@@ -33,8 +33,9 @@ const keys = loadKeys();
 const run = Date.now().toString(36);
 const roomDisplayName = process.env.CRAYS_TEST_ROOM_NAME || ROOM_DISPLAY_NAME;
 const roomId = process.env.CRAYS_TEST_ROOM_ID || 'crays-qa-skyline';
-const fixtureTtlSeconds = Math.min(604_800, Math.max(3_600, Number(process.env.CRAYS_TEST_ROOM_TTL_SECONDS || 86_400)));
-if (!Number.isFinite(fixtureTtlSeconds)) throw new Error('CRAYS_TEST_ROOM_TTL_SECONDS must be a number');
+const MAX_TEST_ROOM_TTL_SECONDS = 90 * 24 * 60 * 60;
+const fixtureTtlSeconds = Math.min(MAX_TEST_ROOM_TTL_SECONDS, Math.max(3_600, Number(process.env.CRAYS_TEST_ROOM_TTL_SECONDS || 86_400)));
+if (!Number.isSafeInteger(fixtureTtlSeconds)) throw new Error('CRAYS_TEST_ROOM_TTL_SECONDS must be an integer number of seconds');
 
 await requireCoordinator();
 const relay = await reserveOrReuseRelay(keys);
@@ -68,6 +69,54 @@ writeState({
 });
 
 const pool = makePool();
+let testRoomMembershipDefinitionId;
+if (process.env.CRAYS_TEST_ROOM_PRESENCE === '1') {
+  const rootSecret = secrets.community_root_secret_key;
+  if (!/^[0-9a-f]{64}$/i.test(rootSecret || '')) throw new Error('Test Room presence setup requires its community root secret');
+  const definitionD = requiredBadge.split(':').slice(2).join(':');
+  const requiredKinds = ['0', '1', '10312'];
+  const hasExactPermissions = (event) => {
+    const permissions = event?.tags.filter((tag) => tag[0] === 'permission') || [];
+    return permissions.length === requiredKinds.length && requiredKinds.every((kind) => permissions.some(
+      (tag) => tag.length === 3 && tag[1] === kind && tag[2] === 'write',
+    ));
+  };
+  const currentDefinitions = await pool.querySync(
+    [relay.relay_url],
+    { kinds: [30009], authors: [communityRoot], '#d': [definitionD], limit: 10 },
+  );
+  const current = currentDefinitions.sort((a, b) => b.created_at - a.created_at || a.id.localeCompare(b.id))[0];
+  const hasRequiredPermissions = hasExactPermissions(current);
+  if (!hasRequiredPermissions) {
+    const definition = signEvent(
+      {
+        kind: 30009,
+        created_at: Math.max(nowSeconds(), Number(current?.created_at || 0) + 1),
+        tags: [
+          ['d', definitionD],
+          ['name', 'Member'],
+          ['description', 'Community membership'],
+          ['t', 'membership'],
+          ['price', '0', 'SAT'],
+          ...requiredKinds.map((kind) => ['permission', kind, 'write']),
+        ],
+      },
+      rootSecret,
+    );
+    await publishUntilStored(pool, relay.relay_url, definition, 'Test Room NIP-53 presence permission');
+  }
+  const { result: compatibleDefinition } = await queryUntil(
+    pool,
+    relay.relay_url,
+    { kinds: [30009], authors: [communityRoot], '#d': [definitionD], limit: 10 },
+    (events) => events.find(hasExactPermissions),
+    'Test Room NIP-53 membership definition is readable',
+  );
+  testRoomMembershipDefinitionId = compatibleDefinition.id;
+  // Let the external gate observe the addressable replacement before invite
+  // recipients exercise the NIP-53 presence write in the current app.
+  await sleep(1_000);
+}
 const fixtureUsers = keys.users.slice(0, 3);
 const qaUserIndex = Number(process.env.CRAYS_QA_USER_INDEX || 0);
 const qaUser = keys.users[qaUserIndex];
@@ -82,7 +131,7 @@ const authorizedUsers = [...new Map([
 // its own old events under NIP-09. Preserve only this run's capability while
 // sweeping; teardown removes it after all user-authored events.
 //
-// The switch-room scenario seeds two signed room manifests on the one
+// The switch-room scenario seeds two signed NIP-53 room definitions on the one
 // coordinator-reserved relay. The deployed coordinator limits this owner to
 // that relay, so its second bootstrap must preserve room A while adding room
 // B. All other scenarios retain the default cleanup behavior.
@@ -115,13 +164,19 @@ if (preserveExistingFixtures) {
   });
 }
 
+const inviteTtlSeconds = Number(process.env.CRAYS_INVITE_TTL_SECONDS || 3600);
 let invite;
 if (process.env.CRAYS_QA_MINT_INVITE !== '0') {
   const inviteEndpoint = `${relay.base_url}/invites`;
+  const badgeTtlSeconds = Number(process.env.CRAYS_BADGE_TTL_SECONDS || 604800);
+  const inviteMaxRedemptions = Number(process.env.CRAYS_INVITE_MAX_REDEMPTIONS || 5);
+  if (!Number.isSafeInteger(inviteTtlSeconds) || inviteTtlSeconds < 1) throw new Error('CRAYS_INVITE_TTL_SECONDS must be a positive integer');
+  if (!Number.isSafeInteger(badgeTtlSeconds) || badgeTtlSeconds < 0) throw new Error('CRAYS_BADGE_TTL_SECONDS must be a non-negative integer');
+  if (!Number.isSafeInteger(inviteMaxRedemptions) || inviteMaxRedemptions < 1) throw new Error('CRAYS_INVITE_MAX_REDEMPTIONS must be a positive safe integer');
   const inviteBody = JSON.stringify({
-    expires_in_seconds: Number(process.env.CRAYS_INVITE_TTL_SECONDS || 3600),
-    badge_expires_in_seconds: Number(process.env.CRAYS_BADGE_TTL_SECONDS || 604800),
-    max_redemptions: Number(process.env.CRAYS_INVITE_MAX_REDEMPTIONS || 5),
+    expires_in_seconds: inviteTtlSeconds,
+    ...(badgeTtlSeconds > 0 ? { badge_expires_in_seconds: badgeTtlSeconds } : {}),
+    max_redemptions: inviteMaxRedemptions,
   });
   for (let attempt = 0; attempt < 30 && !invite; attempt += 1) {
     try {
@@ -141,6 +196,12 @@ if (process.env.CRAYS_QA_MINT_INVITE !== '0') {
   }
   if (!invite) throw new Error('invite service did not mint a token before timeout');
   assert(typeof invite.token === 'string' && invite.token.includes('.'), 'real invite service minted a signed token');
+  const inviteClaims = JSON.parse(Buffer.from(invite.token.split('.')[0], 'base64url').toString('utf8'));
+  const remainingInviteSeconds = Number(invite.expires_at) - nowSeconds();
+  assert(remainingInviteSeconds >= inviteTtlSeconds - 60 && remainingInviteSeconds <= inviteTtlSeconds + 5, `invite service honored the requested ${inviteTtlSeconds}-second lifetime`);
+  assert(inviteClaims.exp === invite.expires_at, 'invite response and signed claims have the same expiry');
+  assert(invite.max_redemptions === inviteMaxRedemptions && inviteClaims.max === inviteMaxRedemptions, 'invite service preserved the requested redemption allowance');
+  assert(badgeTtlSeconds > 0 ? Number.isSafeInteger(inviteClaims.badge_exp) : inviteClaims.badge_exp === undefined, badgeTtlSeconds > 0 ? 'invite carries the requested membership expiry' : 'invite grants membership without an award expiry');
 }
 const publish = (event, label) => publishUntilStored(pool, relay.relay_url, event, label);
 const profile = signEvent(
@@ -177,29 +238,28 @@ assert(anchor.tags.some((tag) => tag[0] === 'p' && tag[1] === keys.admin.pub), '
 assert(anchor.tags.some((tag) => tag[0] === 'badge_issuer' && tag[1] === badgeIssuerPubkey), 'anchor delegates to the badge issuer');
 
 const expires = nowSeconds() + fixtureTtlSeconds;
-const manifest = signEvent(
+const roomDefinition = signEvent(
   {
-    kind: 30078,
+    kind: 30312,
     tags: [
-      ['d', `life.crays/room/v1/${roomId}`],
-      ['schema', 'life.crays/room/v1'],
-      ['name', roomDisplayName],
-      ['about', ROOM_ABOUT],
-      ['relay', relay.relay_url],
-      ['operator', keys.admin.pub],
-      ['award_issuer', badgeIssuerPubkey],
+      ['d', roomId],
+      ['room', roomDisplayName],
+      ['summary', ROOM_ABOUT],
+      ['status', 'open'],
+      ['service', relay.base_url],
+      ['p', keys.admin.pub, relay.relay_url, 'Host'],
+      ['relays', relay.relay_url],
       ['g', 'u0u67'],
-      ['capability', 'social'],
-      ['capability', 'menu'],
-      ['capability', 'events'],
-      ['capability', 'membership'],
-      ['open', 'open'],
-      ['expiration', String(expires)],
+      ['t', 'social'],
+      ['t', 'menu'],
+      ['t', 'events'],
+      ['t', 'membership'],
     ],
   },
   keys.admin.priv,
 );
-await publish(manifest, 'versioned room manifest');
+await publish(roomDefinition, 'root-authorized NIP-53 room definition');
+const roomAddress = `30312:${keys.admin.pub}:${roomId}`;
 
 const people = FIXTURE_PEOPLE;
 const profileIds = [];
@@ -212,15 +272,11 @@ for (let index = 0; index < fixtureUsers.length; index += 1) {
   profileIds.push(personProfile.id);
   const presence = signEvent(
     {
-      kind: 78,
+      kind: 10312,
       tags: [
-        ['d', `life.crays/presence/v1/${roomId}/${user.pub}`],
-        ['schema', 'life.crays/presence/v1'],
-        ['type', 'presence'],
-        ['h', roomId],
-        ['visibility', 'visible'],
+        ['a', roomAddress, relay.relay_url, 'root'],
         ['intent', index === 0 ? 'Open to chat' : 'Enjoying the room'],
-        ['expiration', String(nowSeconds() + Math.min(fixtureTtlSeconds, 86_400))],
+        ['expiration', String(nowSeconds() + fixtureTtlSeconds)],
       ],
     },
     user.priv,
@@ -373,7 +429,7 @@ await publish(eventAccessAward, 'member event access award');
 const { events: counts } = await queryUntil(
   pool,
   relay.relay_url,
-  { kinds: [0, 1, 4, 8, 78, 30009, 30078, 30402, 31727, 31923], limit: 100 },
+  { kinds: [0, 1, 4, 8, 10312, 30009, 30312, 30402, 31727, 31923], limit: 100 },
   (events) => events.length >= 15,
   'complete fixture family after seed',
 );
@@ -397,9 +453,12 @@ writeState({
   badge_issuer_pubkey: badgeIssuerPubkey,
   badge_issuer_secret_key: issuerSecret,
   nip11_document: nip11,
+  ...(testRoomMembershipDefinitionId ? { test_room_membership_definition_id: testRoomMembershipDefinitionId } : {}),
   cleanup_capability_definition_id: cleanupCapability.definition.id,
   cleanup_capability_award_ids: cleanupCapability.awards.map((award) => award.id),
-  manifest_id: manifest.id,
+  anchor_id: anchor.id,
+  room_definition_id: roomDefinition.id,
+  room_address: roomAddress,
   profile_ids: profileIds,
   presence_ids: presenceIds,
   feed_ids: feedEvents.map((event) => event.id),
@@ -415,7 +474,13 @@ writeState({
   pass_status_id: passUse.id,
   event_access_award_id: eventAccessAward.id,
   order_ref: orderRef,
-  ...(invite ? { invite_token: invite.token, invite_expires_at: invite.expires_at } : {}),
+  ...(invite ? {
+    invite_token: invite.token,
+    invite_expires_at: invite.expires_at,
+    invite_ttl_seconds: inviteTtlSeconds,
+    invite_max_redemptions: invite.max_redemptions,
+    invite_badge_expires_at: invite.badge_expires_at,
+  } : {}),
   qa_pubkey: qaUser.pub,
   fixture_pubkeys: fixtureUsers.map((user) => user.pub),
   incoming_message_event_id: incomingDirectMessage.id,

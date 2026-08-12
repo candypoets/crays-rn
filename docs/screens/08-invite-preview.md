@@ -4,7 +4,7 @@
 
 This screen opens directly from an invite deep link, before authentication. It shows the room/operator identity, the exact membership grant, invite expiry, and award expiry when present. It persists `{serviceUrl, transportRelayUrl, roomId, token}` before handing off to account creation or login. Accepting never enters a room or publishes presence.
 
-The token's base64url claims are untrusted display input until checked against `GET /community/info`. The client accepts only version 1, a future expiry, a valid kind-30009 badge address, a matching `required_badge`, and a definition author listed in the mirrored anchor (`admins` or `community_root`). The client deliberately says “issuer details match”; only `POST /redeem` verifies the service HMAC. The room card is independently read from the supplied Nostr relay and must pass the signed manifest projection.
+The token's base64url claims are untrusted display input until checked against `GET /community/info`. The client accepts only version 1, a future expiry, a valid kind-30009 badge address, a matching `required_badge`, and a definition author listed in the mirrored anchor (`admins` or `community_root`). The client deliberately says “issuer details match”; only `POST /redeem` verifies the service HMAC. The room card is independently read from the supplied Nostr relay and must pass the NIP-11 → kind-31727 → authorized kind-30312 projection.
 
 Visual authority: the Night Playlist entry/account board `docs/design-explorations/night-playlist/mockups/02-entry-and-account-v1.png`, **panel 04**, with the treatment notes in `docs/design-explorations/night-playlist/screens/08-invite-preview.md`. Night Playlist supersedes the older dark styling.
 

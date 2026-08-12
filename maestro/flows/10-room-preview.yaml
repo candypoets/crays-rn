@@ -10,7 +10,7 @@ appId: life.crays
     visible: "Verified room"
     timeout: 15000
 # ${QA_ROOM_ABOUT} comes from .qa/flow-fixtures.mjs (ROOM_ABOUT, seeded into the
-# manifest by relay-bootstrap.mjs); standalone runs need -e QA_ROOM_ABOUT=...
+# kind-30312 definition by relay-bootstrap.mjs); standalone runs need -e QA_ROOM_ABOUT=...
 - assertVisible: ${QA_ROOM_ABOUT}
 - assertVisible: "Preview room"
 - tapOn:

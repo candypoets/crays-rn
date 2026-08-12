@@ -36,7 +36,7 @@ export default function RoomRoute() {
         roomFeedTemplate(
           activeRoom.id,
           content,
-          Math.min(activeRoom.expiresAt, Math.floor(activeRoom.leaveAt / 1000)),
+          Math.floor(activeRoom.leaveAt / 1000),
         ),
         [relayUrlFor(activeRoom)],
         'room_post',

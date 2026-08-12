@@ -1,4 +1,4 @@
-import { extractTagValue, extractTagValues, type ParsedEvent, type PreGenericParsed } from '@candypoets/nipworker';
+import { extractTagValue, extractTagValues, type ParsedEvent } from '@candypoets/nipworker';
 import { asKind0, asKind1, fbIterable } from '@candypoets/nipworker/utils';
 
 import { CRAYS_PROTOCOL } from '@/nostr/protocol';
@@ -8,8 +8,6 @@ import {
 } from '@/access/nip97';
 import type {
   RoomCalendarEvent,
-  RoomCapability,
-  RoomDescriptor,
   RoomMembershipOffer,
   RoomPost,
   RoomProduct,
@@ -17,52 +15,6 @@ import type {
   RoomEntitlementType,
 } from '@/rooms/types';
 import type { EntitlementDefinitionProjection } from '@/access/entitlements';
-
-const CAPABILITIES = new Set<RoomCapability>(['social', 'menu', 'events', 'membership']);
-
-/**
- * The room selector must survive the FlatBuffer subscription scope, so this
- * is the intentional minimal-copy boundary. All validation reads directly
- * from the parsed event before constructing the stable app input.
- */
-export function projectRoomManifest(event: ParsedEvent, generic: PreGenericParsed): RoomDescriptor | null {
-  if (event.kind() !== CRAYS_PROTOCOL.roomManifestKind) return null;
-  const d = extractTagValue(event, 'd');
-  const schema = extractTagValue(event, 'schema');
-  const name = extractTagValue(event, 'name');
-  const relayUrl = extractTagValue(event, 'relay');
-  const operator = extractTagValue(event, 'operator');
-  const expiration = Number(extractTagValue(event, 'expiration'));
-  const pubkey = event.pubkey() ?? '';
-  const awardIssuerPubkey = extractTagValue(event, 'award_issuer');
-  if (
-    !d?.startsWith('life.crays/room/v1/') ||
-    schema !== 'life.crays/room/v1' ||
-    !name ||
-    !relayUrl ||
-    !operator ||
-    operator !== pubkey ||
-    !Number.isSafeInteger(expiration) ||
-    expiration <= Math.floor(Date.now() / 1000)
-  ) {
-    return null;
-  }
-  const capabilities = extractTagValues(event, 'capability').filter(
-    (value: string): value is RoomCapability => CAPABILITIES.has(value as RoomCapability),
-  );
-  return {
-    id: d.slice('life.crays/room/v1/'.length),
-    name,
-    about: extractTagValue(event, 'about') ?? generic.description() ?? '',
-    relayUrl,
-    operatorPubkey: operator,
-    capabilities,
-    expiresAt: expiration,
-    open: extractTagValue(event, 'open') !== 'closed',
-    verified: true,
-    ...(awardIssuerPubkey && /^[0-9a-f]{64}$/i.test(awardIssuerPubkey) ? { awardIssuerPubkey } : {}),
-  };
-}
 
 function finiteNumber(value: string | undefined, fallback = 0): number {
   const parsed = Number(value);

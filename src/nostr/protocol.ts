@@ -1,14 +1,9 @@
 import type { EventTemplate } from 'nostr-tools';
 
-/**
- * Stable NIP kinds stay literal. The unresolved room primitives use NIP-78's
- * application-data kinds and a versioned namespace so pilot data can migrate
- * without being mistaken for a standardized NIP.
- */
 export const CRAYS_PROTOCOL = {
   appNamespace: 'life.crays',
-  roomManifestKind: 30078,
-  roomActivityKind: 78,
+  roomDefinitionKind: 30312,
+  roomPresenceKind: 10312,
   roomFeedKind: 1,
   profileKind: 0,
   badgeAwardKind: 8,
@@ -23,11 +18,8 @@ export const CRAYS_PROTOCOL = {
   rsvpKind: 31925,
 } as const;
 
-export const pilotD = {
-  room: (roomId: string) => `${CRAYS_PROTOCOL.appNamespace}/room/v1/${roomId}`,
-  presence: (roomId: string, pubkey: string) =>
-    `${CRAYS_PROTOCOL.appNamespace}/presence/v1/${roomId}/${pubkey}`,
-} as const;
+export const PRESENCE_HEARTBEAT_INTERVAL_MS = 60_000;
+export const PRESENCE_FALLBACK_FRESHNESS_SECONDS = 5 * 60;
 
 export type PresenceVisibility = 'visible' | 'quiet';
 export type PresenceIntent = 'social' | 'business' | 'dating' | 'curious';
@@ -49,51 +41,71 @@ export function roomFeedTemplate(
   };
 }
 
+export function communityAnchorAddress(rootPubkey: string): string {
+  if (!/^[0-9a-f]{64}$/i.test(rootPubkey)) throw new Error('The community root key is invalid.');
+  return `${CRAYS_PROTOCOL.anchorKind}:${rootPubkey.toLowerCase()}:community`;
+}
+
+export function roomDefinitionAddress(authorPubkey: string, roomId: string): string {
+  if (!/^[0-9a-f]{64}$/i.test(authorPubkey)) throw new Error('The room author key is invalid.');
+  if (!roomId.trim()) throw new Error('The room identifier is missing.');
+  return `${CRAYS_PROTOCOL.roomDefinitionKind}:${authorPubkey.toLowerCase()}:${roomId}`;
+}
+
+function assertRoomDefinitionAddress(roomAddress: string): void {
+  if (!/^30312:[0-9a-f]{64}:.+$/i.test(roomAddress)) {
+    throw new Error('The NIP-53 room address is invalid.');
+  }
+}
+
+/** NIP-53 Room Presence bound to the exact kind-30312 meeting space. */
 export function presenceTemplate({
-  roomId,
-  pubkey,
-  visibility,
+  roomAddress,
+  relayUrl,
   intent,
   context,
   expiresAt,
 }: {
-  roomId: string;
-  pubkey: string;
-  visibility: PresenceVisibility;
-  intent?: PresenceIntent;
+  roomAddress: string;
+  relayUrl: string;
+  intent: PresenceIntent;
   context?: string;
   expiresAt: number;
 }): EventTemplate {
+  assertRoomDefinitionAddress(roomAddress);
   const normalizedContext = context?.trim().slice(0, 80) ?? '';
   return {
-    kind: CRAYS_PROTOCOL.roomActivityKind,
+    kind: CRAYS_PROTOCOL.roomPresenceKind,
     created_at: Math.floor(Date.now() / 1000),
     content: '',
     tags: [
-      ['d', pilotD.presence(roomId, pubkey)],
-      ['h', roomId],
-      ['type', 'presence'],
-      ['visibility', visibility],
-      ...(visibility === 'visible' && intent ? [['intent', intent]] : []),
-      ...(visibility === 'visible' && normalizedContext ? [['context', normalizedContext]] : []),
+      ['a', roomAddress, relayUrl, 'root'],
+      ['intent', intent],
+      ...(normalizedContext ? [['context', normalizedContext]] : []),
       ['expiration', String(expiresAt)],
-      ['schema', 'life.crays/presence/v1'],
     ],
   };
 }
 
-export function leaveTemplate(roomId: string, pubkey: string): EventTemplate {
+/** A newer same-kind/same-author replacement makes leave visible immediately. */
+export function leaveTemplate({
+  roomAddress,
+  relayUrl,
+  expiresAt,
+}: {
+  roomAddress: string;
+  relayUrl: string;
+  expiresAt: number;
+}): EventTemplate {
+  assertRoomDefinitionAddress(roomAddress);
   return {
-    kind: CRAYS_PROTOCOL.roomActivityKind,
+    kind: CRAYS_PROTOCOL.roomPresenceKind,
     created_at: Math.floor(Date.now() / 1000),
     content: '',
     tags: [
-      ['d', pilotD.presence(roomId, pubkey)],
-      ['h', roomId],
-      ['type', 'presence'],
+      ['a', roomAddress, relayUrl, 'root'],
       ['status', 'left'],
-      ['expiration', String(Math.floor(Date.now() / 1000) + 60)],
-      ['schema', 'life.crays/presence/v1'],
+      ['expiration', String(expiresAt)],
     ],
   };
 }

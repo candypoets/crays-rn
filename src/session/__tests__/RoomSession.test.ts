@@ -2,17 +2,22 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { parseStoredRoom, RoomSessionProvider, useRoomSession } from '@/session/RoomSession';
+import type { RoomDescriptor } from '@/rooms/types';
 
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn(), deleteItemAsync: jest.fn() }));
 
-const descriptor = {
+const descriptor: RoomDescriptor & { joinedAt: number; visibility: 'visible' } = {
   id: 'skyline',
   name: 'The Skyline Room',
   about: 'Rooftop jazz',
   relayUrl: 'wss://room.test',
+  address: `30312:${'a'.repeat(64)}:skyline`,
+  communityAddress: `31727:${'b'.repeat(64)}:community`,
+  rootPubkey: 'b'.repeat(64),
   operatorPubkey: 'a'.repeat(64),
+  serviceUrl: 'https://room.test',
   capabilities: ['social'],
-  expiresAt: 2_000_000_000,
+  status: 'open',
   open: true,
   verified: true,
   joinedAt: 1_000,
@@ -20,7 +25,7 @@ const descriptor = {
 };
 
 describe('active room persistence boundary', () => {
-  it('migrates a valid legacy room to safe presence defaults', () => {
+  it('fills safe presence defaults for a valid NIP-53 room session', () => {
     const result = parseStoredRoom(JSON.stringify(descriptor), 2_000);
     expect(result.room).toEqual(expect.objectContaining({
       intent: 'curious',
@@ -64,6 +69,6 @@ describe('automatic room expiry', () => {
     await act(async () => { jest.advanceTimersByTime(60 * 60 * 1000); await Promise.resolve(); });
     await waitFor(() => expect(result.current.activeRoom).toBeNull());
     expect(result.current.endedRoom).toEqual({ name: 'The Skyline Room', reason: 'automatic' });
-    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('crays.room.active');
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('crays.room.active.v2');
   });
 });

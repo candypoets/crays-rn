@@ -1,16 +1,17 @@
 import {
   CRAYS_PROTOCOL,
+  communityAnchorAddress,
   leaveTemplate,
-  pilotD,
   presenceTemplate,
+  roomDefinitionAddress,
   roomFeedTemplate,
 } from '@/nostr/protocol';
 
-describe('Crays pilot protocol templates', () => {
-  it('uses a versioned NIP-78 namespace for unresolved room records', () => {
-    expect(CRAYS_PROTOCOL.roomManifestKind).toBe(30078);
-    expect(CRAYS_PROTOCOL.roomActivityKind).toBe(78);
-    expect(pilotD.room('skyline')).toBe('life.crays/room/v1/skyline');
+describe('Crays protocol templates', () => {
+  it('uses the NIP-53 room definition and presence kinds', () => {
+    expect(CRAYS_PROTOCOL.roomDefinitionKind).toBe(30312);
+    expect(CRAYS_PROTOCOL.roomPresenceKind).toBe(10312);
+    expect(roomDefinitionAddress('a'.repeat(64), 'skyline')).toBe(`30312:${'a'.repeat(64)}:skyline`);
   });
 
   it('builds room feed notes with room context and expiry', () => {
@@ -25,38 +26,57 @@ describe('Crays pilot protocol templates', () => {
     );
   });
 
-  it('never turns quiet browsing into visible presence', () => {
-    const quiet = presenceTemplate({
-      roomId: 'skyline',
-      pubkey: 'a'.repeat(64),
-      visibility: 'quiet',
-      expiresAt: 2_000_000_000,
-    });
-    expect(quiet.tags).toContainEqual(['visibility', 'quiet']);
-    expect(quiet.tags).not.toContainEqual(['visibility', 'visible']);
-    expect(quiet.tags).not.toContainEqual(expect.arrayContaining(['intent']));
+  it('builds the root-signed NIP-97 community address', () => {
+    expect(communityAnchorAddress('A'.repeat(64))).toBe(`31727:${'a'.repeat(64)}:community`);
+    expect(() => communityAnchorAddress('not-a-key')).toThrow('community root key');
   });
 
-  it('publishes the selected intent, bounded context, and exact expiry for visible presence', () => {
+  it('publishes room-bound NIP-53 presence with bounded context and exact expiry', () => {
+    const address = `30312:${'a'.repeat(64)}:skyline`;
     const visible = presenceTemplate({
-      roomId: 'skyline',
-      pubkey: 'a'.repeat(64),
-      visibility: 'visible',
+      roomAddress: address,
+      relayUrl: 'wss://room.example',
       intent: 'business',
       context: `  ${'x'.repeat(100)}  `,
       expiresAt: 2_000_000_000,
     });
+    expect(visible.kind).toBe(10312);
+    expect(visible.tags).toContainEqual([
+      'a',
+      address,
+      'wss://room.example',
+      'root',
+    ]);
     expect(visible.tags).toContainEqual(['intent', 'business']);
     expect(visible.tags).toContainEqual(['context', 'x'.repeat(80)]);
     expect(visible.tags).toContainEqual(['expiration', '2000000000']);
+    expect(visible.tags.some(([name]) => ['d', 'h', 'schema', 'type', 'visibility'].includes(name))).toBe(false);
   });
 
-  it('leaving replaces presence with an explicit left status', () => {
-    const left = leaveTemplate('skyline', 'b'.repeat(64));
+  it('leaving publishes a newer same-kind room-bound replacement', () => {
+    const address = `30312:${'b'.repeat(64)}:skyline`;
+    const left = leaveTemplate({
+      roomAddress: address,
+      relayUrl: 'wss://room.example',
+      expiresAt: 2_000_000_000,
+    });
+    expect(left.kind).toBe(10312);
     expect(left.tags).toContainEqual(['status', 'left']);
     expect(left.tags).toContainEqual([
-      'd',
-      `life.crays/presence/v1/skyline/${'b'.repeat(64)}`,
+      'a',
+      address,
+      'wss://room.example',
+      'root',
     ]);
+    expect(left.tags).toContainEqual(['expiration', '2000000000']);
+  });
+
+  it('rejects presence without an exact kind-30312 address', () => {
+    expect(() => presenceTemplate({
+      roomAddress: `31727:${'a'.repeat(64)}:community`,
+      relayUrl: 'wss://room.example',
+      intent: 'social',
+      expiresAt: 2_000_000_000,
+    })).toThrow('NIP-53 room address');
   });
 });

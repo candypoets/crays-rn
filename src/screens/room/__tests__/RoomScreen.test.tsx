@@ -7,8 +7,10 @@ jest.mock('expo-router', () => ({ router: { replace: jest.fn() }, usePathname: (
 
 const activeRoom: ActiveRoom = {
   id: 'skyline', name: 'The Skyline Room', about: 'Rooftop jazz', relayUrl: 'wss://room.test',
-  operatorPubkey: 'a'.repeat(64), capabilities: ['social', 'menu'], expiresAt: 2_000_000_000,
-  open: true, verified: true, joinedAt: 1_600_000_000_000, visibility: 'quiet', intent: 'curious', context: '', leaveAt: 2_000_000_000_000,
+  address: `30312:${'a'.repeat(64)}:skyline`, communityAddress: `31727:${'b'.repeat(64)}:community`,
+  rootPubkey: 'b'.repeat(64), operatorPubkey: 'a'.repeat(64), serviceUrl: 'https://room.test',
+  capabilities: ['social', 'menu'], status: 'open', open: true, verified: true,
+  joinedAt: 1_600_000_000_000, visibility: 'quiet', intent: 'curious', context: '', leaveAt: 2_000_000_000_000,
 };
 const maya: RoomPerson = {
   pubkey: 'b'.repeat(64), name: 'Maya', about: 'Here for jazz', intent: 'Open to chat', context: 'Here for the jazz',
@@ -30,11 +32,12 @@ describe('RoomScreen', () => {
     const onOpenPerson = jest.fn();
     render(<RoomScreen {...props({ onOpenPerson })} />);
     const joined = new Date(activeRoom.joinedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-    const expiryDate = new Date(activeRoom.expiresAt * 1000);
+    const expiryDate = new Date(activeRoom.leaveAt);
     const expiry = `${expiryDate.toLocaleDateString([], { day: 'numeric', month: 'short' })} · ${expiryDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
     expect(screen.getByText('Connected in the room')).toBeOnTheScreen();
     expect(screen.getByText('People here · 1 visible')).toBeOnTheScreen();
     expect(screen.getByLabelText(`Room timing. Joined ${joined}. Current moment Rooftop jazz. Ends ${expiry}.`)).toBeOnTheScreen();
+    expect(screen.getByLabelText('Maya, Open to chat, Here for the jazz')).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId(`person-${maya.pubkey}`));
     expect(onOpenPerson).toHaveBeenCalledWith(maya.pubkey);
   });
