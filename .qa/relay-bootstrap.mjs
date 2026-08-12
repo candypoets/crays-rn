@@ -104,31 +104,33 @@ await deleteFixtureEvents({
   label: 'pre-seed sweep',
 });
 
-const inviteEndpoint = `${relay.base_url}/invites`;
-const inviteBody = JSON.stringify({
-  expires_in_seconds: Number(process.env.CRAYS_INVITE_TTL_SECONDS || 3600),
-  badge_expires_in_seconds: Number(process.env.CRAYS_BADGE_TTL_SECONDS || 604800),
-  max_redemptions: Number(process.env.CRAYS_INVITE_MAX_REDEMPTIONS || 5),
-});
 let invite;
-for (let attempt = 0; attempt < 30 && !invite; attempt += 1) {
-  try {
-    const inviteResponse = await fetch(inviteEndpoint, {
-      method: 'POST',
-      headers: {
-        authorization: nip98Header(inviteEndpoint, 'POST', inviteBody, keys.admin.priv),
-        'content-type': 'application/json',
-      },
-      body: inviteBody,
-    });
-    if (inviteResponse.ok) invite = await inviteResponse.json();
-  } catch {
-    // Coordinator status can turn running just before the invite port accepts.
+if (process.env.CRAYS_QA_MINT_INVITE !== '0') {
+  const inviteEndpoint = `${relay.base_url}/invites`;
+  const inviteBody = JSON.stringify({
+    expires_in_seconds: Number(process.env.CRAYS_INVITE_TTL_SECONDS || 3600),
+    badge_expires_in_seconds: Number(process.env.CRAYS_BADGE_TTL_SECONDS || 604800),
+    max_redemptions: Number(process.env.CRAYS_INVITE_MAX_REDEMPTIONS || 5),
+  });
+  for (let attempt = 0; attempt < 30 && !invite; attempt += 1) {
+    try {
+      const inviteResponse = await fetch(inviteEndpoint, {
+        method: 'POST',
+        headers: {
+          authorization: nip98Header(inviteEndpoint, 'POST', inviteBody, keys.admin.priv),
+          'content-type': 'application/json',
+        },
+        body: inviteBody,
+      });
+      if (inviteResponse.ok) invite = await inviteResponse.json();
+    } catch {
+      // Coordinator status can turn running just before the invite port accepts.
+    }
+    if (!invite) await sleep(750);
   }
-  if (!invite) await sleep(750);
+  if (!invite) throw new Error('invite service did not mint a token before timeout');
+  assert(typeof invite.token === 'string' && invite.token.includes('.'), 'real invite service minted a signed token');
 }
-if (!invite) throw new Error('invite service did not mint a token before timeout');
-assert(typeof invite.token === 'string' && invite.token.includes('.'), 'real invite service minted a signed token');
 const publish = (event, label) => publishUntilStored(pool, relay.relay_url, event, label);
 const profile = signEvent(
   { kind: 0, content: JSON.stringify({ name: roomDisplayName, about: 'Rooftop jazz, drinks and late-night company.' }) },
@@ -147,8 +149,8 @@ for (const user of authorizedUsers) {
 await sleep(2500);
 
 // NIP-97 trust chain the app will resolve: the relay's NIP-11 root key signs
-// the community anchor (31727), which delegates to the badge issuer. The
-// invite service publishes both at boot — assert them independently here.
+// the community anchor (31727), which delegates to the badge issuer. Assert
+// the live community metadata independently here.
 const nip11Response = await fetch(relay.relay_url.replace(/^ws/, 'http'), { headers: { accept: 'application/nostr+json' } });
 assert(nip11Response.ok, 'relay serves its NIP-11 document');
 const nip11 = await nip11Response.json();
@@ -158,7 +160,7 @@ const { result: anchor } = await queryUntil(
   relay.relay_url,
   { kinds: [31727], authors: [communityRoot], '#d': ['community'], limit: 5 },
   (events) => events.sort((a, b) => b.created_at - a.created_at || a.id.localeCompare(b.id))[0],
-  'invite service published the root-signed community anchor',
+  'live relay exposes the root-signed community anchor',
 );
 assert(anchor.tags.some((tag) => tag[0] === 'p' && tag[1] === keys.admin.pub), 'anchor lists the scenario admin');
 assert(anchor.tags.some((tag) => tag[0] === 'badge_issuer' && tag[1] === badgeIssuerPubkey), 'anchor delegates to the badge issuer');
@@ -236,8 +238,9 @@ for (const [position, [d, productName, description, price, section, productKind]
     {
       kind: 30402,
       tags: [
-        ['d', d], ['title', productName], ['summary', description], ['price', price, 'EUR'],
-        ['position', String(position)], ['availability', 'available'], ['product_kind', productKind],
+        ['d', d], ['t', 'product'], ['title', productName], ['summary', description], ['price', price, 'EUR'],
+        ['position', String(position)], ['availability', 'available'], ['status', 'active'],
+        ['product_kind', productKind], ['max_uses', '1'],
         ['section', section], ['r', relay.relay_url],
       ],
     },
@@ -389,6 +392,7 @@ writeState({
   presence_ids: presenceIds,
   feed_ids: feedEvents.map((event) => event.id),
   definition_ids: [...definitionIds, membership.id, passDefinition.id, eventAccessDefinition.id],
+  product_addresses: productAddresses,
   event_id: calendarEvent.id,
   event_address: `31923:${keys.admin.pub}:${eventD}`,
   membership_definition_id: membership.id,
@@ -399,8 +403,7 @@ writeState({
   pass_status_id: passUse.id,
   event_access_award_id: eventAccessAward.id,
   order_ref: orderRef,
-  invite_token: invite.token,
-  invite_expires_at: invite.expires_at,
+  ...(invite ? { invite_token: invite.token, invite_expires_at: invite.expires_at } : {}),
   qa_pubkey: qaUser.pub,
   fixture_pubkeys: fixtureUsers.map((user) => user.pub),
   incoming_message_event_id: incomingDirectMessage.id,

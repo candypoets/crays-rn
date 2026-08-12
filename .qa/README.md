@@ -129,11 +129,12 @@ in the cleanup signer set. `node .qa/relay-teardown.mjs --sweep` recovers only
 fixture data; it never deletes the relay or a Docker volume, and is safe only
 when no other Crays QA run is active.
 
-UI runs connect through the Test Room bridge at
-`ws://10.0.2.2:8787`. It proxies WebSocket traffic to the reserved WSS relay,
-passes NIP-11 HTTP requests through to the deployed HTTPS origin, and forwards
-invite-service calls. Independent verifiers always query the WSS relay
-directly.
+The invite-oriented relay screen scenarios connect through the Test Room bridge
+at `ws://10.0.2.2:8787`. It proxies WebSocket traffic to the reserved WSS
+relay, passes NIP-11 HTTP requests through to the deployed HTTPS origin, and
+forwards invite-service calls. The manual development Test Room connects
+directly to the reserved WSS relay instead. Independent verifiers always query
+the WSS relay directly.
 
 Invite scenarios `qa-08-invite-preview.mjs` and
 `qa-08b-invite-accepted.mjs` mint through the real relay invite service. The
@@ -184,15 +185,27 @@ presence with selected intent, context, stable replacement key, and expiry.
 ## Long-running development Test Room
 
 `npm run test-room` seeds the same real signed fixture family on the reserved
-relay and keeps its proxy available behind a stable port until stopped. This is
-the manual-development counterpart to the screen scenarios; it is not a mock
-store.
-The Android emulator connects to `ws://10.0.2.2:8787`. Use
-`npm run test-room:stop` for author-scoped fixture cleanup. The reserved relay
-itself remains running.
+live relay and keeps it available until stopped. The manual-development Test
+Room connects directly to `wss://crays-test.relays.nuts.cash`; it is not a mock
+store and it does not redeem an invite. Use `npm run test-room:stop` for
+author-scoped fixture cleanup. The reserved relay itself remains running.
+
+The local proxy is an explicit compatibility mode (`CRAYS_TEST_ROOM_PROXY=1`)
+for devices that cannot reach the hosted relay and remains enabled by the
+invite-oriented relay screen scenarios, which need a local handoff endpoint.
+
+The checkout scenario keeps the app's payment default pointed at
+`https://payments.nuts.cash`. Its deterministic QA variant is an explicit
+Metro-time override: start Metro with
+`EXPO_PUBLIC_PAYMENT_SERVICE_URL=http://10.0.2.2:8790 npm run start:maestro`,
+then run `node .qa/qa-14-review-pay.mjs`. The scenario starts
+`.qa/checkout-adapter.mjs`, which validates the app's real kind-27235 checkout
+request and calls the live room `/redeem` endpoint with the shared
+`strfry-badge-node` payment-service key. It does not log that secret or use a
+JavaScript mock award. The adapter is stopped in the scenario teardown.
 
 The executable lifecycle is `.qa/qa-test-room.mjs` with
-`maestro/flows/test-room.yaml`. It proves Discover card availability, remote
-entry without Bluetooth, quiet join, fixture rendering, manifest consumption,
-signature validity, zero presence writes, and exact fixture teardown while the
-reserved relay remains available.
+`maestro/flows/test-room.yaml`. It proves Discover card availability, entry
+through the synthetic Nearby result, quiet join, fixture rendering, manifest
+consumption, signature validity, no invite redemption, zero presence writes,
+and exact fixture teardown while the reserved relay remains available.

@@ -1,6 +1,17 @@
 appId: life.crays
 ---
-- runFlow: 12-menu.yaml
+# The scenario's Metro bundle points EXPO_PUBLIC_PAYMENT_SERVICE_URL at the
+# local adapter. The adapter still calls the real room /redeem service, so the
+# browser handoff and relay award are both exercised without entering a card
+# number in an automated test.
+- runFlow: seed-and-join.yaml
+- tapOn:
+    id: "room-menu"
+- extendedWaitUntil:
+    visible:
+      id: "menu-screen"
+    timeout: 15000
+- assertVisible: "Mezcal Negroni"
 - tapOn: "Mezcal Negroni"
 - extendedWaitUntil:
     visible:
@@ -14,7 +25,33 @@ appId: life.crays
     timeout: 15000
 - assertVisible: "Total"
 - assertVisible: "€12.00"
-- assertVisible: "Payments are intentionally not connected in this pilot. No charge or venue order will be created from this build."
-- assertVisible:
-    id: "place-order-disabled"
+- assertVisible: "Stripe opens in a secure browser"
+- tapOn:
+    id: "place-order"
+- extendedWaitUntil:
+    visible: ".*(Payment successful|Use without an account|Chrome notifications).*"
+    timeout: 90000
+- runFlow:
+    when:
+      visible: "Use without an account"
+    commands:
+      - tapOn: "Use without an account"
+- runFlow:
+    when:
+      visible: "No thanks"
+    commands:
+      - tapOn: "No thanks"
+- extendedWaitUntil:
+    visible: "Payment successful"
+    timeout: 60000
+- takeScreenshot: 14-review-pay-checkout
+- launchApp:
+    appId: life.crays
+    stopApp: false
+- extendedWaitUntil:
+    visible:
+      id: "order-detail-screen"
+    timeout: 30000
+- assertVisible: "Mezcal Negroni"
+- assertVisible: "Order received"
 - takeScreenshot: 14-review-pay-relay

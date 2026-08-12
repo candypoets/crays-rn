@@ -58,11 +58,13 @@ minimum, retention expiry, role removal, resolution notification, and scope.
 
 ## D-006 — Payments, checkout, receipts, cancellation, refunds
 
-**Explicitly deferred.** Decide launch rails/processors, merchant and tax data,
-modifiers/tip/fulfillment, idempotency, payment-to-kind-8 award issuance,
-uncertain-order reconciliation, cancellation, original-rail refunds, receipts,
-and alcohol eligibility. Apple Pay, Google Pay, card/Stripe, and payment signing
-are not simulated.
+Self-order card checkout now uses the shared Nuts hosted Stripe service and
+the live payment-to-kind-8 redemption path. Remaining decisions include
+merchant and tax data, modifiers/tip/fulfillment, multi-line and quantity
+checkout, idempotency across a real Stripe session, uncertain-order recovery,
+cancellation, original-rail refunds, receipts, gift accept/decline, and alcohol
+eligibility. Cashu, gift checkout, and membership/event checkout remain
+explicitly unavailable.
 
 **Evidence to close:** processor sandbox plus relay tests for success, decline,
 kill-after-capture, duplicate tap, timeout/recovery, cancellation/refund states,

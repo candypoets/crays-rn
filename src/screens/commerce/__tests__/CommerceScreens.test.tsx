@@ -38,11 +38,21 @@ describe('commerce screens', () => {
     expect(onChangeQuantity).toHaveBeenCalledWith(3);
   });
 
-  it('reviews cart but never fakes payment availability', () => {
-    render(<ReviewPayScreen cart={cart} method="Wallet" onBack={jest.fn()} onChangeMethod={jest.fn()} onChangeQuantity={jest.fn()} onRemove={jest.fn()} total={24} />);
+  it('opens hosted Stripe checkout for a supported self order', () => {
+    const onCheckout = jest.fn();
+    const selfCart: CartState = { ...cart, lines: [{ ...line, quantity: 1, recipientPubkey: undefined, recipientName: undefined }] };
+    render(<ReviewPayScreen cart={selfCart} method="Card" onBack={jest.fn()} onCheckout={onCheckout} onChangeMethod={jest.fn()} onChangeQuantity={jest.fn()} onRemove={jest.fn()} total={12} />);
     expect(screen.getByText('Total')).toBeOnTheScreen();
-    expect(screen.getByText(/Payments are intentionally not connected/)).toBeOnTheScreen();
-    expect(screen.getByTestId('place-order-disabled')).toBeDisabled();
+    expect(screen.getByText(/Stripe opens in a secure browser/)).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('place-order'));
+    expect(onCheckout).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps unsupported quantity explicit instead of charging a different amount', () => {
+    const reason = 'Stripe checkout currently supports one serving per payment.';
+    render(<ReviewPayScreen cart={cart} checkoutDisabledReason={reason} method="Card" onBack={jest.fn()} onCheckout={jest.fn()} onChangeMethod={jest.fn()} onChangeQuantity={jest.fn()} onRemove={jest.fn()} total={24} />);
+    expect(screen.getByTestId('checkout-disabled-reason')).toHaveTextContent(reason);
+    expect(screen.getByTestId('place-order')).toBeDisabled();
   });
 
   it('shows all configured payment rails equally and returns selection', () => {

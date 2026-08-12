@@ -71,7 +71,7 @@ try {
   ]);
   run(process.execPath, ['.qa/relay-verify.mjs']);
   run(process.execPath, ['.qa/verify-manifest-consumed.mjs']);
-  run(process.execPath, ['.qa/verify-night-access.mjs']);
+  run(process.execPath, ['.qa/verify-no-invite-redemption.mjs']);
   run(process.execPath, ['.qa/verify-quiet-entry.mjs']);
   console.log(`QA PASS: development-test-room (${state.room_id})`);
 } finally {

@@ -52,27 +52,35 @@ and waits up to three minutes for a cold bundle.
 ## Development Test Room
 
 For a room that is always discoverable during local development, keep this in
-a second terminal while the Nuts coordinator is running on port 7798:
+a second terminal:
 
 ```sh
 npm run test-room
 ```
 
-Discover will show **Crays Test Room** after its signed manifest arrives. Open
-it and choose quiet entry; Bluetooth range is not involved. Entry silently
-redeems the same real invite contract used by nearby-room handoff and grants
-the current account a 24-hour badge before the room opens. The command uses a
-real isolated Nuts relay and removes it when stopped. Stop it with Ctrl-C or
+Discover will show **Crays Test Room** after its signed manifest arrives. The
+developer card simulates a Nearby room result: open it and choose quiet entry;
+Bluetooth and invite redemption are not involved. The command uses the live
+reserved Nuts relay, seeds the signed room/feed/menu fixture, and removes its
+fixture events when stopped. Stop it with Ctrl-C or
 `npm run test-room:stop`.
 
-The Android emulator and iOS simulator work with the defaults. For a physical
-device, start Metro with a LAN-reachable host address:
+The Android emulator, iOS simulator, and physical devices use the hosted relay
+with the defaults. If a device cannot reach it, opt into the local compatibility
+proxy:
 
 ```sh
+CRAYS_TEST_ROOM_PROXY=1 npm run test-room
 EXPO_PUBLIC_CRAYS_TEST_RELAY_URL=ws://192.168.1.20:8787 npm run start
 ```
 
 The card and its relay subscription exist only in development builds.
+
+Self-orders with one menu item at quantity one can continue to the shared Nuts
+hosted Stripe checkout. The payment service re-reads the signed room listing,
+and Crays shows the order only after the room relay returns the signed product
+award. Gift, Cashu, multi-line, and multi-quantity checkout remain disabled
+until their payment contracts are implemented.
 
 ## Verification
 

@@ -5,7 +5,7 @@ import { useRoomManifest } from '@/rooms/useRoomManifest';
 import { DiscoverHandoffScreen } from '@/screens/DiscoverHandoffScreen';
 import { useRoomSession } from '@/session/RoomSession';
 import { useNearbyRoom } from '@/discovery/useNearbyRoom';
-import { DEV_TEST_RELAY_URL, DEV_TEST_ROOM_ID, DEV_TEST_ROOM_INVITE_URL } from '@/config/testRoom';
+import { devTestRoomEntryParams, DEV_TEST_RELAY_URL, DEV_TEST_ROOM_ID } from '@/config/testRoom';
 
 export default function DiscoverRoute() {
   const params = useLocalSearchParams<{ relay?: string; room?: string; nearby?: string }>();
@@ -27,5 +27,5 @@ export default function DiscoverRoute() {
     setMode(next);
     if (next === 'nearby' && params.nearby !== '1') router.push({ pathname: '/bluetooth-rationale', params: { relay: params.relay, room: params.room } } as never);
   };
-  return <DiscoverHandoffScreen error={manifest.error || nearby.error} loading={manifest.loading || nearby.scanning} mapAvailable={!!transportRelay} mode={mode} onChangeMode={changeMode} room={manifest.room} testRoom={__DEV__ && !duplicatesPrimaryManifest ? testRoom : undefined} onOpenTestRoom={(room) => router.push({ pathname: activeRoom && activeRoom.id !== room.id ? '/switch-room' : '/room-preview', params: { relay: DEV_TEST_RELAY_URL, room: DEV_TEST_ROOM_ID, invite: DEV_TEST_ROOM_INVITE_URL } } as never)} onOpenRoom={(room) => router.push({ pathname: activeRoom && activeRoom.id !== room.id ? '/switch-room' : '/room-preview', params: { relay: transportRelay || room.relayUrl, room: room.id } } as never)} />;
+  return <DiscoverHandoffScreen error={manifest.error || nearby.error} loading={manifest.loading || nearby.scanning} mapAvailable={!!transportRelay} mode={mode} onChangeMode={changeMode} room={manifest.room} testRoom={__DEV__ && !duplicatesPrimaryManifest ? testRoom : undefined} onOpenTestRoom={(room) => router.push({ pathname: activeRoom && activeRoom.id !== room.id ? '/switch-room' : '/room-preview', params: devTestRoomEntryParams() } as never)} onOpenRoom={(room) => router.push({ pathname: activeRoom && activeRoom.id !== room.id ? '/switch-room' : '/room-preview', params: { relay: transportRelay || room.relayUrl, room: room.id } } as never)} />;
 }

@@ -45,16 +45,18 @@ and GATT manifests continue through the implemented signature validator.
 
 Development builds also render a compact **Developer** section at the bottom
 of the screen, visually subordinate to every newcomer state. It exposes the
-real local signed relay fixture at the platform-specific port-8787 address as
+reserved live signed relay fixture at `wss://crays-test.relays.nuts.cash` as
 one **Test room** row: room name when the fixture is online, `Connecting…`
 while waiting, and `Offline — run npm run test-room` with the Open action
-disabled while the fixture is down. Internal labels ("Development test mode",
-"local signed test relay", "Waiting for test relay") never appear on the
-newcomer surface. This section and its subscription are absent from release
-builds; they are not a substitute for D-001 or a fabricated production
-listing. When a direct link already targets the test room's relay and id, the
-duplicate card and its subscription are suppressed because relays replace a
-REQ that reuses a subscription ID.
+disabled while the fixture is down. This row is a synthetic Nearby result for
+the development client: it follows the room-pointer path without requesting
+Bluetooth permission and without carrying or redeeming an invite. Internal
+labels ("Development test mode", "local signed test relay", "Waiting for test
+relay") never appear on the newcomer surface. This section and its
+subscription are absent from release builds; they are not a substitute for
+D-001 or a fabricated production listing. When a direct link already targets
+the test room's relay and id, the duplicate card and its subscription are
+suppressed because relays replace a REQ that reuses a subscription ID.
 
 Accessibility: Map/Nearby are real tabs with selected and disabled states;
 room cards have a single descriptive action; verification is text plus icon;
@@ -74,12 +76,13 @@ is `maestro/flows/27-discover-handoff.yaml`, owned by
 identity and no relay connection or subscription before exercising Nearby's
 rationale and the honest disabled-Map state.
 
-Required paths: cold account → newcomer Nearby with Map disabled; development Test Room online →
-preview → quiet join without Bluetooth; Test Room offline → disabled recovery
-copy; release build → no Test Room; Nearby → rationale; direct fresh
-manifest → preview; stale/wrong signer → no card; relay unavailable → retry
-copy while Messages/Me remain; relaunch of direct link; repeated tap does not
-change active room; no permissions before rationale.
+Required paths: cold account → newcomer Nearby with Map disabled; development
+Test Room online → synthetic Nearby result → preview → quiet join without
+Bluetooth or invite redemption; Test Room offline → disabled recovery copy;
+release build → no Test Room; Nearby → rationale; direct fresh manifest →
+preview; stale/wrong signer → no card; relay unavailable → retry copy while
+Messages/Me remain; relaunch of direct link; repeated tap does not change
+active room; no permissions before rationale.
 
 Pass criteria: the displayed id/operator/relay equal the signed event queried
 independently, exactly zero room selection/presence mutations occur, and
