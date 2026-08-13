@@ -1,6 +1,6 @@
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EdgeTabs, TempoRail } from '@/components/night/NightPrimitives';
 import { BrandMark } from '@/components/onboarding/OnboardingPrimitives';
@@ -14,12 +14,17 @@ type AppShellProps = PropsWithChildren<{
   showTempoRail?: boolean;
   scroll?: boolean;
   testID: string;
+  underTabBar?: boolean;
 }>;
 
-export function AppShell({ children, chrome = 'brand', eyebrow, headerAction, scroll = true, showEdgeTabs = false, showTempoRail = false, testID, title }: AppShellProps) {
-  const content = <View className="mx-auto w-full max-w-[620px] grow px-5 pb-8">{children}</View>;
+export function AppShell({ children, chrome = 'brand', eyebrow, headerAction, scroll = true, showEdgeTabs = false, showTempoRail = false, testID, title, underTabBar = false }: AppShellProps) {
+  const insets = useSafeAreaInsets();
+  // The bottom tab bar already owns the home-indicator inset; everywhere else
+  // the scroll content pads so the last row can rest above it.
+  const bottomInset = underTabBar ? 0 : insets.bottom;
+  const content = <View className="mx-auto w-full max-w-[620px] grow px-5" style={{ paddingBottom: 32 + bottomInset }}>{children}</View>;
   return (
-    <SafeAreaView className="flex-1 bg-base-100" edges={['top', 'right', 'bottom', 'left']} testID={testID}>
+    <SafeAreaView className="flex-1 bg-base-100" edges={['top', 'right', 'left']} testID={testID}>
       {showEdgeTabs ? <EdgeTabs top={96} /> : null}
       {chrome === 'brand' ? (
         <View className="mx-auto w-full max-w-[620px] flex-row items-center justify-between px-5 pb-3 pt-2" testID={`${testID}-brand-header`}>
@@ -35,7 +40,7 @@ export function AppShell({ children, chrome = 'brand', eyebrow, headerAction, sc
       ) : null}
       {showTempoRail ? <TempoRail className="mx-5 mb-2 opacity-90" /> : null}
       {scroll ? (
-        <ScrollView contentContainerClassName="grow" showsVerticalScrollIndicator={false}>{content}</ScrollView>
+        <ScrollView contentContainerClassName="grow" scrollIndicatorInsets={{ bottom: bottomInset }} showsVerticalScrollIndicator={false}>{content}</ScrollView>
       ) : content}
     </SafeAreaView>
   );

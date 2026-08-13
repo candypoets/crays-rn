@@ -8,7 +8,7 @@ import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NightBadge, VenueImage } from '@/components/night/NightPrimitives';
 import { PrimaryButton } from '@/components/onboarding/OnboardingPrimitives';
@@ -35,6 +35,7 @@ const capabilityLabels: Record<string, string> = {
 
 export function RoomPreviewScreen({ error, loading, onEnter, room }: RoomPreviewScreenProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const insets = useSafeAreaInsets();
 
   if (loading) {
     return (
@@ -62,9 +63,9 @@ export function RoomPreviewScreen({ error, loading, onEnter, room }: RoomPreview
 
   const capabilities = room.capabilities.map((capability) => capabilityLabels[capability] || capability);
   return (
-    <SafeAreaView className="flex-1 bg-photo-night" edges={['top', 'left', 'right', 'bottom']} testID="room-preview-screen">
+    <SafeAreaView className="flex-1 bg-photo-night" edges={['top', 'left', 'right']} testID="room-preview-screen">
       <StatusBar style="light" />
-      <ScrollView contentContainerClassName="grow" showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerClassName="grow" contentContainerStyle={{ paddingBottom: insets.bottom }} scrollIndicatorInsets={{ bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
         <View className="relative min-h-[610px] grow overflow-hidden bg-photo-night">
           <VenueImage className="absolute inset-0" index={1} label={`${room.name} venue atmosphere`} />
           <View className="absolute inset-0 bg-photo-night/45" />

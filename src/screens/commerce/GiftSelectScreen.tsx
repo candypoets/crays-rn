@@ -5,7 +5,7 @@
 // FORM: Empty, departed, declined, restricted, and unavailable states remain explicit and safe.
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { formatCurrency } from '@/commerce/currency';
 import { DrinkImage, PortraitImage, TempoRail } from '@/components/night/NightPrimitives';
@@ -21,9 +21,11 @@ type GiftSelectScreenProps = {
 };
 
 export function GiftSelectScreen({ onBack, onSelect, person, products, roomName }: GiftSelectScreenProps) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'right', 'bottom', 'left']} testID="gift-select-screen">
-      <ScrollView contentContainerClassName="grow px-5 pb-8" showsVerticalScrollIndicator={false}>
+    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'right', 'left']} testID="gift-select-screen">
+      <ScrollView contentContainerClassName="grow px-5" contentContainerStyle={{ paddingBottom: 32 + insets.bottom }} scrollIndicatorInsets={{ bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
         <View className="mx-auto w-full max-w-[620px] grow">
           <View className="flex-row items-center justify-between pt-2">
             <Pressable

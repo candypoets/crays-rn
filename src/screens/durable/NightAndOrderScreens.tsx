@@ -14,7 +14,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppShell, RaisedRow, SectionTitle } from '@/components/app/AppShell';
 import { DrinkImage, NightBadge, NightCard } from '@/components/night/NightPrimitives';
@@ -190,10 +190,11 @@ function doorItemCopy(item: MyNightDoorItem) {
 
 export function MyNightScreen({ doorItem, membership, onBack, onDoorItem, onMembership, onOrder, order, roomName }: { doorItem?: MyNightDoorItem; membership?: RoomMembershipOffer; onBack: () => void; onDoorItem: () => void; onMembership: () => void; onOrder: () => void; order?: RoomOrder; roomName: string }) {
   const copy = doorItem ? doorItemCopy(doorItem) : undefined;
+  const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'right', 'bottom', 'left']} testID="my-night-screen">
-      <ScrollView contentContainerClassName="grow pb-8" showsVerticalScrollIndicator={false}>
+    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'right', 'left']} testID="my-night-screen">
+      <ScrollView contentContainerClassName="grow" contentContainerStyle={{ paddingBottom: 32 + insets.bottom }} scrollIndicatorInsets={{ bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
         <View className="relative h-64 overflow-hidden bg-photo-night">
           <View accessibilityElementsHidden className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-primary/30" />
           <View accessibilityElementsHidden className="absolute -bottom-24 -left-10 h-56 w-56 rounded-full bg-verified/20" />

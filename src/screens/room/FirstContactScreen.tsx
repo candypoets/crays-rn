@@ -6,7 +6,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PortraitImage } from '@/components/night/NightPrimitives';
 import type { RoomPerson } from '@/rooms/types';
@@ -78,12 +78,13 @@ export function FirstContactScreen({
   safetyNotice,
 }: FirstContactScreenProps) {
   const [showSafety, setShowSafety] = useState(false);
+  const insets = useSafeAreaInsets();
   const waiting = contactState === 'requested';
   const canSendDrink = contactState === 'accepted';
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-soft" edges={['top', 'left', 'right', 'bottom']} testID="first-contact-screen">
-      <ScrollView contentContainerClassName="grow" showsVerticalScrollIndicator={false}>
+    <SafeAreaView className="flex-1 bg-surface-soft" edges={['top', 'left', 'right']} testID="first-contact-screen">
+      <ScrollView contentContainerClassName="grow" contentContainerStyle={{ paddingBottom: insets.bottom }} scrollIndicatorInsets={{ bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
         <View className="relative h-[390px] overflow-hidden bg-surface-soft">
           <PortraitImage className="absolute inset-0" index={portraitIndex(person.name)} label={`Portrait of ${person.name}`} />
           <View className="absolute inset-x-0 top-0 flex-row items-center justify-between px-5 pt-3">

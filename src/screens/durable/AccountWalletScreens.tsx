@@ -135,6 +135,7 @@ export function MeScreen({
         </View>
       )}
       testID="me-screen"
+      underTabBar
     >
       <Text accessibilityRole="header" className="mt-2 text-[40px] font-black uppercase tracking-[-1px] text-ink">
         Me

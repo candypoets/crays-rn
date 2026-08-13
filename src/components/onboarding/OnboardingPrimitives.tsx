@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EdgeTabs } from '@/components/night/NightPrimitives';
 import { colors } from '@/theme/colors';
@@ -21,11 +21,14 @@ type OnboardingShellProps = PropsWithChildren<{
 }>;
 
 export function OnboardingShell({ children, keyboard = false, showEdgeTabs = true, testID }: OnboardingShellProps) {
+  const insets = useSafeAreaInsets();
   const content = (
     <ScrollView
       automaticallyAdjustKeyboardInsets
-      contentContainerClassName="grow px-6 pb-8 pt-3"
+      contentContainerClassName="grow px-6 pt-3"
+      contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
       keyboardShouldPersistTaps="handled"
+      scrollIndicatorInsets={{ bottom: insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
       <View className="mx-auto w-full max-w-[560px] grow">{children}</View>
@@ -33,7 +36,7 @@ export function OnboardingShell({ children, keyboard = false, showEdgeTabs = tru
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-base-100" edges={['top', 'right', 'bottom', 'left']} testID={testID}>
+    <SafeAreaView className="flex-1 bg-base-100" edges={['top', 'right', 'left']} testID={testID}>
       {showEdgeTabs ? <EdgeTabs /> : null}
       {keyboard ? (
         <KeyboardAvoidingView

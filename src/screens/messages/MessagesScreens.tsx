@@ -31,7 +31,7 @@ export function MessagesScreen({
   onOpen: (message: LocalMessage) => void;
 }) {
   return (
-    <AppShell eyebrow="Private · stays after the room" testID="messages-screen" title="Messages">
+    <AppShell eyebrow="Private · stays after the room" testID="messages-screen" title="Messages" underTabBar>
       {error ? (
         <View accessibilityLiveRegion="polite" accessibilityRole="alert" className="mt-3" testID="messages-error">
           <ErrorBanner message={error} />
