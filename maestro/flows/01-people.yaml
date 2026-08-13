@@ -25,4 +25,6 @@ appId: life.crays
     timeout: 15000
 - assertVisible: "People here · 3 visible"
 - assertVisible: "Connected in the room"
+- assertNotVisible: "Room moment"
+- assertNotVisible: "${QA_ROOM_ABOUT}"
 - takeScreenshot: 01-people-relay

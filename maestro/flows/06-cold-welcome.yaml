@@ -5,6 +5,11 @@ appId: life.crays
     id: "cold-welcome-screen"
 - assertVisible:
     id: "cold-welcome-heading"
+- assertVisible: "Built for real rooms"
+- assertVisible: "Verified rooms"
+- assertNotVisible: "Gallery Opening"
+- assertNotVisible: "Rooftop Jazz"
+- assertNotVisible: "After Hours"
 - assertVisible: "Create account"
 - assertVisible: "Log in"
 - assertVisible: ".*No public location.*"

@@ -17,7 +17,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AppShell, RaisedRow, SectionTitle } from '@/components/app/AppShell';
-import { DrinkImage, NightBadge, NightCard, VenueImage } from '@/components/night/NightPrimitives';
+import { DrinkImage, NightBadge, NightCard } from '@/components/night/NightPrimitives';
 import { ErrorBanner, PrimaryButton } from '@/components/onboarding/OnboardingPrimitives';
 import { formatCurrency } from '@/commerce/currency';
 import type { MyNightDoorItem } from '@/screens/durable/myNight';
@@ -195,14 +195,15 @@ export function MyNightScreen({ doorItem, membership, onBack, onDoorItem, onMemb
     <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'right', 'bottom', 'left']} testID="my-night-screen">
       <ScrollView contentContainerClassName="grow pb-8" showsVerticalScrollIndicator={false}>
         <View className="relative h-64 overflow-hidden bg-photo-night">
-          <VenueImage className="absolute inset-0" index={1} label={`${roomName} at night`} />
-          <View className="absolute inset-0 bg-photo-night/55" />
+          <View accessibilityElementsHidden className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-primary/30" />
+          <View accessibilityElementsHidden className="absolute -bottom-24 -left-10 h-56 w-56 rounded-full bg-verified/20" />
+          <View accessibilityElementsHidden className="absolute bottom-8 right-8 h-px w-40 -rotate-12 bg-white/30" />
           <Pressable accessibilityLabel="Back to room" accessibilityRole="button" className="absolute left-4 top-3 min-h-12 min-w-12 items-center justify-center rounded-full bg-surface/95" hitSlop={8} onPress={onBack} testID="my-night-back">
             <Ionicons color={colors.ink} name="chevron-back" size={24} />
           </Pressable>
           <View className="absolute bottom-14 left-5 right-5">
-            <Text accessibilityRole="header" className="text-[30px] font-black uppercase tracking-[0.4px] text-white">Up next</Text>
-            <Text className="mt-1 text-base font-semibold text-white">This room. Right now.</Text>
+            <Text accessibilityRole="header" className="text-[30px] font-black uppercase tracking-[0.4px] text-white">My night</Text>
+            <Text className="mt-1 text-base font-semibold text-white">{roomName}</Text>
           </View>
         </View>
 

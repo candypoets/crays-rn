@@ -1,7 +1,8 @@
 appId: life.crays
 ---
-# ${QA_FEED_POST_TEXT} is supplied by .qa/relay-screen-scenario.mjs from
-# .qa/flow-fixtures.mjs; standalone runs need `-e QA_FEED_POST_TEXT=...`.
+# ${QA_FEED_POST_TEXT} and ${QA_ROOM_ABOUT} are supplied by
+# .qa/relay-screen-scenario.mjs from .qa/flow-fixtures.mjs; standalone runs
+# need explicit `-e` values for both.
 - runFlow: seed-and-join.yaml
 - tapOn:
     id: "room-feed-tab"
@@ -9,6 +10,8 @@ appId: life.crays
     visible:
       id: "room-feed-screen"
     timeout: 15000
+- assertNotVisible: "Room moment"
+- assertNotVisible: "${QA_ROOM_ABOUT}"
 - assertVisible: "The mezcal negroni is excellent."
 # The feed is chronological (PRD 7.5): the venue announcement is the oldest
 # seeded post and sits below the fold, so scroll it into view before asserting.

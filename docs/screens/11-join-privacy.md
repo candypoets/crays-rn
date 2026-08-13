@@ -29,10 +29,19 @@ root-delegated issuer, and live expiry rules before profile or presence is publi
 Missing, expired, exhausted, wrong-room, issuer-mismatched, delayed,
 and offline grants remain on this screen with a retryable error. Repeated entry
 reuses the locally persisted nonce/account redemption and confirms it again.
+The anchor read ignores nipworker's local cache-complete `EOCE`; only network
+`ConnectionStatus(EOSE)` from the exact normalized room relay may prove that an
+empty root-signed-anchor query is complete. The relay is part of the stable
+subscription identity so same-root requests to different relays cannot replace
+one another.
 
 The Test Room uses this same direct Nearby pointer in development and special
 TestFlight builds. Its public token lasts 90 days with an effectively unlimited
 safe-integer redemption count; redeemed test membership does not expire.
+If that explicitly reusable Test Room grant came from local cache but network
+EOSE proves its exact award is no longer on the pinned relay, the app redeems
+it once again and confirms the replacement before writing. Finite-use invites
+are never retried this way.
 
 ## Mutation and lifecycle
 
@@ -87,8 +96,11 @@ joining against an unreachable relay renders the unverified-room error state
 and the enter action stays inert. The Test Room scenario additionally proves
 the direct broadcast pointer, 90-day effectively unlimited credential,
 non-expiring redeemed membership, exact award confirmation, room-bound
-kind-10312 presence, and exact profile projection. Pure-logic
-coverage proves that quiet visibility removes the invite source before any
-network operation. Component/fake-clock coverage owns automatic local expiry; a future BLE
+kind-10312 presence, and exact profile projection. Pure-logic coverage proves
+that quiet visibility removes the invite source before any network operation
+and that only a cached, effectively unlimited Test Room grant may be refreshed
+after a proven missing award. Invite unit coverage delivers cache `EOCE`, a foreign-relay
+network `EOSE`, the valid anchor, and the pinned-relay `EOSE` under a fake clock
+to prevent the slow-network early-rejection regression. Component/fake-clock coverage owns automatic local expiry; a future BLE
 gateway harness must additionally force credential-renewal loss and verify the
 Signal weak → Reconnecting → Room locked sequence.

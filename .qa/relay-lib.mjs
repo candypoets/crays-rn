@@ -225,12 +225,26 @@ export function fixtureSignerMap(keys, badgeIssuerSecret) {
   return { signers, badgeIssuerPubkey };
 }
 
-export async function queryFixtureEvents(pool, relayUrl, signers) {
+function eventTagValue(event, name) {
+  return event.tags.find((tag) => tag[0] === name)?.[1];
+}
+
+/**
+ * The badge issuer is shared by QA fixtures and real Test Room visitors. Only
+ * awards addressed to a known fixture identity belong to the harness; deleting
+ * every issuer-authored award would revoke unrelated devices after a QA run.
+ */
+export function isFixtureCleanupTarget(event, signerPubkeys, badgeIssuerPubkey) {
+  if (event.kind === 5) return false;
+  if (event.pubkey !== badgeIssuerPubkey) return true;
+  const recipient = eventTagValue(event, 'p');
+  return Boolean(recipient && signerPubkeys.has(recipient));
+}
+
+export async function queryFixtureEvents(pool, relayUrl, signers, badgeIssuerPubkey) {
   const events = await pool.querySync([relayUrl], { authors: [...signers.keys()], limit: 5000 });
-  // NIP-09 tombstones are the cleanup proof and may remain stored. They are
-  // never cleanup targets themselves, otherwise every sweep creates another
-  // unbounded generation of tombstones.
-  return events.filter((event) => event.kind !== 5);
+  const signerPubkeys = new Set(signers.keys());
+  return events.filter((event) => isFixtureCleanupTarget(event, signerPubkeys, badgeIssuerPubkey));
 }
 
 /**
@@ -278,7 +292,7 @@ export async function deleteFixtureEvents({ pool, relayUrl, keys, badgeIssuerSec
   const { signers, badgeIssuerPubkey } = fixtureSignerMap(keys, badgeIssuerSecret);
   if (signers.has(communityRoot)) throw new Error('fixture cleanup signer set unexpectedly contains the community root');
   const excluded = new Set(excludeIds);
-  const targets = (await queryFixtureEvents(pool, relayUrl, signers)).filter((event) => !excluded.has(event.id));
+  const targets = (await queryFixtureEvents(pool, relayUrl, signers, badgeIssuerPubkey)).filter((event) => !excluded.has(event.id));
   if (!targets.length) {
     assert(true, `${label}: no fixture-authored leftovers`);
     return { deleted: 0, deletionIds: [] };
@@ -323,7 +337,7 @@ export async function deleteFixtureEvents({ pool, relayUrl, keys, badgeIssuerSec
     (events) => events.length === 0,
     `${label}: all ${targets.length} fixture-authored targets were deleted`,
   );
-  const remaining = (await queryFixtureEvents(pool, relayUrl, signers)).filter((event) => !excluded.has(event.id));
+  const remaining = (await queryFixtureEvents(pool, relayUrl, signers, badgeIssuerPubkey)).filter((event) => !excluded.has(event.id));
   assert(remaining.length === 0, `${label}: reserved relay has no non-deletion fixture events outside the protected run capability`);
   return { deleted: targets.length, deletionIds };
 }

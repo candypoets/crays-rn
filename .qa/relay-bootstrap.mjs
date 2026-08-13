@@ -137,7 +137,7 @@ const authorizedUsers = [...new Map([
 // B. All other scenarios retain the default cleanup behavior.
 const preserveExistingFixtures = process.env.CRAYS_QA_PRESERVE_FIXTURES === '1';
 const { signers } = fixtureSignerMap(keys, issuerSecret);
-const leftovers = await queryFixtureEvents(pool, relay.relay_url, signers);
+const leftovers = await queryFixtureEvents(pool, relay.relay_url, signers, badgeIssuerPubkey);
 const ordinaryLeftoverAuthors = leftovers
   .map((event) => event.pubkey)
   .filter((pubkey) => pubkey !== keys.admin.pub && pubkey !== badgeIssuerPubkey);

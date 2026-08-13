@@ -1,14 +1,14 @@
-// THESIS: The active room is one live set shared by the people who chose to appear.
-// OWNED WORLD: A current-moment rail, portrait stickers, venue photography, and chronological notes.
-// STORY: Confirm the verified room → see its current moment → meet people or read the room feed.
-// FIRST VIEWPORT: Room identity, current moment, live context, and the first useful content stay visible.
+// THESIS: The active room is one verified place shared by the people who chose to appear.
+// OWNED WORLD: Session timing, portrait stickers, and chronological notes.
+// STORY: Confirm the verified room → see opted-in people or read the room feed.
+// FIRST VIEWPORT: Room identity, session boundary, connection truth, and useful content stay visible.
 // FORM: Relay, quiet, empty, publish-failure, report, and expiry truth remain explicit.
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PortraitImage, VenueImage } from '@/components/night/NightPrimitives';
+import { PortraitImage } from '@/components/night/NightPrimitives';
 import type { ActiveRoom, RoomPerson, RoomPost, RoomProfile } from '@/rooms/types';
 import { colors } from '@/theme/colors';
 
@@ -120,35 +120,28 @@ function RoomHeader(props: Pick<RoomScreenProps, 'activeRoom' | 'connected' | 'o
   );
 }
 
-function CurrentMomentRail({ room }: { room: ActiveRoom }) {
-  const moments = [
+function RoomSessionRail({ room }: { room: ActiveRoom }) {
+  const timing = [
     { label: 'Joined', value: formatMoment(room.joinedAt, 'milliseconds') },
-    { label: 'Right now', value: room.about || 'Room live', selected: true },
-    { label: 'Ends', value: formatCredentialExpiry(Math.floor(room.leaveAt / 1000)) },
+    { label: 'Leave at', value: formatCredentialExpiry(Math.floor(room.leaveAt / 1000)) },
   ];
   return (
     <View
-      accessibilityLabel={`Room timing. Joined ${moments[0].value}. Current moment ${moments[1].value}. Ends ${moments[2].value}.`}
+      accessibilityLabel={`Room session. Joined ${timing[0].value}. Leave at ${timing[1].value}.`}
       accessible
       className="border-b border-edge bg-surface"
     >
-      <View className="flex-row px-4">
-        {moments.map((moment) => (
-          <View className={`min-h-[66px] flex-1 items-center justify-center px-1 ${moment.selected ? 'bg-primary' : ''}`} key={moment.label}>
-            <Text className={`text-[10px] font-black uppercase ${moment.selected ? 'text-white' : 'text-ink'}`}>{moment.label}</Text>
-            <Text className={`mt-1 text-center text-[11px] font-semibold ${moment.selected ? 'text-white' : 'text-ink'}`}>{moment.value}</Text>
+      <View className="flex-row px-5">
+        {timing.map((item, index) => (
+          <View
+            className={`min-h-[66px] flex-1 justify-center ${index === 0 ? 'items-start border-r border-edge pr-5' : 'items-end pl-5'}`}
+            key={item.label}
+          >
+            <Text className="text-[10px] font-black uppercase tracking-[0.6px] text-muted">{item.label}</Text>
+            <Text className="mt-1 text-sm font-bold text-ink">{item.value}</Text>
           </View>
         ))}
       </View>
-      <View className="mx-8 -mt-px flex-row items-center">
-        <View className="h-px flex-1 bg-primary" />
-        <View className="h-3 w-3 rounded-full border-2 border-primary bg-surface" />
-        <View className="h-px flex-1 bg-primary" />
-        <View className="h-3 w-3 rounded-full border-2 border-primary bg-primary" />
-        <View className="h-px flex-1 bg-edge" />
-        <View className="h-3 w-3 rounded-full border-2 border-ink bg-surface" />
-      </View>
-      <View className="h-3" />
     </View>
   );
 }
@@ -158,15 +151,6 @@ function EmptyRoom({ children, icon }: { children: ReactNode; icon: keyof typeof
     <View className="mt-6 items-center border-y border-dashed border-edge bg-surface px-6 py-10">
       <Ionicons color={colors.primary} name={icon} size={34} />
       <Text className="mt-4 max-w-[320px] text-center text-base leading-6 text-muted">{children}</Text>
-    </View>
-  );
-}
-
-function Waveform() {
-  const bars = [9, 16, 11, 20, 13, 25, 18, 31, 14, 22, 38, 20, 28, 47, 21, 32, 17, 25, 12, 19, 9];
-  return (
-    <View accessibilityElementsHidden className="h-14 flex-row items-center justify-center gap-1">
-      {bars.map((height, index) => <View className="w-0.5 rounded-full bg-primary" key={`${height}-${index}`} style={{ height }} />)}
     </View>
   );
 }
@@ -202,16 +186,7 @@ function PeopleView({ activeRoom, loading, onOpenPerson, people }: Pick<RoomScre
 
   return (
     <>
-      <View className="px-5 pb-1 pt-5">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-xs font-black uppercase tracking-[0.7px] text-ink">Room moment</Text>
-          <Text className="text-xs font-semibold text-muted">Live relay</Text>
-        </View>
-        <Waveform />
-        <Text className="text-center text-base font-bold text-ink">{activeRoom.about}</Text>
-      </View>
-
-      <View className="mt-5 flex-row items-end justify-between px-5">
+      <View className="mt-6 flex-row items-end justify-between px-5">
         <Text accessibilityRole="header" className="text-xs font-black uppercase tracking-[0.7px] text-ink">People here · {people.length} visible</Text>
         <Text className="text-[11px] text-muted">No distance or ranking</Text>
       </View>
@@ -224,8 +199,6 @@ function PeopleView({ activeRoom, loading, onOpenPerson, people }: Pick<RoomScre
       >
         {people.map((person, index) => <PersonCard index={index} key={person.pubkey} onPress={() => onOpenPerson(person.pubkey)} person={person} />)}
       </ScrollView>
-
-      <VenueImage className="mx-5 mt-6 h-44 rounded-t-[28px]" index={1} label={`${activeRoom.name} venue atmosphere`} />
     </>
   );
 }
@@ -360,7 +333,7 @@ export function RoomScreen(props: RoomScreenProps) {
     >
       <RoomHeader {...props} />
       <ScrollView contentContainerClassName="pb-6" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <CurrentMomentRail room={props.activeRoom} />
+        <RoomSessionRail room={props.activeRoom} />
         {props.view === 'people' ? <PeopleView {...props} /> : <FeedView {...props} />}
       </ScrollView>
     </SafeAreaView>

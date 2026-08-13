@@ -31,7 +31,7 @@ const pool = makePool();
 
 try {
   const { signers, badgeIssuerPubkey } = fixtureSignerMap(keys, badgeIssuerSecret);
-  const existing = await queryFixtureEvents(pool, relay.relay_url, signers);
+  const existing = await queryFixtureEvents(pool, relay.relay_url, signers, badgeIssuerPubkey);
   const ordinaryAuthors = existing
     .map((event) => event.pubkey)
     .filter((pubkey) => pubkey !== keys.admin.pub && pubkey !== badgeIssuerPubkey);

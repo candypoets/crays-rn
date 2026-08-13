@@ -36,7 +36,10 @@ describe('RoomScreen', () => {
     const expiry = `${expiryDate.toLocaleDateString([], { day: 'numeric', month: 'short' })} · ${expiryDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
     expect(screen.getByText('Connected in the room')).toBeOnTheScreen();
     expect(screen.getByText('People here · 1 visible')).toBeOnTheScreen();
-    expect(screen.getByLabelText(`Room timing. Joined ${joined}. Current moment Rooftop jazz. Ends ${expiry}.`)).toBeOnTheScreen();
+    expect(screen.getByLabelText(`Room session. Joined ${joined}. Leave at ${expiry}.`)).toBeOnTheScreen();
+    expect(screen.queryByText(activeRoom.about)).toBeNull();
+    expect(screen.queryByText('Room moment')).toBeNull();
+    expect(screen.queryByLabelText(`${activeRoom.name} venue atmosphere`)).toBeNull();
     expect(screen.getByLabelText('Maya, Open to chat, Here for the jazz')).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId(`person-${maya.pubkey}`));
     expect(onOpenPerson).toHaveBeenCalledWith(maya.pubkey);

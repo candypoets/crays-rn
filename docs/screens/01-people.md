@@ -11,11 +11,12 @@ Entry requires a persisted `ActiveRoom`. With no active room, route to Discover.
 ## UI and interaction
 
 - Header: signed room name, compact connection state, native Leave control, Menu, My night, and the local **Right now / Feed** switch.
-- Current-moment rail: joined time, selected room descriptor, and credential expiry. Its schedule-like form follows the mockup without inventing venue event data.
+- Room-session rail: joined time and credential expiry only. A kind-30312 room description is identity metadata, not a calendar event, so it is never placed in a **Right now**, event, or schedule slot. Venue events remain absent from this surface unless a future design consumes a trusted kind-31922/31923 projection explicitly.
 - Roster: horizontally readable portrait cards with display name and intent in deterministic accessible order. Optional context is included in each card's accessible label. No per-person "online" dot is rendered; roster membership is the only presence signal and it is already textual.
-- Portrait cards use the Night Playlist portrait atlas with its native tall-cell
-  aspect ratio, retain at least 48-point targets, and end in a uniformly cropped
-  venue image without changing semantic order or distorting either atlas.
+- Portrait cards use the Night Playlist portrait treatment with its native
+  tall-cell aspect ratio and retain at least 48-point targets. No bundled venue
+  photograph appears as current room or event evidence; this screen has no
+  trusted event-image input.
 - The visible count counts current, non-expired, explicitly visible presence projections only.
 - Tapping a person opens screen 02 with their relay-derived public key; no name is used as identity.
 
@@ -49,15 +50,16 @@ Presence is refreshed every 60 seconds and on foreground without extending the f
 
 Name, intent, and context are text and may reflow under large type instead of
 being clipped. Reading order is predictable despite the organic visual layout.
-The current-moment summary announces joined, current, and expiry values as one
-coherent unit. No exact distance, table number, follower count,
+The room-session summary announces joined and expiry values as one coherent
+unit. No exact distance, table number, follower count,
 profile-open count, or non-room activity is rendered. Quiet mode is never
 visually treated as degraded access.
 
 ## QA strategy
 
 Unit coverage in `RoomScreen.test.tsx` verifies populated and quiet-empty paths,
-person identity routing, and the accessible current-moment summary.
+person identity routing, the accessible room-session summary, and the absence
+of the kind-30312 description from event-like UI.
 `NightPrimitives.test.tsx` verifies portrait and venue crop geometry. Native
 workflow `maestro/flows/01-people.yaml` enters quietly through the real join
 screen, waits for live relay projections, checks the exact visible-only count,
@@ -69,8 +71,10 @@ and captures the canonical state.
 2. issue fixture membership awards through the same gate as production;
 3. publish the root/admin-authored kind-30312 room definition plus signed profiles, room-bound NIP-53 presences, feed, catalog, membership, and event fixtures;
 4. enter the room on Android using the emulator transport alias;
-5. assert the screen consumed profile and presence FlatBuffers;
-6. independently query every fixture and verify all Nostr signatures;
+5. assert the screen consumed profile and presence FlatBuffers and did not
+   present room metadata as a live event;
+6. independently query every fixture, including the real kind-31923 calendar
+   event used by My Night, and verify all Nostr signatures;
 7. delete the exact relay and Docker volume in `finally`.
 
 Additional implementation QA must cover: zero profiles, profile without presence, left replacement, expired/fallback-stale presence, newer/older/equal-time replacement ordering, malformed profile, wrong room `a`, reconnect, background/foreground heartbeat, and switching to a second relay without mixed roster data.

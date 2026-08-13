@@ -1,7 +1,11 @@
 import type { ParsedEvent } from '@candypoets/nipworker';
+import { isConnectionStatus, useSubscription as subscribeToNostr } from '@candypoets/nipworker/hooks';
+import { isParsedEvent } from '@candypoets/nipworker/utils';
 import * as SecureStore from 'expo-secure-store';
-import { decodeInviteToken, fetchInviteHandoff, inviteAwardMatches, loadInvitePreview, redeemInvite, resolveInviteSource } from '@/invites/invites';
+import { decodeInviteToken, fetchInviteHandoff, inviteAwardMatches, loadInvitePreview, readTrustedAnchor, redeemInvite, resolveInviteSource } from '@/invites/invites';
 
+jest.mock('@candypoets/nipworker/hooks', () => ({ isConnectionStatus: jest.fn(), useSubscription: jest.fn() }));
+jest.mock('@candypoets/nipworker/utils', () => ({ isParsedEvent: jest.fn() }));
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn() }));
 
 const root = 'a'.repeat(64);
@@ -23,6 +27,24 @@ function awardEvent(tags: string[][], overrides: { id?: string; issuer?: string 
     kind: () => 8,
     id: () => overrides.id || 'b'.repeat(64),
     pubkey: () => overrides.issuer || badgeIssuer,
+    createdAt: () => 100,
+    tags: (index: number) => tags[index] || null,
+    tagsLength: () => tags.length,
+  } as unknown as ParsedEvent;
+}
+
+function anchorEvent(): ParsedEvent {
+  const tags = [
+    ['d', 'community'],
+    ['p', root],
+    ['p', admin],
+    ['badge_issuer', badgeIssuer],
+    ['name', 'Venue community'],
+  ];
+  return {
+    kind: () => 31727,
+    id: () => 'f'.repeat(64),
+    pubkey: () => root,
     createdAt: () => 100,
     tags: (index: number) => tags[index] || null,
     tagsLength: () => tags.length,
@@ -97,6 +119,57 @@ describe('invite contract', () => {
     await expect(redeemInvite(preview, token, 'c'.repeat(64))).resolves.toMatchObject({ eventId: 'b'.repeat(64), nonce: 'qa-nonce' });
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);
     expect(SecureStore.setItemAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('marks a persisted redemption as cached without posting again', async () => {
+    const stored = { eventId: 'b'.repeat(64), nonce: claims.nonce, pubkey: 'c'.repeat(64), redeemedAt: 1, badgeAddress: claims.badge, serviceUrl: 'https://venue.test' };
+    (SecureStore.getItemAsync as jest.Mock).mockResolvedValue(JSON.stringify({ [`${claims.nonce}:${stored.pubkey}`]: stored }));
+    globalThis.fetch = jest.fn() as never;
+    const preview = { claims: { ...claims, v: 1 as const }, community: communityInfo, serviceUrl: 'https://venue.test' };
+
+    await expect(redeemInvite(preview, token, stored.pubkey)).resolves.toEqual({ ...stored, cached: true });
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it('waits for network EOSE instead of rejecting on cache EOCE', async () => {
+    jest.useFakeTimers();
+    const cacheEoce = {};
+    const anchorMessage = {};
+    const wrongRelayEose = {};
+    const venueRelayEose = {};
+    const unsubscribe = jest.fn();
+    (subscribeToNostr as jest.Mock).mockReturnValue(unsubscribe);
+    (isParsedEvent as unknown as jest.Mock).mockImplementation((message) => message === anchorMessage ? anchorEvent() : null);
+    (isConnectionStatus as unknown as jest.Mock).mockImplementation((message) => {
+      if (message === wrongRelayEose) return { relayUrl: () => 'wss://other.test', status: () => 'EOSE' };
+      if (message === venueRelayEose) return { relayUrl: () => 'wss://venue.test/', status: () => 'EOSE' };
+      return null;
+    });
+
+    try {
+      const result = readTrustedAnchor('wss://venue.test', root, 2_000);
+      const callback = (subscribeToNostr as jest.Mock).mock.calls[0][2] as (message: object) => void;
+      let settled = false;
+      void result.then(() => { settled = true; }, () => { settled = true; });
+
+      callback(cacheEoce);
+      jest.advanceTimersByTime(300);
+      await Promise.resolve();
+      expect(settled).toBe(false);
+
+      callback(wrongRelayEose);
+      jest.advanceTimersByTime(300);
+      await Promise.resolve();
+      expect(settled).toBe(false);
+
+      callback(anchorMessage);
+      callback(venueRelayEose);
+      jest.advanceTimersByTime(250);
+      await expect(result).resolves.toMatchObject({ pubkey: root, badgeIssuer });
+      expect(unsubscribe).toHaveBeenCalledTimes(1);
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   it('matches only the exact live membership award returned by redemption', () => {

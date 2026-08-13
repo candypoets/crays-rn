@@ -16,7 +16,7 @@
     "test:watch": "jest --watch",
     "qa:maestro": "MAESTRO_CLI_NO_ANALYTICS=1 maestro test maestro/flows/cold-signup.yaml",
     "qa:entry": "node .qa/qa-cold-signup.mjs",
-    "qa:contracts": "node .qa/verify-screen-contracts.mjs",
+    "qa:contracts": "node .qa/verify-screen-contracts.mjs && node --test .qa/relay-cleanup.test.mjs",
     "qa:relay:bootstrap": "node .qa/relay-bootstrap.mjs",
     "qa:relay:verify": "node .qa/relay-verify.mjs",
     "qa:relay:teardown": "node .qa/relay-teardown.mjs",

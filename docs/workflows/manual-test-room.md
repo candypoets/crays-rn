@@ -37,6 +37,10 @@ Entry remains a privacy boundary:
   address.
 - A failed, expired, exhausted, wrong-room, wrong-issuer, or delayed award stays
   on Join privacy with a retryable error. It never shows false entry.
+- A cached Test Room redemption is re-confirmed on every visible entry. When
+  the exact relay's network EOSE proves that its award disappeared, only this
+  effectively unlimited public test token is redeemed again; finite invites
+  are never consumed twice.
 
 No local invite endpoint or handoff proxy is part of this workflow. TestFlight
 users contact the hosted community invite service directly.
@@ -89,6 +93,11 @@ Independent verifiers then require:
   and one-hour expiry;
 - one valid app-authored kind-0 profile carrying the exact test display name;
 - complete author-scoped fixture teardown from the shared reserved relay.
+
+Cleanup treats the shared badge issuer carefully: it removes awards addressed
+to harness fixture identities, but preserves issuer awards granted to unrelated
+Test Room visitors. A developer QA run therefore cannot revoke another
+device's redeemed membership.
 
 Additional manual paths are quiet entry with zero redemption, token expiry,
 wrong-room service metadata, missing root anchor, delayed award read-back,

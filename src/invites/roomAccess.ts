@@ -1,6 +1,7 @@
 import {
   confirmInviteRedemption,
   loadInvitePreview,
+  MissingInviteRedemptionError,
   redeemInvite,
   resolveInviteSource,
   type InvitePreview,
@@ -50,6 +51,20 @@ export async function grantVisibleRoomAccess({
     throw new Error('This room invitation belongs to another venue. Ask staff for a fresh invite.');
   }
   const redemption = await operations.redeem(preview, invite.token, pubkey);
-  await operations.confirm({ preview, pubkey, redemption, relayUrl: roomRelayUrl });
-  return redemption;
+  try {
+    await operations.confirm({ preview, pubkey, redemption, relayUrl: roomRelayUrl });
+    return redemption;
+  } catch (cause) {
+    // The public Test Room invite is deliberately reusable. If QA cleanup from
+    // an older build removed a cached award, refresh only that explicit
+    // reusable grant. Ordinary finite-use invites must never be consumed twice.
+    if (
+      !(cause instanceof MissingInviteRedemptionError) ||
+      !redemption.cached ||
+      preview.claims.max !== Number.MAX_SAFE_INTEGER
+    ) throw cause;
+    const refreshed = await operations.redeem(preview, invite.token, pubkey, { force: true });
+    await operations.confirm({ preview, pubkey, redemption: refreshed, relayUrl: roomRelayUrl });
+    return refreshed;
+  }
 }

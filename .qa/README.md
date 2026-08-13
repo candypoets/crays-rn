@@ -115,7 +115,9 @@ creation cooldown.
 Do not use a JavaScript mock store as proof of relay behavior. Keep fixtures
 deterministic and make operations idempotent where the product requires it.
 Addressable fixture `d` tags are stable and replace across runs; non-replaceable
-awards are removed before each seed. Scenario state files contain the
+awards addressed to fixture identities are removed before each seed. Awards
+from the shared badge issuer to unrelated Test Room visitors are never cleanup
+targets. Scenario state files contain the
 re-fetched badge issuer secret, are always mode `0600`, and must never be
 printed or committed.
 
@@ -123,7 +125,7 @@ The reserved relay persists, but fixture data does not. Bootstrap first grants
 fixture identities a temporary, UI-invisible NIP-97 capability and sweeps old
 events. Teardown publishes kind-5 deletions signed by each original fixture
 author, verifies the tombstones landed, waits before checking absence, and
-requires all non-kind-5 fixture events to be gone. Root-authored infrastructure
+requires all targeted non-kind-5 fixture events to be gone. Root-authored infrastructure
 (the kind-31727 community anchor and kind-30009 `members` definition) is never
 in the cleanup signer set. `node .qa/relay-teardown.mjs --sweep` recovers only
 fixture data; it never deletes the relay or a Docker volume, and is safe only

@@ -8,7 +8,7 @@ This is Crays Mobile's only public feed. It reads and writes against exactly the
 
 ## UI and interaction
 
-- Fixed venue context, the same current-moment rail as People, and the explicit **Chronological · locks when you leave** consequence.
+- Fixed venue context, the same room-session rail (**Joined / Leave at**) as People, and the explicit **Chronological · locks when you leave** consequence. The kind-30312 room description never occupies an event-like slot.
 - One keyboard-safe **Add a note** composer, maximum 500 characters for the pilot. It retains the draft and char count while publishing.
 - Notes follow a thin vertical tempo rail. Venue announcements use a strong labelled block and icon, never color alone; guest posts use white notes and portrait crops.
 - Posts offer Message and Report; reply can be added against the same room credential.
@@ -45,7 +45,8 @@ Announcements have an explicit label. Author buttons announce names. Content fol
 Unit tests verify announcements, composer, feed content, publish failure,
 empty-draft disabling, the 500-character boundary, retained publishing drafts,
 and report-action locking. `maestro/flows/03-room-feed.yaml` joins through the
-real root-authorized room definition, selects Room feed, and asserts both an operator announcement and
+real root-authorized room definition, selects Room feed, proves the room
+description is absent from event-like UI, and asserts both an operator announcement and
 guest post planted on the isolated relay.
 
 `.qa/qa-03-room-feed.mjs` independently provisions, seeds, queries, verifies, and destroys a Nuts relay. It uses an authorized QA signer, publishes an exact post through UI, and independently proves kind, signature, room/client/expiry tags and content. It also reports a selected Jonas post and proves the report's exact `e`, `p`, and venue tags. Component QA owns retained-draft/rejection and disabled-publish behavior. Credential-timeout enforcement remains D-002/D-003.
