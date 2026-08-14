@@ -22,12 +22,14 @@ export function AppShell({ children, chrome = 'brand', eyebrow, headerAction, sc
   // The bottom tab bar already owns the home-indicator inset; everywhere else
   // the scroll content pads so the last row can rest above it.
   const bottomInset = underTabBar ? 0 : insets.bottom;
-  const content = <View className="mx-auto w-full max-w-[620px] grow px-5" style={{ paddingBottom: 32 + bottomInset }}>{children}</View>;
+  // The fixed brand header claims the top inset; child chrome scrolls through it.
+  const topInset = chrome === 'brand' ? 0 : insets.top;
+  const content = <View className="mx-auto w-full max-w-[620px] grow px-5" style={{ paddingTop: topInset, paddingBottom: 32 + bottomInset }}>{children}</View>;
   return (
-    <SafeAreaView className="flex-1 bg-base-100" edges={['top', 'right', 'left']} testID={testID}>
+    <SafeAreaView className="flex-1 bg-base-100" edges={['right', 'left']} testID={testID}>
       {showEdgeTabs ? <EdgeTabs top={96} /> : null}
       {chrome === 'brand' ? (
-        <View className="mx-auto w-full max-w-[620px] flex-row items-center justify-between px-5 pb-3 pt-2" testID={`${testID}-brand-header`}>
+        <View className="mx-auto w-full max-w-[620px] flex-row items-center justify-between px-5 pb-3" style={{ paddingTop: 8 + insets.top }} testID={`${testID}-brand-header`}>
           <View className="flex-1 flex-row items-center gap-3">
             <BrandMark size={42} />
             <View className="flex-1">
@@ -40,7 +42,7 @@ export function AppShell({ children, chrome = 'brand', eyebrow, headerAction, sc
       ) : null}
       {showTempoRail ? <TempoRail className="mx-5 mb-2 opacity-90" /> : null}
       {scroll ? (
-        <ScrollView contentContainerClassName="grow" scrollIndicatorInsets={{ bottom: bottomInset }} showsVerticalScrollIndicator={false}>{content}</ScrollView>
+        <ScrollView contentContainerClassName="grow" scrollIndicatorInsets={{ top: topInset, bottom: bottomInset }} showsVerticalScrollIndicator={false}>{content}</ScrollView>
       ) : content}
     </SafeAreaView>
   );

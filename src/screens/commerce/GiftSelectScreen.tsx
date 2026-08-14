@@ -24,8 +24,8 @@ export function GiftSelectScreen({ onBack, onSelect, person, products, roomName 
   const insets = useSafeAreaInsets();
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'right', 'left']} testID="gift-select-screen">
-      <ScrollView contentContainerClassName="grow px-5" contentContainerStyle={{ paddingBottom: 32 + insets.bottom }} scrollIndicatorInsets={{ bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
+    <SafeAreaView className="flex-1 bg-canvas" edges={['right', 'left']} testID="gift-select-screen">
+      <ScrollView contentContainerClassName="grow px-5" contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 + insets.bottom }} scrollIndicatorInsets={{ top: insets.top, bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
         <View className="mx-auto w-full max-w-[620px] grow">
           <View className="flex-row items-center justify-between pt-2">
             <Pressable

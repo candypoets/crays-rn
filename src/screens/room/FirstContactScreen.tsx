@@ -4,6 +4,7 @@
 // FIRST VIEWPORT: Identity, live context, Message, Send a drink, and Browse quietly stay together.
 // FORM: Missing contact rights never become a visually enabled action; safety remains one menu away.
 import { Ionicons } from '@expo/vector-icons';
+import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -83,11 +84,12 @@ export function FirstContactScreen({
   const canSendDrink = contactState === 'accepted';
 
   return (
-    <SafeAreaView className="flex-1 bg-surface-soft" edges={['top', 'left', 'right']} testID="first-contact-screen">
+    <SafeAreaView className="flex-1 bg-surface-soft" edges={['left', 'right']} testID="first-contact-screen">
+      <StatusBar style="light" />
       <ScrollView contentContainerClassName="grow" contentContainerStyle={{ paddingBottom: insets.bottom }} scrollIndicatorInsets={{ bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
         <View className="relative h-[390px] overflow-hidden bg-surface-soft">
           <PortraitImage className="absolute inset-0" index={portraitIndex(person.name)} label={`Portrait of ${person.name}`} />
-          <View className="absolute inset-x-0 top-0 flex-row items-center justify-between px-5 pt-3">
+          <View className="absolute inset-x-0 top-0 flex-row items-center justify-between px-5" style={{ paddingTop: 12 + insets.top }}>
             <RoundButton icon="chevron-back" label="Back to people" onPress={onBack} testID="first-contact-back" />
             <RoundButton icon="ellipsis-horizontal" label="Privacy and safety" onPress={() => setShowSafety((value) => !value)} testID="first-contact-more" />
           </View>

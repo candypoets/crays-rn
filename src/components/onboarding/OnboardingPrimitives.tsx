@@ -25,10 +25,10 @@ export function OnboardingShell({ children, keyboard = false, showEdgeTabs = tru
   const content = (
     <ScrollView
       automaticallyAdjustKeyboardInsets
-      contentContainerClassName="grow px-6 pt-3"
-      contentContainerStyle={{ paddingBottom: 32 + insets.bottom }}
+      contentContainerClassName="grow px-6"
+      contentContainerStyle={{ paddingTop: 12 + insets.top, paddingBottom: 32 + insets.bottom }}
       keyboardShouldPersistTaps="handled"
-      scrollIndicatorInsets={{ bottom: insets.bottom }}
+      scrollIndicatorInsets={{ top: insets.top, bottom: insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
       <View className="mx-auto w-full max-w-[560px] grow">{children}</View>
@@ -36,7 +36,7 @@ export function OnboardingShell({ children, keyboard = false, showEdgeTabs = tru
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-base-100" edges={['top', 'right', 'left']} testID={testID}>
+    <SafeAreaView className="flex-1 bg-base-100" edges={['right', 'left']} testID={testID}>
       {showEdgeTabs ? <EdgeTabs /> : null}
       {keyboard ? (
         <KeyboardAvoidingView

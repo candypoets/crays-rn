@@ -63,14 +63,14 @@ export function RoomPreviewScreen({ error, loading, onEnter, room }: RoomPreview
 
   const capabilities = room.capabilities.map((capability) => capabilityLabels[capability] || capability);
   return (
-    <SafeAreaView className="flex-1 bg-photo-night" edges={['top', 'left', 'right']} testID="room-preview-screen">
+    <SafeAreaView className="flex-1 bg-photo-night" edges={['left', 'right']} testID="room-preview-screen">
       <StatusBar style="light" />
       <ScrollView contentContainerClassName="grow" contentContainerStyle={{ paddingBottom: insets.bottom }} scrollIndicatorInsets={{ bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
         <View className="relative min-h-[610px] grow overflow-hidden bg-photo-night">
           <VenueImage className="absolute inset-0" index={1} label={`${room.name} venue atmosphere`} />
           <View className="absolute inset-0 bg-photo-night/45" />
 
-          <View className="flex-row items-center justify-between px-5 pt-3">
+          <View className="flex-row items-center justify-between px-5" style={{ paddingTop: 12 + insets.top }}>
             <Pressable accessibilityLabel="Back to Discover" accessibilityRole="button" className="h-12 w-12 items-center justify-center rounded-full border border-white/40 bg-photo-night/55" onPress={() => router.back()} testID="room-preview-cancel">
               <Ionicons color={colors.surface} name="chevron-back" size={25} />
             </Pressable>

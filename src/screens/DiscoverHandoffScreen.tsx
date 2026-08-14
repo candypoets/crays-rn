@@ -6,7 +6,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { NightBadge, VenueImage } from '@/components/night/NightPrimitives';
 import { BrandMark, PrimaryButton } from '@/components/onboarding/OnboardingPrimitives';
@@ -100,9 +100,11 @@ export function DiscoverHandoffScreen({
   room,
   testRoom,
 }: Props) {
+  const insets = useSafeAreaInsets();
+
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'left', 'right']} testID="discover-screen">
-      <ScrollView contentContainerClassName="grow px-5 pb-8" showsVerticalScrollIndicator={false}>
+    <SafeAreaView className="flex-1 bg-canvas" edges={['left', 'right']} testID="discover-screen">
+      <ScrollView contentContainerClassName="grow px-5 pb-8" contentContainerStyle={{ paddingTop: insets.top }} scrollIndicatorInsets={{ top: insets.top }} showsVerticalScrollIndicator={false}>
         <View className="mx-auto w-full max-w-[620px] grow">
           <View className="flex-row items-center justify-between pt-2">
             <BrandMark size={34} />

@@ -6,7 +6,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PortraitImage } from '@/components/night/NightPrimitives';
 import type { ActiveRoom, RoomPerson, RoomPost, RoomProfile } from '@/rooms/types';
@@ -325,13 +325,17 @@ function FeedView(props: Pick<RoomScreenProps, 'composer' | 'composerError' | 'c
 }
 
 export function RoomScreen(props: RoomScreenProps) {
+  const insets = useSafeAreaInsets();
+
   return (
     <SafeAreaView
       className="flex-1 bg-canvas"
-      edges={['top', 'left', 'right']}
+      edges={['left', 'right']}
       testID={props.view === 'people' ? 'room-people-screen' : 'room-feed-screen'}
     >
-      <RoomHeader {...props} />
+      <View style={{ paddingTop: insets.top }}>
+        <RoomHeader {...props} />
+      </View>
       <ScrollView contentContainerClassName="pb-6" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <RoomSessionRail room={props.activeRoom} />
         {props.view === 'people' ? <PeopleView {...props} /> : <FeedView {...props} />}
