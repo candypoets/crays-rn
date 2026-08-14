@@ -5,7 +5,9 @@ import { assert, loadKeys, makePool, nowSeconds, queryUntil, readState } from '.
 
 const state = readState();
 const keys = loadKeys();
-const recipient = keys.users[1];
+const recipientPubkey = state.fixture_pubkeys?.[1];
+const recipient = keys.users.find((user) => user.pub === recipientPubkey);
+if (!recipient) throw new Error('scenario state does not identify a fixture recipient key');
 const pool = makePool();
 const { events } = await queryUntil(
   pool, state.relay_url,
