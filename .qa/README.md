@@ -121,7 +121,14 @@ targets. Scenario state files contain the
 re-fetched badge issuer secret, are always mode `0600`, and must never be
 printed or committed.
 
-The reserved relay persists, but fixture data does not. Bootstrap first grants
+The reserved relay persists, but scenario fixture data does not. When a
+published Test Room state exists at `/tmp/crays-manual-test-room.json`, every
+scenario protects its recorded event IDs during both pre-seed sweep and
+teardown. The published room uses a dedicated fixture-user window, while
+ephemeral scenarios namespace their addressable `d` tags and leave the
+published venue kind-0 coordinate untouched. Routine QA therefore cannot
+supersede or take the persistent development/TestFlight room offline.
+Bootstrap first grants
 fixture identities a temporary, UI-invisible NIP-97 capability and sweeps old
 events. Teardown publishes kind-5 deletions signed by each original fixture
 author, verifies the tombstones landed, waits before checking absence, and

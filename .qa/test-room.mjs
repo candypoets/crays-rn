@@ -29,6 +29,8 @@ const scriptEnv = {
   CRAYS_INVITE_MAX_REDEMPTIONS: process.env.CRAYS_INVITE_MAX_REDEMPTIONS || String(Number.MAX_SAFE_INTEGER),
   CRAYS_QA_PREAUTHORIZE: process.env.CRAYS_QA_PREAUTHORIZE || '0',
   CRAYS_QA_MINT_INVITE: process.env.CRAYS_QA_MINT_INVITE || '1',
+  CRAYS_PERSIST_TEST_ROOM_FIXTURES: publishOnly ? '1' : '0',
+  CRAYS_FIXTURE_USER_OFFSET: process.env.CRAYS_FIXTURE_USER_OFFSET || (publishOnly ? '20' : '0'),
   // Test Room members can publish profile/feed data and room-bound NIP-53
   // presence through the same production relay gate as the TestFlight app.
   CRAYS_TEST_ROOM_PRESENCE: '1',

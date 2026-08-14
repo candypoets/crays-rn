@@ -40,4 +40,4 @@ appId: life.crays
 - assertVisible: "^Discover$"
 - assertVisible: "^Messages$"
 - assertVisible: "^Me$"
-- takeScreenshot: 01-people-relay
+- takeScreenshot: 01-people-edge-to-edge

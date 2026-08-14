@@ -76,6 +76,18 @@ verification, and teardown. Bootstrap asks the real invite service for exactly
 seed route injects that per-run public credential into `createTestRoomPointer`;
 release builds cannot use this route.
 
+All relay-backed QA scenarios protect the event IDs recorded by the published
+Test Room state at `/tmp/crays-manual-test-room.json`. Their pre-seed sweep and
+teardown may add and remove scenario events from the shared reserved relay, but
+must not delete the persistent room definition, catalog, profiles, presences,
+entitlements, or venue profile recorded by `npm run test-room:publish`.
+Published people use a dedicated fixture-key window; ephemeral scenarios use
+separate fixture identities, namespace every addressable `d` coordinate by
+room id, and do not overwrite the published admin's replaceable kind-0 profile.
+This matters because deleting a newer Nostr replacement does not restore the
+older event it superseded. Publishing the room itself uses its own state path
+and therefore intentionally replaces its prior fixture family.
+
 `maestro/flows/test-room.yaml` provides these inputs: hosted service URL,
 hosted WSS relay, Test Room id, direct invite token, signer identity, visible
 intent, and context. Its expected output is Discover card → verified preview →
@@ -92,7 +104,8 @@ Independent verifiers then require:
   `30312:<room-author>:<room-id>` address, with the selected intent, context,
   and one-hour expiry;
 - one valid app-authored kind-0 profile carrying the exact test display name;
-- complete author-scoped fixture teardown from the shared reserved relay.
+- complete author-scoped scenario teardown from the shared reserved relay,
+  while the recorded published Test Room fixture remains queryable.
 
 Cleanup treats the shared badge issuer carefully: it removes awards addressed
 to harness fixture identities, but preserves issuer awards granted to unrelated

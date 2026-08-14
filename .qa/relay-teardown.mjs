@@ -7,6 +7,7 @@ import {
   getRelaySecrets,
   loadKeys,
   makePool,
+  publishedTestRoomEventIds,
   queryFixtureEvents,
   readState,
   requireCoordinator,
@@ -28,6 +29,7 @@ const secrets = await getRelaySecrets(relay.id, keys);
 const badgeIssuerSecret = secrets.badge_issuer_secret_key;
 const communityRoot = relay.required_badge.split(':')[1];
 const pool = makePool();
+const protectedPublishedFixtureIds = publishedTestRoomEventIds();
 
 try {
   const { signers, badgeIssuerPubkey } = fixtureSignerMap(keys, badgeIssuerSecret);
@@ -44,6 +46,7 @@ try {
     keys,
     badgeIssuerSecret,
     communityRoot,
+    excludeIds: protectedPublishedFixtureIds,
     label: process.argv.includes('--sweep') ? 'reserved-relay recovery sweep' : 'scenario teardown',
   });
   console.log(`ok - reserved relay retained; removed ${result.deleted} fixture event(s)`);

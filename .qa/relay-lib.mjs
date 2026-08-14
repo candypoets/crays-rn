@@ -22,6 +22,7 @@ useWebSocketImplementation(QaWebSocket);
 
 export const COORDINATOR_URL = (process.env.COORDINATOR_URL || 'https://coordinator.nuts.cash').replace(/\/$/, '');
 export const STATE_PATH = process.env.CRAYS_QA_STATE || '/tmp/qa-crays-room.json';
+export const PUBLISHED_TEST_ROOM_STATE_PATH = process.env.CRAYS_PUBLISHED_TEST_ROOM_STATE || '/tmp/crays-manual-test-room.json';
 export const DEFAULT_KEYS_JSON = '/root/code/strfry-badge-node/test/env/keys.json';
 export const RESERVED_RELAY_DOMAIN = process.env.CRAYS_QA_RELAY_DOMAIN || 'crays-test.relays.nuts.cash';
 export const FIXTURE_CAPABILITY_D = 'crays-qa-write-capabilities';
@@ -239,6 +240,61 @@ export function isFixtureCleanupTarget(event, signerPubkeys, badgeIssuerPubkey) 
   if (event.pubkey !== badgeIssuerPubkey) return true;
   const recipient = eventTagValue(event, 'p');
   return Boolean(recipient && signerPubkeys.has(recipient));
+}
+
+const persistedEventIdFields = [
+  'anchor_id',
+  'cleanup_capability_definition_id',
+  'event_access_award_id',
+  'event_id',
+  'incoming_message_event_id',
+  'membership_award_id',
+  'membership_definition_id',
+  'order_award_id',
+  'order_status_id',
+  'pass_award_id',
+  'pass_status_id',
+  'room_definition_id',
+  'test_room_membership_definition_id',
+  'venue_profile_id',
+];
+
+const persistedEventIdArrayFields = [
+  'cleanup_capability_award_ids',
+  'definition_ids',
+  'feed_ids',
+  'presence_ids',
+  'profile_ids',
+];
+
+export function fixtureEventIdsFromState(state) {
+  if (!state || typeof state !== 'object') return [];
+  const ids = [
+    ...persistedEventIdFields.map((field) => state[field]),
+    ...persistedEventIdArrayFields.flatMap((field) => Array.isArray(state[field]) ? state[field] : []),
+  ];
+  return [...new Set(ids.filter((value) => typeof value === 'string' && /^[0-9a-f]{64}$/i.test(value)))];
+}
+
+export function publishedTestRoomEventIds({ publishedStatePath = PUBLISHED_TEST_ROOM_STATE_PATH, scenarioStatePath = STATE_PATH } = {}) {
+  if (publishedStatePath === scenarioStatePath || !existsSync(publishedStatePath)) return [];
+  try {
+    const state = JSON.parse(readFileSync(publishedStatePath, 'utf8'));
+    return state.phase === 'ready' ? fixtureEventIdsFromState(state) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function fixtureAddressD(value, roomId, persistent) {
+  return persistent ? value : `${roomId}:${value}`;
+}
+
+export function fixtureUsersAtOffset(users, offset, count = 3) {
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('CRAYS_FIXTURE_USER_OFFSET must be a non-negative integer');
+  const selected = users.slice(offset, offset + count);
+  if (selected.length !== count) throw new Error(`CRAYS_FIXTURE_USER_OFFSET ${offset} cannot select ${count} fixture users`);
+  return selected;
 }
 
 export async function queryFixtureEvents(pool, relayUrl, signers, badgeIssuerPubkey) {

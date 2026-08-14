@@ -13,13 +13,16 @@ import {
   deleteFixtureEvents,
   emulatorUrl,
   ensureFixtureCleanupCapability,
+  fixtureAddressD,
   fixtureSignerMap,
+  fixtureUsersAtOffset,
   getRelaySecrets,
   loadKeys,
   makePool,
   nip98Header,
   nowSeconds,
   publishUntilStored,
+  publishedTestRoomEventIds,
   queryFixtureEvents,
   queryUntil,
   requireCoordinator,
@@ -30,9 +33,12 @@ import {
 } from './relay-lib.mjs';
 
 const keys = loadKeys();
+const protectedPublishedFixtureIds = publishedTestRoomEventIds();
 const run = Date.now().toString(36);
 const roomDisplayName = process.env.CRAYS_TEST_ROOM_NAME || ROOM_DISPLAY_NAME;
 const roomId = process.env.CRAYS_TEST_ROOM_ID || 'crays-qa-skyline';
+const persistentFixtures = process.env.CRAYS_PERSIST_TEST_ROOM_FIXTURES === '1';
+const addressD = (value) => fixtureAddressD(value, roomId, persistentFixtures);
 const MAX_TEST_ROOM_TTL_SECONDS = 90 * 24 * 60 * 60;
 const fixtureTtlSeconds = Math.min(MAX_TEST_ROOM_TTL_SECONDS, Math.max(3_600, Number(process.env.CRAYS_TEST_ROOM_TTL_SECONDS || 86_400)));
 if (!Number.isSafeInteger(fixtureTtlSeconds)) throw new Error('CRAYS_TEST_ROOM_TTL_SECONDS must be an integer number of seconds');
@@ -117,7 +123,7 @@ if (process.env.CRAYS_TEST_ROOM_PRESENCE === '1') {
   // recipients exercise the NIP-53 presence write in the current app.
   await sleep(1_000);
 }
-const fixtureUsers = keys.users.slice(0, 3);
+const fixtureUsers = fixtureUsersAtOffset(keys.users, Number(process.env.CRAYS_FIXTURE_USER_OFFSET || 0));
 const qaUserIndex = Number(process.env.CRAYS_QA_USER_INDEX || 0);
 const qaUser = keys.users[qaUserIndex];
 if (!qaUser) throw new Error(`CRAYS_QA_USER_INDEX ${qaUserIndex} has no fixture key`);
@@ -159,7 +165,7 @@ if (preserveExistingFixtures) {
     keys,
     badgeIssuerSecret: issuerSecret,
     communityRoot,
-    excludeIds: capabilityIds,
+    excludeIds: [...capabilityIds, ...protectedPublishedFixtureIds],
     label: 'pre-seed sweep',
   });
 }
@@ -203,12 +209,19 @@ if (process.env.CRAYS_QA_MINT_INVITE !== '0') {
   assert(invite.max_redemptions === inviteMaxRedemptions && inviteClaims.max === inviteMaxRedemptions, 'invite service preserved the requested redemption allowance');
   assert(badgeTtlSeconds > 0 ? Number.isSafeInteger(inviteClaims.badge_exp) : inviteClaims.badge_exp === undefined, badgeTtlSeconds > 0 ? 'invite carries the requested membership expiry' : 'invite grants membership without an award expiry');
 }
-const publish = (event, label) => publishUntilStored(pool, relay.relay_url, event, label);
-const profile = signEvent(
-  { kind: 0, content: JSON.stringify({ name: roomDisplayName, about: 'Rooftop jazz, drinks and late-night company.' }) },
-  keys.admin.priv,
-);
-await publish(profile, 'venue kind-0 round-trips after the write gate is ready');
+const publish = async (event, label) => {
+  await publishUntilStored(pool, relay.relay_url, event, label);
+};
+let venueProfile;
+if (persistentFixtures || protectedPublishedFixtureIds.length === 0) {
+  venueProfile = signEvent(
+    { kind: 0, content: JSON.stringify({ name: roomDisplayName, about: 'Rooftop jazz, drinks and late-night company.' }) },
+    keys.admin.priv,
+  );
+  await publish(venueProfile, 'venue kind-0 round-trips after the write gate is ready');
+} else {
+  console.log('ok - protected published Test Room owns the venue kind-0 coordinate');
+}
 
 // Authorize deterministic people so their own signed profile/feed/presence
 // fixtures pass the exact membership gate the app will encounter.
@@ -300,7 +313,8 @@ for (const [index, event] of feedEvents.entries()) await publish(event, `room fe
 const products = FIXTURE_PRODUCTS;
 const definitionIds = [];
 const productAddresses = [];
-for (const [position, [d, productName, description, price, section, productKind]] of products.entries()) {
+for (const [position, [baseD, productName, description, price, section, productKind]] of products.entries()) {
+  const d = addressD(baseD);
   const product = signEvent(
     {
       kind: 30402,
@@ -318,7 +332,7 @@ for (const [position, [d, productName, description, price, section, productKind]
   productAddresses.push(`30402:${keys.admin.pub}:${d}`);
 }
 
-const orderRef = 'CR-QA-READY';
+const orderRef = persistentFixtures ? 'CR-QA-READY' : `CR-QA-READY-${roomId}`;
 const orderAward = signEvent(
   {
     kind: 8,
@@ -342,11 +356,12 @@ const orderStatus = signEvent(
 );
 await publish(orderStatus, 'ready order status');
 
+const membershipD = addressD('skyline-regular');
 const membership = signEvent(
   {
       kind: 30009,
       tags: [
-      ['d', 'skyline-regular'], ['t', 'membership'],
+      ['d', membershipD], ['t', 'membership'],
       ['name', FIXTURE_MEMBERSHIP_NAME], ['description', 'Member nights, one monthly cocktail, and priority booking.'],
       ['price', '24.00', 'EUR', 'month'], ['availability', 'available'],
     ],
@@ -354,18 +369,19 @@ const membership = signEvent(
   keys.admin.priv,
 );
 await publish(membership, 'membership definition');
-const membershipAddress = `30009:${keys.admin.pub}:skyline-regular`;
+const membershipAddress = `30009:${keys.admin.pub}:${membershipD}`;
 const membershipAward = signEvent(
   { kind: 8, tags: [['a', membershipAddress], ['p', fixtureUsers[0].pub], ['i', 'invite-grant:crays-qa'], ['t', '30009'], ['t', 'membership']] },
   issuerSecret,
 );
 await publish(membershipAward, 'member durable membership award');
 
+const passD = addressD('skyline-three-visits');
 const passDefinition = signEvent(
   {
       kind: 30402,
       tags: [
-      ['d', 'skyline-three-visits'], ['title', 'Skyline three-visit pass'],
+      ['d', passD], ['title', 'Skyline three-visit pass'],
       ['summary', 'Three entries to Skyline member nights.'],
       ['price', '30.00', 'EUR'], ['max_uses', '3'], ['availability', 'available'],
     ],
@@ -373,7 +389,7 @@ const passDefinition = signEvent(
   keys.admin.priv,
 );
 await publish(passDefinition, 'multi-use pass listing');
-const passAddress = `30402:${keys.admin.pub}:skyline-three-visits`;
+const passAddress = `30402:${keys.admin.pub}:${passD}`;
 const passAward = signEvent(
   { kind: 8, tags: [['a', passAddress], ['p', fixtureUsers[0].pub], ['order', 'PASS-CRAYS-QA'], ['t', '30402']] },
   issuerSecret,
@@ -384,14 +400,14 @@ const passUse = signEvent(
     kind: 37237,
     tags: [
       ['status', 'fulfilled'], ['a', passAddress], ['e', passAward.id], ['p', fixtureUsers[0].pub],
-      ['order', 'checkin-crays-qa-one'], ['d', 'order:checkin-crays-qa-one'],
+      ['order', `checkin:${roomId}:one`], ['d', addressD('order:checkin-crays-qa-one')],
     ],
   },
   keys.admin.priv,
 );
 await publish(passUse, 'one fulfilled pass use');
 
-const eventD = 'rooftop-jazz';
+const eventD = addressD('rooftop-jazz');
 const calendarEvent = signEvent(
   {
     kind: 31923,
@@ -406,11 +422,12 @@ const calendarEvent = signEvent(
 );
 await publish(calendarEvent, 'calendar event');
 
+const eventAccessD = addressD('rooftop-jazz-ticket');
 const eventAccessDefinition = signEvent(
   {
       kind: 30402,
       tags: [
-      ['d', 'rooftop-jazz-ticket'], ['title', 'Rooftop Jazz entry'],
+      ['d', eventAccessD], ['title', 'Rooftop Jazz entry'],
       ['summary', 'Door entry for the Rooftop Jazz set.'],
       ['price', '0.00', 'EUR'], ['max_uses', '1'], ['availability', 'available'],
       ['a', `31923:${keys.admin.pub}:${eventD}`],
@@ -419,7 +436,7 @@ const eventAccessDefinition = signEvent(
   keys.admin.priv,
 );
 await publish(eventAccessDefinition, 'event access listing');
-const eventAccessAddress = `30402:${keys.admin.pub}:rooftop-jazz-ticket`;
+const eventAccessAddress = `30402:${keys.admin.pub}:${eventAccessD}`;
 const eventAccessAward = signEvent(
   { kind: 8, tags: [['a', eventAccessAddress], ['p', fixtureUsers[0].pub], ['event', `31923:${keys.admin.pub}:${eventD}`], ['t', '30402'], ['t', 'event_access']] },
   issuerSecret,
@@ -457,6 +474,7 @@ writeState({
   cleanup_capability_definition_id: cleanupCapability.definition.id,
   cleanup_capability_award_ids: cleanupCapability.awards.map((award) => award.id),
   anchor_id: anchor.id,
+  ...(venueProfile ? { venue_profile_id: venueProfile.id } : {}),
   room_definition_id: roomDefinition.id,
   room_address: roomAddress,
   profile_ids: profileIds,

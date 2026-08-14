@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ScrollView } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { getPeopleRosterLayout, RoomScreen } from '@/screens/room/RoomScreen';
 import type { ActiveRoom, RoomPerson, RoomPost, RoomProduct, RoomProfile } from '@/rooms/types';
@@ -30,6 +31,19 @@ function props(overrides: Partial<Parameters<typeof RoomScreen>[0]> = {}): Param
 }
 
 describe('RoomScreen', () => {
+  beforeEach(() => {
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ bottom: 0, left: 0, right: 0, top: 0 });
+  });
+
+  it('lets the room scroll through the top safe area while the tab bar owns the bottom inset', () => {
+    jest.mocked(useSafeAreaInsets).mockReturnValue({ bottom: 20, left: 0, right: 0, top: 24 });
+    render(<RoomScreen {...props()} />);
+
+    const scrollView = screen.UNSAFE_getByType(ScrollView);
+    expect(scrollView.props.contentContainerStyle).toEqual({ paddingTop: 24 });
+    expect(scrollView.props.scrollIndicatorInsets).toEqual({ top: 24, bottom: 0 });
+  });
+
   it('selects the relay menu by default and exposes the live people count in room navigation', () => {
     const onChangeView = jest.fn();
     const onOpenProduct = jest.fn();

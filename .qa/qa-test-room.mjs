@@ -13,6 +13,7 @@ const env = {
   ...process.env,
   CRAYS_TEST_ROOM_STATE: statePath,
   CRAYS_TEST_ROOM_PID: pidPath,
+  CRAYS_TEST_ROOM_ID: 'crays-qa-test-room',
   CRAYS_QA_STATE: statePath,
   CRAYS_QA_USER_INDEX: String(qaUserIndex),
   // User 3 starts outside the fixture membership. Visible entry must redeem
@@ -20,13 +21,13 @@ const env = {
   CRAYS_QA_PREAUTHORIZE: '0',
 };
 
-function run(command, args) {
-  return execFileSync(command, args, { cwd: process.cwd(), env, stdio: 'inherit', maxBuffer: 64 * 1024 * 1024 });
+function run(command, args, runEnv = env) {
+  return execFileSync(command, args, { cwd: process.cwd(), env: runEnv, stdio: 'inherit', maxBuffer: 64 * 1024 * 1024 });
 }
 
 function waitForReady(child) {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Test Room did not become ready within 120 seconds')), 120_000);
+    const timeout = setTimeout(() => reject(new Error('Test Room did not become ready within 300 seconds')), 300_000);
     let output = '';
     child.stdout.on('data', (chunk) => {
       const text = chunk.toString();
@@ -91,4 +92,5 @@ try {
   console.log(`QA PASS: test-build-room-visible-invite (${state.room_id})`);
 } finally {
   await stopChild(testRoom);
+  if (existsSync(statePath)) run(process.execPath, ['.qa/relay-teardown.mjs']);
 }

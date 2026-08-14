@@ -373,10 +373,15 @@ export function RoomScreen(props: RoomScreenProps) {
       edges={['left', 'right']}
       testID={`room-${props.view}-screen`}
     >
-      <View style={{ paddingTop: insets.top }}>
+      <ScrollView
+        key={props.view}
+        contentContainerClassName="pb-6"
+        contentContainerStyle={{ paddingTop: insets.top }}
+        keyboardShouldPersistTaps="handled"
+        scrollIndicatorInsets={{ top: insets.top, bottom: 0 }}
+        showsVerticalScrollIndicator={false}
+      >
         <RoomHeader {...props} />
-      </View>
-      <ScrollView key={props.view} contentContainerClassName="pb-6" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <RoomSessionRail room={props.activeRoom} />
         {props.view === 'menu' ? (
           <View className="mx-auto w-full max-w-[620px] px-5">

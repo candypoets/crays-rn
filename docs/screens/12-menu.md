@@ -8,7 +8,7 @@ Visual authority: the Night Playlist commerce/messages board `docs/design-explor
 
 ## Content and hierarchy
 
-- Shared room chrome: signed room name, connection truth, Leave, My night, and the fixed **Menu / People (x) / Feed** navbar. Menu is textually selected by default and the bottom primary tabs remain visible.
+- Shared room chrome: signed room name, connection truth, Leave, My night, and the **Menu / People (x) / Feed** navbar participate in the Room edge-to-edge scroll surface. Menu is textually selected by default and the bottom primary tabs remain visible.
 - **Tonight's setlist** leads the pane with the cart pill at right, followed by a compact tempo rail. Availability and prices come directly from the venue; payment methods appear at review. No duplicate Menu title, Back row, room identity, live-set, or kitchen-moment claim is rendered inside the pane.
 - Sections follow the actual `section` values of available definitions only (e.g. Drinks, Food, Events, Membership when the venue authors them); no fixed or empty categories are invented.
 - Each product is a bright card: shared drink imagery for drink kinds (deterministic atlas index from product position; honest icon block otherwise), name, reflowing summary, exact formatted price, and a small blue add cue. Rows use gap-aware equal columns instead of percentage widths, so narrow layouts do not wrap unpredictably. Tapping a card opens screen 13 — it never places an order or implies kitchen state. Unavailable products stay visible but disabled and dimmed, never purchasable.

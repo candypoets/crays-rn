@@ -12,7 +12,7 @@ This is Crays Mobile's only public feed. It reads and writes against exactly the
 - One keyboard-safe **Add a note** composer, maximum 500 characters for the pilot. It retains the draft and char count while publishing.
 - Notes follow a thin vertical tempo rail. Venue announcements use a strong labelled block and icon, never color alone; guest posts use white notes and portrait crops.
 - Posts offer Message and Report; reply can be added against the same room credential.
-- Menu, People with the visible count, and Feed use the same fixed room navbar as screen 01; Feed retains its selected state when revisiting the Room primary tab. My night and Leave remain in shared room chrome.
+- Menu, People with the visible count, and Feed use the same room navbar as screen 01 inside the edge-to-edge Room scroll surface; Feed retains its selected state when revisiting the Room primary tab. My night and Leave remain in shared room chrome.
 
 ## Relay contract
 
