@@ -8,7 +8,7 @@ This screen is the consent boundary between seeing a visible room profile and co
 
 ## UI and interaction
 
-- Open as a portrait-led native sheet: full-bleed selected portrait, text-labelled lime **In the room now** sticker, display name, intent, one-line room context, and room name.
+- Open as a portrait-led native sheet: the exact valid kind-0 picture already shown in People, or the same pubkey-derived bundled fallback, fills the hero. It never reselects an illustration from list position or display name. Follow with the text-labelled lime **In the room now** sticker, display name, intent, one-line room context, and room name.
 - Do not show distance, table, followers, popularity, or activity outside this room.
 - Message opens screen 22 unless an accepted conversation already exists; accepted contacts open the thread directly.
 - Send a drink opens screen 04 only after the recipient has accepted the NIP-04 conversation. A future signed recipient/venue gift-first policy may relax this conservative default (D-004).
@@ -27,6 +27,6 @@ All actions are labelled buttons with minimum 48-point touch targets. The consen
 
 ## QA strategy
 
-Unit coverage checks action hierarchy, the no-contact/pending gift lock, accepted-contact unlock, safety actions, and the non-anonymous contract. `maestro/flows/02-first-contact.yaml` enters an isolated relay-backed room, selects Jonas from actual presence/profile events, publishes a venue report, and verifies acknowledgement.
+Unit coverage checks stable kind-0 image handoff, action hierarchy, the no-contact/pending gift lock, accepted-contact unlock, safety actions, and the non-anonymous contract. `maestro/flows/02-first-contact.yaml` enters an isolated relay-backed room, selects People in the room navbar, opens Jonas from actual presence/profile events, publishes a venue report, and verifies acknowledgement.
 
 `.qa/qa-02-first-contact.mjs` creates and tears down its own test relay, validates fixture signatures, proves the person came from relay events, and independently checks the kind-1984 signer, venue, and target. `qa-safety-blocks.mjs` separately proves global/venue persistence, filtering, relaunch, unblock, and absence of DM or report side effects. Remote recipient policy/rate limits remain D-004.

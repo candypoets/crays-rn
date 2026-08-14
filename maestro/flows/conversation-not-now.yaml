@@ -24,7 +24,7 @@ appId: life.crays
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: "room-people-screen"
+      id: "room-menu-screen"
     timeout: 30000
 - tapOn:
     id: "tab-messages"

@@ -12,10 +12,6 @@ import { ErrorBanner, PrimaryButton } from '@/components/onboarding/OnboardingPr
 import type { LocalMessage } from '@/messages/store';
 import { colors } from '@/theme/colors';
 
-function portraitIndex(pubkey: string) {
-  return Number.parseInt(pubkey.slice(0, 2), 16) % 8 || 1;
-}
-
 function stateLabel(message: LocalMessage) {
   if (message.direction === 'outgoing' && message.state === 'requested') return 'waiting';
   return message.state;
@@ -61,8 +57,8 @@ export function MessagesScreen({
             >
               <PortraitImage
                 className="h-16 w-14 rounded-[18px]"
-                index={portraitIndex(message.recipientPubkey)}
-                label={`Portrait of ${message.recipientName}`}
+                identity={message.recipientPubkey}
+                label={`Profile illustration for ${message.recipientName}`}
               />
               <View className="ml-4 min-w-0 flex-1">
                 <View className="flex-row items-start justify-between gap-3">
@@ -145,8 +141,8 @@ export function ConversationScreen({
       headerAction={(
         <PortraitImage
           className="h-12 w-10 rounded-[14px]"
-          index={portraitIndex(message.recipientPubkey)}
-          label={`Portrait of ${message.recipientName}`}
+          identity={message.recipientPubkey}
+          label={`Profile illustration for ${message.recipientName}`}
         />
       )}
       testID="conversation-screen"

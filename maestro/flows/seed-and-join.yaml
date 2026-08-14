@@ -28,7 +28,7 @@ appId: life.crays
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-people-screen"
+      id: "room-menu-screen"
     timeout: 30000
 - extendedWaitUntil:
     visible: "Maya"

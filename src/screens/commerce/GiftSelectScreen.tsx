@@ -49,7 +49,7 @@ export function GiftSelectScreen({ onBack, onSelect, person, products, roomName 
               <Text className="mt-1 text-base font-black uppercase text-ink">Send a drink to {person.name}</Text>
               <Text className="mt-2 text-sm text-muted">At {roomName}</Text>
             </View>
-            <PortraitImage className="h-20 w-20 rounded-full border-4 border-verified" index={0} label={`Portrait of ${person.name}`} />
+            <PortraitImage className="h-20 w-20 rounded-full border-4 border-verified" identity={person.pubkey} label={`Profile image for ${person.name}`} picture={person.picture} />
           </View>
           <TempoRail className="mt-5" />
 

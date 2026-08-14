@@ -51,7 +51,7 @@ export function MessageRequestScreen({
     <AppShell headerAction={close} testID="message-request-screen" title="Message request">
       {sent ? (
         <View className="mt-8 items-center border-y border-edge bg-surface px-5 py-9">
-          <PortraitImage className="h-24 w-20 rounded-[24px]" index={1} label={`Portrait of ${person.name}`} />
+          <PortraitImage className="h-24 w-20 rounded-[24px]" identity={person.pubkey} label={`Profile image for ${person.name}`} picture={person.picture} />
           <View className="-mt-5 h-11 w-11 items-center justify-center self-center rounded-full border-4 border-surface bg-verified">
             <Ionicons color={colors.ink} name="checkmark" size={23} />
           </View>
@@ -67,7 +67,7 @@ export function MessageRequestScreen({
         <>
           <View className="mt-3 flex-row items-center gap-4 border-b border-edge pb-5">
             <View className="relative">
-              <PortraitImage className="h-20 w-16 rounded-[20px]" index={1} label={`Portrait of ${person.name}`} />
+              <PortraitImage className="h-20 w-16 rounded-[20px]" identity={person.pubkey} label={`Profile image for ${person.name}`} picture={person.picture} />
               <View className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-2 border-canvas bg-verified" />
             </View>
             <View className="min-w-0 flex-1">

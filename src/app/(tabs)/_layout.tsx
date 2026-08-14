@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import type { ColorValue } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PRIMARY_TABS, primaryTabIcon } from '@/navigation/primaryTabs';
+import { PRIMARY_TABS, primaryTabBarStyle, primaryTabIcon } from '@/navigation/primaryTabs';
 import { colors } from '@/theme/colors';
 
 function optionsFor(tab: (typeof PRIMARY_TABS)[number]) {
@@ -21,6 +22,8 @@ function optionsFor(tab: (typeof PRIMARY_TABS)[number]) {
 }
 
 export default function PrimaryTabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       backBehavior="initialRoute"
@@ -32,11 +35,12 @@ export default function PrimaryTabsLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarHideOnKeyboard: false,
         tabBarInactiveTintColor: colors.navMuted,
+        tabBarLabelPosition: 'below-icon',
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.edge,
-          paddingTop: 5,
+          ...primaryTabBarStyle(insets.bottom),
         },
         transitionSpec: { animation: 'timing', config: { duration: 280 } },
       }}

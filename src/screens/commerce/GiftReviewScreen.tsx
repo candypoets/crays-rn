@@ -39,7 +39,7 @@ export function GiftReviewScreen({ line, method, onBack, onChangeMethod }: { lin
       headerAction={
         <PortraitImage
           className="h-14 w-14 rounded-full border-2 border-verified"
-          index={1}
+          identity={line.recipientPubkey}
           label="Gift recipient illustration"
         />
       }

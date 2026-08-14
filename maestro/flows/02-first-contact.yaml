@@ -1,6 +1,12 @@
 appId: life.crays
 ---
 - runFlow: seed-and-join.yaml
+- tapOn:
+    id: "room-people-tab"
+- extendedWaitUntil:
+    visible:
+      id: "room-people-screen"
+    timeout: 15000
 - tapOn: "Jonas"
 - extendedWaitUntil:
     visible:

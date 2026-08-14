@@ -41,8 +41,14 @@ appId: life.crays
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-people-screen"
+      id: "room-menu-screen"
     timeout: 30000
+- tapOn:
+    id: "room-people-tab"
+- extendedWaitUntil:
+    visible:
+      id: "room-people-screen"
+    timeout: 15000
 - assertVisible: "Maya"
 - assertVisible: "Jonas"
 - extendedWaitUntil:

@@ -5,13 +5,14 @@ import type { RoomPerson } from '@/rooms/types';
 
 jest.mock('expo-router', () => ({ router: { replace: jest.fn() }, usePathname: () => '/person' }));
 
-const person: RoomPerson = { pubkey: 'b'.repeat(64), name: 'Maya', about: '', intent: 'Open to chat', context: 'Here for the jazz', expiresAt: 2_000_000_000, createdAt: 1 };
+const person: RoomPerson = { pubkey: 'b'.repeat(64), name: 'Maya', about: '', picture: 'https://profiles.example/maya.jpg', intent: 'Open to chat', context: 'Here for the jazz', expiresAt: 2_000_000_000, createdAt: 1 };
 
 it('keeps message primary and gates a non-anonymous drink until acceptance', () => {
   const onMessage = jest.fn();
   const onSendDrink = jest.fn();
   const onBlock = jest.fn(); const onHideInRoom = jest.fn(); const onReport = jest.fn();
   render(<FirstContactScreen onBack={jest.fn()} onBlock={onBlock} onHideInRoom={onHideInRoom} onMessage={onMessage} onReport={onReport} onSendDrink={onSendDrink} person={person} roomName="Skyline" />);
+  expect(screen.getByTestId('first-contact-profile-image-profile-image')).toHaveProp('source', { uri: person.picture });
   expect(screen.getByText(/A drink is never anonymous/)).toBeOnTheScreen();
   fireEvent.press(screen.getByTestId('message-person'));
   fireEvent.press(screen.getByTestId('send-drink-person'));

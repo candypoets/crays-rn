@@ -5,9 +5,11 @@ import {
   type ImageSourcePropType,
   type LayoutChangeEvent,
   Pressable,
+  type StyleProp,
   StyleSheet,
   Text,
   View,
+  type ViewStyle,
 } from 'react-native';
 
 const venueAtlas = require('../../../assets/night-playlist/venue-atlas.png');
@@ -22,6 +24,7 @@ type AtlasCropProps = PropsWithChildren<{
   row: number;
   rows: number;
   source: ImageSourcePropType;
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 }>;
 
@@ -67,6 +70,7 @@ function AtlasCrop({
   row,
   rows,
   source,
+  style,
   testID,
 }: AtlasCropProps) {
   const [layout, setLayout] = useState({ height: 0, width: 0 });
@@ -82,6 +86,7 @@ function AtlasCrop({
       accessible={Boolean(accessibilityLabel)}
       className={`overflow-hidden bg-surface-soft ${className}`}
       onLayout={onLayout}
+      style={style}
       testID={testID}
     >
       {imageStyle ? (
@@ -126,16 +131,48 @@ export function VenueImage({
 
 export function PortraitImage({
   className = '',
-  index = 0,
+  identity,
+  index,
   label,
+  picture,
+  style,
   testID,
 }: {
   className?: string;
+  identity?: string;
   index?: number;
   label?: string;
+  picture?: string;
+  style?: StyleProp<ViewStyle>;
   testID?: string;
 }) {
-  const safeIndex = Math.max(0, Math.min(7, index));
+  const [failedPicture, setFailedPicture] = useState<string | null>(null);
+  const pictureUri = /^https?:\/\/\S+$/i.test(picture?.trim() ?? '') ? picture?.trim() : undefined;
+  if (pictureUri && failedPicture !== pictureUri) {
+    return (
+      <View
+        accessibilityLabel={label}
+        accessible={Boolean(label)}
+        className={`overflow-hidden bg-surface-soft ${className}`}
+        style={style}
+        testID={testID}
+      >
+        <Image
+          accessibilityIgnoresInvertColors
+          accessible={false}
+          className="h-full w-full"
+          onError={() => setFailedPicture(pictureUri)}
+          resizeMode="cover"
+          source={{ uri: pictureUri }}
+          testID={testID ? `${testID}-profile-image` : undefined}
+        />
+      </View>
+    );
+  }
+
+  const safeIndex = index === undefined
+    ? stablePortraitIndex(identity ?? '')
+    : Math.max(0, Math.min(7, index));
   return (
     <AtlasCrop
       accessibilityLabel={label}
@@ -145,9 +182,19 @@ export function PortraitImage({
       row={Math.floor(safeIndex / 4)}
       rows={2}
       source={portraitAtlas}
+      style={style}
       testID={testID}
     />
   );
+}
+
+export function stablePortraitIndex(identity: string): number {
+  let hash = 0x811c9dc5;
+  for (const character of identity) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) % 8;
 }
 
 export function DrinkImage({

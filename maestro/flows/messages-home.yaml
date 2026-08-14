@@ -4,6 +4,12 @@ appId: life.crays
 # .qa/flow-fixtures.mjs; standalone runs need `-e` overrides. The "22/240"
 # counter assertion assumes the default 22-character fixture text.
 - runFlow: seed-and-join.yaml
+- tapOn:
+    id: "room-people-tab"
+- extendedWaitUntil:
+    visible:
+      id: "room-people-screen"
+    timeout: 15000
 - tapOn: "Jonas"
 - extendedWaitUntil:
     visible:
@@ -37,6 +43,8 @@ appId: life.crays
 - assertVisible: "${QA_MESSAGE_REQUEST_TEXT}"
 - tapOn:
     id: "tab-room"
+- tapOn:
+    id: "room-people-tab"
 - tapOn: "Jonas"
 - extendedWaitUntil:
     visible: "Waiting for a response"

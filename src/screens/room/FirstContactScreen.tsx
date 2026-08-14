@@ -27,10 +27,6 @@ type FirstContactScreenProps = {
   safetyNotice?: string | null;
 };
 
-function portraitIndex(name: string) {
-  return [...name].reduce((sum, character) => sum + character.charCodeAt(0), 0) % 8;
-}
-
 function RoundButton({
   icon,
   label,
@@ -88,7 +84,13 @@ export function FirstContactScreen({
       <StatusBar style="light" />
       <ScrollView contentContainerClassName="grow" contentContainerStyle={{ paddingBottom: insets.bottom }} scrollIndicatorInsets={{ bottom: insets.bottom }} showsVerticalScrollIndicator={false}>
         <View className="relative h-[390px] overflow-hidden bg-surface-soft">
-          <PortraitImage className="absolute inset-0" index={portraitIndex(person.name)} label={`Portrait of ${person.name}`} />
+          <PortraitImage
+            className="absolute inset-0"
+            identity={person.pubkey}
+            label={`Profile image for ${person.name}`}
+            picture={person.picture}
+            testID="first-contact-profile-image"
+          />
           <View className="absolute inset-x-0 top-0 flex-row items-center justify-between px-5" style={{ paddingTop: 12 + insets.top }}>
             <RoundButton icon="chevron-back" label="Back to people" onPress={onBack} testID="first-contact-back" />
             <RoundButton icon="ellipsis-horizontal" label="Privacy and safety" onPress={() => setShowSafety((value) => !value)} testID="first-contact-more" />

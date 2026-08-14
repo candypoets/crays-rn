@@ -247,6 +247,10 @@ joining-account kind-0 projection, room-bound kind-10312 presence, authorized
 kind-30312 definition consumption, and exact fixture teardown while the reserved relay
 remains available. Bootstrap rejects any invite response shorter than the
 requested 90 days or smaller than the effectively unlimited redemption count.
-The Test Room's root-signed membership definition grants kind `10312`. Room
+The Test Room's root-signed membership definition grants kinds `0`, `1`, `4`,
+and `10312`, so a redeemed member can publish their profile, room feed,
+encrypted direct-message request, and visible presence. The Test Room Maestro
+flow sends a real request to Jonas and `verify-message-request.mjs`
+independently queries, validates, and decrypts it. Room
 identity is proven through NIP-11 root → root-signed kind-31727 anchor →
 root/admin-authored NIP-53 kind-30312 definition.

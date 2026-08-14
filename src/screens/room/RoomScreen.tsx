@@ -5,21 +5,24 @@
 // FORM: Relay, quiet, empty, publish-failure, report, and expiry truth remain explicit.
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PortraitImage } from '@/components/night/NightPrimitives';
-import type { ActiveRoom, RoomPerson, RoomPost, RoomProfile } from '@/rooms/types';
+import { MenuCatalog, MenuCartButton } from '@/screens/commerce/MenuScreen';
+import type { ActiveRoom, RoomPerson, RoomPost, RoomProduct, RoomProfile } from '@/rooms/types';
 import { colors } from '@/theme/colors';
 
-export type RoomView = 'people' | 'feed';
+export type RoomView = 'menu' | 'people' | 'feed';
 
 type RoomScreenProps = {
   activeRoom: ActiveRoom;
   connected: boolean;
   loading: boolean;
+  cartCount: number;
   people: RoomPerson[];
   posts: RoomPost[];
+  products: RoomProduct[];
   profiles: ReadonlyMap<string, RoomProfile>;
   view: RoomView;
   composer: string;
@@ -27,9 +30,10 @@ type RoomScreenProps = {
   composerLoading?: boolean;
   onChangeComposer: (value: string) => void;
   onChangeView: (view: RoomView) => void;
+  onCart: () => void;
   onLeave: () => void;
-  onMenu: () => void;
   onMyNight: () => void;
+  onOpenProduct: (product: RoomProduct) => void;
   onOpenPerson: (pubkey: string) => void;
   onPublish: () => void;
   onReportPost: (post: RoomPost) => void;
@@ -76,45 +80,49 @@ function HeaderButton({
   );
 }
 
-function RoomHeader(props: Pick<RoomScreenProps, 'activeRoom' | 'connected' | 'onChangeView' | 'onLeave' | 'onMenu' | 'onMyNight' | 'view'>) {
+function RoomHeader(props: Pick<RoomScreenProps, 'activeRoom' | 'connected' | 'loading' | 'onChangeView' | 'onLeave' | 'onMyNight' | 'people' | 'view'>) {
+  const peopleCount = props.loading ? '…' : String(props.people.length);
+  const tabs: { label: string; accessibilityLabel: string; value: RoomView }[] = [
+    { label: 'Menu', accessibilityLabel: 'Menu', value: 'menu' },
+    { label: `People (${peopleCount})`, accessibilityLabel: props.loading ? 'People, loading visible count' : `People, ${peopleCount} visible`, value: 'people' },
+    { label: 'Feed', accessibilityLabel: 'Room feed', value: 'feed' },
+  ];
   return (
-    <View className="border-b border-edge bg-surface-soft px-5 pb-4 pt-2">
-      <View className="flex-row items-start justify-between gap-3">
+    <View className="border-b border-edge bg-surface-soft pb-3 pt-2">
+      <View className="mx-auto w-full max-w-[620px] flex-row items-start justify-between gap-3 px-5">
         <HeaderButton icon="chevron-down" label="Leave room" onPress={props.onLeave} testID="room-leave" />
         <View className="min-w-0 flex-1 pt-1">
           <Text accessibilityRole="header" className="text-[24px] font-black uppercase leading-7 tracking-[-0.7px] text-primary">
             {props.activeRoom.name}
           </Text>
-          <View accessibilityRole="tablist" className="mt-1 flex-row items-center gap-3">
-            {(['people', 'feed'] as const).map((tab) => {
-              const selected = props.view === tab;
-              return (
-                <Pressable
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected }}
-                  className="min-h-12 justify-center"
-                  key={tab}
-                  onPress={() => props.onChangeView(tab)}
-                  testID={`room-${tab}-tab`}
-                >
-                  <Text className={`text-xs font-black uppercase tracking-[0.5px] ${selected ? 'text-primary' : 'text-muted'}`}>
-                    / {tab === 'people' ? 'Right now' : 'Feed'}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          <View className="mt-1 flex-row items-center gap-1.5">
+          <View className="mt-1.5 flex-row items-center gap-1.5">
             <View className={`h-2 w-2 rounded-full ${props.connected ? 'bg-success' : 'bg-attention'}`} />
             <Text className="text-xs font-semibold text-muted">
               {props.connected ? 'Connected in the room' : 'Connecting to this room…'}
             </Text>
           </View>
         </View>
-        <View className="flex-row gap-2">
-          <HeaderButton icon="ticket-outline" label="Open My night" onPress={props.onMyNight} testID="room-my-night" />
-          <HeaderButton icon="options-outline" label="Open room menu" onPress={props.onMenu} testID="room-menu" />
-        </View>
+        <HeaderButton icon="ticket-outline" label="Open My night" onPress={props.onMyNight} testID="room-my-night" />
+      </View>
+      <View accessibilityRole="tablist" className="mx-auto mt-3 w-full max-w-[620px] flex-row gap-1 px-5">
+        {tabs.map((tab) => {
+          const selected = props.view === tab.value;
+          return (
+            <Pressable
+              accessibilityLabel={tab.accessibilityLabel}
+              accessibilityRole="tab"
+              accessibilityState={{ selected }}
+              className={`min-h-12 flex-1 items-center justify-center rounded-xl px-2 ${selected ? 'bg-primary' : 'bg-surface'}`}
+              key={tab.value}
+              onPress={() => props.onChangeView(tab.value)}
+              testID={`room-${tab.value === 'menu' ? 'menu' : `${tab.value}-tab`}`}
+            >
+              <Text className={`text-center text-xs font-black uppercase ${selected ? 'text-white' : 'text-muted'}`}>
+                {tab.label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
     </View>
   );
@@ -131,7 +139,7 @@ function RoomSessionRail({ room }: { room: ActiveRoom }) {
       accessible
       className="border-b border-edge bg-surface"
     >
-      <View className="flex-row px-5">
+      <View className="mx-auto w-full max-w-[620px] flex-row px-5">
         {timing.map((item, index) => (
           <View
             className={`min-h-[66px] flex-1 justify-center ${index === 0 ? 'items-start border-r border-edge pr-5' : 'items-end pl-5'}`}
@@ -155,24 +163,50 @@ function EmptyRoom({ children, icon }: { children: ReactNode; icon: keyof typeof
   );
 }
 
-function PersonCard({ index, onPress, person }: { index: number; onPress: () => void; person: RoomPerson }) {
+export function getPeopleRosterLayout(viewportWidth: number, fontScale: number) {
+  const contentWidth = Math.max(0, Math.min(viewportWidth, 620) - 40);
+  const largeText = fontScale >= 1.3;
+  const columns = largeText
+    ? contentWidth >= 520 ? 4 : 2
+    : contentWidth >= 520 ? 5 : contentWidth >= 400 ? 4 : contentWidth >= 270 ? 3 : 2;
+  const gap = 12;
+
+  return {
+    cardWidth: Math.max(0, (contentWidth - gap * (columns - 1)) / columns),
+    columns,
+    gap,
+  };
+}
+
+function PersonCard({ cardWidth, onPress, person }: { cardWidth: number; onPress: () => void; person: RoomPerson }) {
   return (
     <Pressable
       accessibilityHint="Opens their room profile"
       accessibilityLabel={`${person.name}, ${person.intent}${person.context ? `, ${person.context}` : ''}`}
       accessibilityRole="button"
-      className="mr-3 min-h-[156px] w-[92px] active:opacity-75"
+      className="min-h-[156px] active:opacity-75"
       onPress={onPress}
+      style={{ width: cardWidth }}
       testID={`person-${person.pubkey}`}
     >
-      <PortraitImage className="h-[104px] w-[92px] rounded-[26px]" index={index} label={`Portrait of ${person.name}`} />
-      <Text className="mt-2 text-[15px] font-black uppercase text-ink">{person.name}</Text>
-      <Text className="mt-0.5 text-[10px] font-black uppercase tracking-[0.4px] text-primary">{person.intent}</Text>
+      <PortraitImage
+        className="w-full rounded-[26px]"
+        identity={person.pubkey}
+        label={`Profile image for ${person.name}`}
+        picture={person.picture}
+        style={{ aspectRatio: 92 / 104 }}
+        testID={`person-image-${person.pubkey}`}
+      />
+      <Text className="mt-2 text-[15px] font-black uppercase leading-5 text-ink">{person.name}</Text>
+      <Text className="mt-0.5 text-[10px] font-black uppercase leading-4 tracking-[0.4px] text-primary">{person.intent}</Text>
     </Pressable>
   );
 }
 
 function PeopleView({ activeRoom, loading, onOpenPerson, people }: Pick<RoomScreenProps, 'activeRoom' | 'loading' | 'onOpenPerson' | 'people'>) {
+  const { fontScale, width } = useWindowDimensions();
+  const roster = getPeopleRosterLayout(width, fontScale);
+
   if (loading) return <ActivityIndicator className="mt-12" color={colors.primary} />;
   if (!people.length) {
     return (
@@ -186,32 +220,34 @@ function PeopleView({ activeRoom, loading, onOpenPerson, people }: Pick<RoomScre
 
   return (
     <>
-      <View className="mt-6 flex-row items-end justify-between px-5">
+      <View className="mx-auto mt-6 w-full max-w-[620px] flex-row flex-wrap items-end justify-between gap-2 px-5">
         <Text accessibilityRole="header" className="text-xs font-black uppercase tracking-[0.7px] text-ink">People here · {people.length} visible</Text>
         <Text className="text-[11px] text-muted">No distance or ranking</Text>
       </View>
-      <ScrollView
-        accessibilityLabel={`${people.length} visible people`}
-        className="mt-4"
-        contentContainerClassName="px-5 pr-8"
-        horizontal
-        showsHorizontalScrollIndicator={false}
+      <View
+        className="mx-auto mt-4 w-full max-w-[620px] flex-row flex-wrap gap-3 px-5 pb-8"
+        testID="people-roster"
       >
-        {people.map((person, index) => <PersonCard index={index} key={person.pubkey} onPress={() => onOpenPerson(person.pubkey)} person={person} />)}
-      </ScrollView>
+        {people.map((person) => (
+          <PersonCard
+            cardWidth={roster.cardWidth}
+            key={person.pubkey}
+            onPress={() => onOpenPerson(person.pubkey)}
+            person={person}
+          />
+        ))}
+      </View>
     </>
   );
 }
 
 function FeedPost({
-  index,
   onOpenPerson,
   onReportPost,
   post,
   profile,
   reporting,
 }: {
-  index: number;
   onOpenPerson: () => void;
   onReportPost: () => void;
   post: RoomPost;
@@ -230,7 +266,12 @@ function FeedPost({
               <Ionicons color={colors.surface} name="megaphone" size={20} />
             </View>
           ) : (
-            <PortraitImage className="h-10 w-10 rounded-full" index={index} label={`Portrait of ${profile?.name || 'room guest'}`} />
+            <PortraitImage
+              className="h-10 w-10 rounded-full"
+              identity={post.pubkey}
+              label={`Profile image for ${profile?.name || 'room guest'}`}
+              picture={profile?.picture}
+            />
           )}
           <Pressable accessibilityLabel={`Open profile of ${profile?.name || 'room guest'}`} accessibilityRole="button" className="min-h-12 flex-1 justify-center" onPress={onOpenPerson} testID={`post-author-${post.id}`}>
             <Text className="text-xs font-black uppercase text-ink">{profile?.name || (post.announcement ? 'The room' : 'Room guest')}</Text>
@@ -262,7 +303,7 @@ function FeedPost({
 
 function FeedView(props: Pick<RoomScreenProps, 'composer' | 'composerError' | 'composerLoading' | 'loading' | 'onChangeComposer' | 'onOpenPerson' | 'onPublish' | 'onReportPost' | 'posts' | 'profiles' | 'reportingPostId' | 'reportNotice'>) {
   return (
-    <View className="px-5 pb-8 pt-5">
+    <View className="mx-auto w-full max-w-[620px] px-5 pb-8 pt-5">
       <View className="flex-row items-end justify-between">
         <View>
           <Text accessibilityRole="header" className="text-xs font-black uppercase tracking-[0.7px] text-ink">Room feed</Text>
@@ -277,9 +318,8 @@ function FeedView(props: Pick<RoomScreenProps, 'composer' | 'composerError' | 'c
 
       <View className="relative mt-5">
         {props.posts.length ? <View className="absolute bottom-3 left-[23px] top-3 w-px bg-edge" /> : null}
-        {props.posts.map((post, index) => (
+        {props.posts.map((post) => (
           <FeedPost
-            index={index}
             key={post.id}
             onOpenPerson={() => props.onOpenPerson(post.pubkey)}
             onReportPost={() => props.onReportPost(post)}
@@ -331,14 +371,27 @@ export function RoomScreen(props: RoomScreenProps) {
     <SafeAreaView
       className="flex-1 bg-canvas"
       edges={['left', 'right']}
-      testID={props.view === 'people' ? 'room-people-screen' : 'room-feed-screen'}
+      testID={`room-${props.view}-screen`}
     >
       <View style={{ paddingTop: insets.top }}>
         <RoomHeader {...props} />
       </View>
-      <ScrollView contentContainerClassName="pb-6" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView key={props.view} contentContainerClassName="pb-6" keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <RoomSessionRail room={props.activeRoom} />
-        {props.view === 'people' ? <PeopleView {...props} /> : <FeedView {...props} />}
+        {props.view === 'menu' ? (
+          <View className="mx-auto w-full max-w-[620px] px-5">
+            <MenuCatalog
+              cartAction={<MenuCartButton cartCount={props.cartCount} onCart={props.onCart} />}
+              loading={props.loading}
+              onOpenProduct={props.onOpenProduct}
+              products={props.products}
+              roomName={props.activeRoom.name}
+              testID="menu-screen"
+            />
+          </View>
+        ) : null}
+        {props.view === 'people' ? <PeopleView {...props} /> : null}
+        {props.view === 'feed' ? <FeedView {...props} /> : null}
       </ScrollView>
     </SafeAreaView>
   );

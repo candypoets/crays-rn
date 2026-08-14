@@ -26,6 +26,8 @@ appId: life.crays
     id: "conversation-back"
 - tapOn:
     id: "tab-room"
+- tapOn:
+    id: "room-people-tab"
 - tapOn: "Jonas"
 - extendedWaitUntil:
     visible:

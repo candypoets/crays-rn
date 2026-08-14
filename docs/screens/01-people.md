@@ -4,17 +4,21 @@
 
 Canonical visual reference: `docs/design-explorations/night-playlist/mockups/01-room-and-feed-v1.png`, panel 02. This Night Playlist board supersedes the incumbent dark room PNGs for composition and color while the relay contract below remains authoritative.
 
-People is the default destination after a successful room join. It proves that exactly one venue relay is active, shows only opted-in visible presence, and never exposes distance, popularity, or hidden attendance. Quiet visitors retain full read, ordering, ticket, and membership access without appearing in this roster.
+People is the social destination inside an active room. Menu is selected by default after a successful join; the fixed room navbar exposes **Menu / People (visible count) / Feed** so the venue catalog is immediately useful without hiding opted-in presence. People proves that exactly one venue relay is active, shows only opted-in visible presence, and never exposes distance, popularity, or hidden attendance. Quiet visitors retain full read, ordering, ticket, and membership access without appearing in this roster.
 
 Entry requires a persisted `ActiveRoom`. With no active room, route to Discover. The header uses the root-authorized NIP-53 room-definition name and the fixed state **Connected in the room**; it must not infer venue identity from profiles or local copy.
 
 ## UI and interaction
 
-- Header: signed room name, compact connection state, native Leave control, Menu, My night, and the local **Right now / Feed** switch.
+- Header: signed room name, compact connection state, native Leave control, and My night. A separate full-width room navbar exposes **Menu**, **People (x)**, and **Feed** with 48 dp targets and a text-selected state; Menu is the default.
 - Room-session rail: joined time and credential expiry only. A kind-30312 room description is identity metadata, not a calendar event, so it is never placed in a **Right now**, event, or schedule slot. Venue events remain absent from this surface unless a future design consumes a trusted kind-31922/31923 projection explicitly.
-- Roster: horizontally readable portrait cards with display name and intent in deterministic accessible order. Optional context is included in each card's accessible label. No per-person "online" dot is rendered; roster membership is the only presence signal and it is already textual.
-- Portrait cards use the Night Playlist portrait treatment with its native
-  tall-cell aspect ratio and retain at least 48-point targets. No bundled venue
+- Roster: a vertically scrolling, wrapping portrait grid with display name and intent in deterministic row-major accessibility order. At normal text size it uses three columns on compact phones, four at intermediate widths, and five inside the 620 dp expanded content width. Large text reduces that to two columns on compact/intermediate widths and four on expanded widths so names and intents reflow instead of clipping. Optional context is included in each card's accessible label. No per-person "online" dot is rendered; roster membership is the only presence signal and it is already textual.
+- A valid HTTP(S) `picture` from the latest kind-0 profile is the primary image.
+  Missing, invalid, or failed pictures use one bundled Night Playlist portrait
+  selected deterministically from the full pubkey. The same pubkey fallback is
+  used by People, first contact, message request, and later conversation views,
+  so roster changes or navigation never change a person's illustration. Portrait
+  cards retain the native tall-cell aspect ratio and at least 48-point targets. No bundled venue
   photograph appears as current room or event evidence; this screen has no
   trusted event-image input.
 - The visible count counts current, non-expired, explicitly visible presence projections only.
@@ -57,13 +61,15 @@ visually treated as degraded access.
 
 ## QA strategy
 
-Unit coverage in `RoomScreen.test.tsx` verifies populated and quiet-empty paths,
-person identity routing, the accessible room-session summary, and the absence
+Unit coverage in `RoomScreen.test.tsx` verifies Menu-default navigation, the
+live People count, populated and quiet-empty paths, person identity routing,
+the responsive non-horizontal roster, the kind-0 picture handoff, the accessible room-session summary, and the absence
 of the kind-30312 description from event-like UI.
 `NightPrimitives.test.tsx` verifies portrait and venue crop geometry. Native
 workflow `maestro/flows/01-people.yaml` enters quietly through the real join
-screen, waits for live relay projections, checks the exact visible-only count,
-and captures the canonical state.
+screen, first proves the relay menu is the default pane, selects People, waits
+for live relay projections, checks the exact visible-only count, and captures
+the canonical state.
 
 `.qa/qa-01-people.mjs` owns an independent lifecycle:
 

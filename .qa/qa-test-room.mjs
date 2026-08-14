@@ -2,7 +2,7 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
-import { JOIN_VISIBLE_CONTEXT, JOIN_VISIBLE_INTENT, TEST_ROOM_QA_PROFILE_NAME } from './flow-fixtures.mjs';
+import { JOIN_VISIBLE_CONTEXT, JOIN_VISIBLE_INTENT, MESSAGE_REQUEST_TEXT, TEST_ROOM_QA_PROFILE_NAME } from './flow-fixtures.mjs';
 import { loadKeys } from './relay-lib.mjs';
 import { deviceArgs } from './relay-screen-scenario.mjs';
 
@@ -80,12 +80,14 @@ try {
     '-e', `QA_JOIN_INTENT=${JOIN_VISIBLE_INTENT}`,
     '-e', `QA_JOIN_CONTEXT=${JOIN_VISIBLE_CONTEXT}`,
     '-e', `QA_PROFILE_NAME=${TEST_ROOM_QA_PROFILE_NAME}`,
+    '-e', `QA_MESSAGE_REQUEST_TEXT=${MESSAGE_REQUEST_TEXT}`,
     'maestro/flows/test-room.yaml',
   ]);
   run(process.execPath, ['.qa/relay-verify.mjs']);
   run(process.execPath, ['.qa/verify-room-definition-consumed.mjs']);
   run(process.execPath, ['.qa/verify-test-room-invite-redeemed.mjs']);
   run(process.execPath, ['.qa/verify-visible-entry.mjs']);
+  run(process.execPath, ['.qa/verify-message-request.mjs']);
   console.log(`QA PASS: test-build-room-visible-invite (${state.room_id})`);
 } finally {
   await stopChild(testRoom);

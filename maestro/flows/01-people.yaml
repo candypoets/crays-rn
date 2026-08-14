@@ -18,13 +18,26 @@ appId: life.crays
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-people-screen"
+      id: "room-menu-screen"
     timeout: 30000
+- assertVisible:
+    id: "menu-screen"
+- assertVisible: "Mezcal Negroni"
+- tapOn:
+    id: "room-people-tab"
+- extendedWaitUntil:
+    visible:
+      id: "room-people-screen"
+    timeout: 15000
 - extendedWaitUntil:
     visible: "Maya"
     timeout: 15000
 - assertVisible: "People here · 3 visible"
+- assertVisible: "People (3)"
 - assertVisible: "Connected in the room"
 - assertNotVisible: "Room moment"
 - assertNotVisible: "${QA_ROOM_ABOUT}"
+- assertVisible: "^Discover$"
+- assertVisible: "^Messages$"
+- assertVisible: "^Me$"
 - takeScreenshot: 01-people-relay

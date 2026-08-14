@@ -1,4 +1,4 @@
-import { PRIMARY_TABS, primaryTabIcon } from '@/navigation/primaryTabs';
+import { PRIMARY_TABS, primaryTabBarStyle, primaryTabIcon } from '@/navigation/primaryTabs';
 
 describe('primary tab navigation', () => {
   it('defines exactly the four ordered top-level destinations', () => {
@@ -19,5 +19,10 @@ describe('primary tab navigation', () => {
 
   it('fails loudly when route configuration asks for an unknown tab', () => {
     expect(() => primaryTabIcon('wallet' as never, false)).toThrow('Unknown primary tab: wallet');
+  });
+
+  it('keeps labels above the full bottom safe area', () => {
+    expect(primaryTabBarStyle(24)).toEqual({ height: 88, paddingBottom: 24, paddingTop: 6 });
+    expect(primaryTabBarStyle(-5)).toEqual({ height: 64, paddingBottom: 0, paddingTop: 6 });
   });
 });

@@ -6,6 +6,7 @@ import {
   getAtlasLayout,
   NightCard,
   PortraitImage,
+  stablePortraitIndex,
   TempoRail,
   VenueImage,
 } from '@/components/night/NightPrimitives';
@@ -43,6 +44,22 @@ describe('NightPrimitives', () => {
 
   it('returns no atlas geometry until a destination has measurable bounds', () => {
     expect(getAtlasLayout({ column: 0, columns: 4, height: 0, row: 0, rows: 2, width: 92 })).toBeNull();
+  });
+
+  it('uses a kind-0 picture and falls back to one stable pubkey illustration', () => {
+    const identity = 'b'.repeat(64);
+    const picture = 'https://profiles.example/jonas.jpg';
+    render(<PortraitImage className="h-20 w-16" identity={identity} picture={picture} testID="profile" />);
+
+    expect(screen.getByTestId('profile-profile-image')).toHaveProp('source', { uri: picture });
+    fireEvent(screen.getByTestId('profile-profile-image'), 'error');
+    fireEvent(screen.getByTestId('profile'), 'layout', {
+      nativeEvent: { layout: { height: 80, width: 64 } },
+    });
+    expect(screen.getByTestId('profile-image')).toBeOnTheScreen();
+    expect(stablePortraitIndex(identity)).toBe(stablePortraitIndex(identity));
+    expect(stablePortraitIndex(identity)).toBeGreaterThanOrEqual(0);
+    expect(stablePortraitIndex(identity)).toBeLessThan(8);
   });
 
   it('keeps decorative tempo and edge marks out of the accessibility tree', () => {
