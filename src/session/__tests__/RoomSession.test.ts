@@ -47,6 +47,7 @@ describe('active room persistence boundary', () => {
 
 describe('automatic room expiry', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-02T20:00:00Z'));
     jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
@@ -70,5 +71,29 @@ describe('automatic room expiry', () => {
     await waitFor(() => expect(result.current.activeRoom).toBeNull());
     expect(result.current.endedRoom).toEqual({ name: 'The Skyline Room', reason: 'automatic' });
     expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('crays.room.active.v2');
+  });
+
+  it('finishes hydration without deleting state when the Keychain is unavailable', async () => {
+    jest.mocked(SecureStore.getItemAsync).mockRejectedValueOnce(new Error('User interaction is not allowed.'));
+    const wrapper = ({ children }: PropsWithChildren) => createElement(RoomSessionProvider, null, children);
+    const { result } = renderHook(() => useRoomSession(), { wrapper });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+
+  it('ends the in-memory session even when automatic durable cleanup is temporarily unavailable', async () => {
+    const wrapper = ({ children }: PropsWithChildren) => createElement(RoomSessionProvider, null, children);
+    const { result } = renderHook(() => useRoomSession(), { wrapper });
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await result.current.enterRoom(
+        { ...descriptor, capabilities: ['social'] as const },
+        { visibility: 'quiet', intent: 'curious', context: '', leaveAfterMinutes: 60 },
+      );
+    });
+    jest.mocked(SecureStore.deleteItemAsync).mockRejectedValueOnce(new Error('User interaction is not allowed.'));
+    await act(async () => { jest.advanceTimersByTime(60 * 60 * 1000); await Promise.resolve(); });
+    await waitFor(() => expect(result.current.activeRoom).toBeNull());
+    expect(result.current.endedRoom).toEqual({ name: 'The Skyline Room', reason: 'automatic' });
   });
 });

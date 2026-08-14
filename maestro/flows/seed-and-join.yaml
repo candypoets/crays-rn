@@ -31,5 +31,5 @@ appId: life.crays
       id: "room-menu-screen"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "Maya"
+    visible: "Mezcal Negroni"
     timeout: 15000

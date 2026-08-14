@@ -15,6 +15,14 @@ const event: RoomCalendarEvent = { id: 'event', address: `31923:${'a'.repeat(64)
 const entitlement: RoomEntitlement = { awardId: 'c'.repeat(64), badgeAddress: membership.address, awardIssuerPubkey: 'd'.repeat(64), recipientPubkey: 'e'.repeat(64), definitionId: membership.id, definitionIssuerPubkey: 'a'.repeat(64), type: 'membership', name: membership.name, description: membership.description, billing: membership.billing, state: 'active', orderRef: 'member', createdAt: 1, activity: [], roomId: 'skyline', roomName: 'Skyline', relayUrl: 'wss://relay.example' };
 const eventAccess: RoomEntitlement = { ...entitlement, awardId: 'f'.repeat(64), badgeAddress: `30402:${'a'.repeat(64)}:jazz-entry`, definitionId: 'jazz-entry', type: 'event_access', name: 'Rooftop Jazz entry', description: 'Door entry', eventAddress: event.address, state: 'available', orderRef: '' };
 const ticket: DurableTicket = { id: 'ticket', eventAddress: event.address, eventId: event.id, title: event.title, summary: event.summary, location: event.location, start: event.start, end: event.end, roomId: 'skyline', roomName: 'Skyline', relayUrl: 'wss://relay.example', status: 'going', confirmedAt: 2 };
+const account = {
+  custody: 'device-only' as const,
+  displayName: 'Maya QA',
+  npub: `npub1${'q'.repeat(58)}`,
+  picture: 'https://profiles.example/maya.jpg',
+  pubkey: 'b'.repeat(64),
+  setupComplete: true,
+};
 
 describe('durable screens', () => {
   it('prioritizes an event-access award and routes its exact award ID to the live ticket', () => { const doorItem = selectMyNightDoorItem({ entitlements: [eventAccess], events: [event], now: 1_900_000_000, roomId: 'skyline', tickets: [ticket] }); expect(doorItem).toEqual({ kind: 'credential', awardId: eventAccess.awardId, title: event.title, location: event.location }); expect(myNightDoorDestination(doorItem!)).toEqual({ pathname: '/ticket', params: { awardId: eventAccess.awardId } }); });
@@ -65,11 +73,38 @@ describe('durable screens', () => {
   });
   it('routes the current room and every urgency-ranked Me row without exposing internal or relay language', () => {
     const memberships = jest.fn(); const messages = jest.fn(); const orders = jest.fn(); const profile = jest.fn(); const room = jest.fn(); const tickets = jest.fn(); const wallet = jest.fn();
-    const view = render(<MeScreen activeOrder={order} hasMembership onMemberships={memberships} onMessages={messages} onOrders={orders} onProfile={profile} onRoom={room} onTickets={tickets} onWallet={wallet} roomName="Skyline" ticketCount={1} />);
+    const view = render(<MeScreen accountState={{ status: 'ready', account }} activeOrder={order} hasMembership onMemberships={memberships} onMessages={messages} onOrders={orders} onProfile={profile} onRoom={room} onTickets={tickets} onWallet={wallet} roomName="Skyline" ticketCount={1} />);
     expect(view.getByText('Ready for pickup')).toBeTruthy(); expect(view.getByText('1 saved ticket')).toBeTruthy(); expect(view.queryByText(order.orderRef, { exact: false })).toBeNull(); expect(view.queryByText(/relay-confirmed/i)).toBeNull();
+    expect(view.getByText(account.displayName)).toBeTruthy(); expect(view.getByText('Protected on this device')).toBeTruthy(); expect(view.getByText('Settings & privacy')).toBeTruthy();
     expect(view.getByLabelText('Skyline. You’re inside. Return to room')).toBeTruthy();
     ['me-current-room', 'me-orders', 'me-memberships', 'me-tickets', 'me-wallet', 'me-messages', 'me-profile'].forEach((id) => fireEvent.press(view.getByTestId(id)));
     expect(room).toHaveBeenCalledTimes(1); expect(orders).toHaveBeenCalled(); expect(memberships).toHaveBeenCalled(); expect(tickets).toHaveBeenCalled(); expect(wallet).toHaveBeenCalled(); expect(messages).toHaveBeenCalled(); expect(profile).toHaveBeenCalled();
+  });
+  it('shows the validated local profile and expands its full public identity without exposing a secret', () => {
+    const view = render(<MeScreen accountState={{ status: 'ready', account }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    const card = view.getByTestId('me-account-profile');
+    expect(card).toHaveProp('accessibilityState', { expanded: false });
+    expect(view.getByText(`${account.npub.slice(0, 12)}…${account.npub.slice(-8)}`)).toBeTruthy();
+    expect(view.getByTestId('me-account-portrait-profile-image')).toHaveProp('source', { uri: account.picture });
+    expect(view.queryByText(account.npub)).toBeNull();
+    fireEvent.press(card);
+    expect(card).toHaveProp('accessibilityState', { expanded: true });
+    expect(view.getByText('Public identity')).toBeTruthy();
+    expect(view.getByText(account.npub)).toHaveProp('selectable', true);
+    expect(view.getByText(/secret key is never shown/i)).toBeTruthy();
+    expect(view.queryByText(/nsec1/i)).toBeNull();
+  });
+  it('keeps protected-profile loading, failure, and invalid states separate from durable data', () => {
+    const retry = jest.fn();
+    const view = render(<MeScreen accountState={{ status: 'loading' }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    expect(view.getByTestId('me-account-loading')).toBeTruthy();
+    expect(view.getByText('No saved tickets')).toBeTruthy();
+    view.rerender(<MeScreen accountState={{ status: 'error', message: 'Crays could not read the protected profile on this device.' }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    fireEvent.press(view.getByTestId('me-account-retry'));
+    expect(retry).toHaveBeenCalledTimes(1);
+    view.rerender(<MeScreen accountState={{ status: 'invalid' }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    expect(view.getByText('Profile could not be verified')).toBeTruthy();
+    expect(view.getByText('No saved tickets')).toBeTruthy();
   });
   it('renders honest empty durable context without inventing an actionable room, ticket, or wallet balance', () => { const view = render(<MeScreen hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />); expect(view.getByText('No room selected')).toBeTruthy(); expect(view.queryByTestId('me-current-room')).toBeNull(); expect(view.getByText('No saved tickets')).toBeTruthy(); expect(view.getByText('Setup required · balance unavailable')).toBeTruthy(); });
   it('does not announce empty durable categories while local archives are loading', () => {

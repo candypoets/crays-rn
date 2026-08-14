@@ -8,6 +8,7 @@ import {
   JOIN_VISIBLE_INTENT,
   MESSAGE_REQUEST_TEXT,
   ROOM_ABOUT,
+  TEST_ROOM_QA_PROFILE_NAME,
 } from './flow-fixtures.mjs';
 import { loadKeys, warnTeardownLeak } from './relay-lib.mjs';
 
@@ -109,6 +110,7 @@ const fixtureEnv = {
   QA_JOIN_CONTEXT: JOIN_VISIBLE_CONTEXT,
   QA_MESSAGE_REQUEST_TEXT: MESSAGE_REQUEST_TEXT,
   QA_CONVERSATION_REPLY_TEXT: CONVERSATION_REPLY_TEXT,
+  QA_PROFILE_NAME: TEST_ROOM_QA_PROFILE_NAME,
   QA_ROOM_ABOUT: ROOM_ABOUT,
 };
 
@@ -163,7 +165,8 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
       });
       waitForHttp(checkoutAdapterProcess, checkoutPort, '/healthz', 'checkout adapter');
     }
-    const fixtureNsec = loadKeys().users[qaUserIndex].nsec;
+    const fixtureIdentity = loadKeys().users[qaUserIndex];
+    const fixtureNsec = fixtureIdentity.nsec;
     run(process.env.MAESTRO_CLI || 'maestro', [
       'test',
       ...deviceArgs(),
@@ -172,6 +175,7 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
       '-e', `SERVICE_URL=http://10.0.2.2:${proxyPort}`,
       '-e', `INVITE_TOKEN=${state.invite_token}`,
       '-e', `QA_NSEC=${fixtureNsec}`,
+      '-e', `QA_PROFILE_NPUB=${fixtureIdentity.npub}`,
       '-e', `JONAS_PUBKEY=${loadKeys().users[1].pub}`,
       '-e', `MEMBERSHIP_AWARD_ID=${state.membership_award_id || ''}`,
       '-e', `EVENT_ID=${state.event_id || ''}`,

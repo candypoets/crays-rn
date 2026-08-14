@@ -1,12 +1,14 @@
-// THESIS: Me is a calm urgency-ranked archive; Wallet is a discreet operational rail.
+// THESIS: Me identifies the local owner before opening their urgency-ranked archive.
 // OWNED WORLD: Durable rows resemble a well-kept coat-check ledger, not a finance dashboard.
-// STORY: Resolve active item → find history/access → inspect honest account and wallet readiness.
-// FIRST VIEWPORT: Active-now context and durable categories precede settings.
-// FORM: Empty, hidden balance, recovering, mint unavailable, and unconfigured states are explicit.
+// STORY: Recognize the current profile → resolve the active room/item → find durable access.
+// FIRST VIEWPORT: A compact identity pass keeps the current room visible below it.
+// FORM: Night Playlist profile pass; account, archive, and relay failures remain independent.
 import { Ionicons } from '@expo/vector-icons';
+import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
+import { abbreviateNpub, type LocalAccountRead } from '@/account/account';
 import { AppShell, SectionTitle } from '@/components/app/AppShell';
-import { DrinkImage, NightBadge, NightCard, VenueImage } from '@/components/night/NightPrimitives';
+import { DrinkImage, NightBadge, NightCard, PortraitImage, VenueImage } from '@/components/night/NightPrimitives';
 import { ErrorBanner, PrimaryButton } from '@/components/onboarding/OnboardingPrimitives';
 import type { RoomEntitlement, RoomOrder } from '@/rooms/types';
 import { colors } from '@/theme/colors';
@@ -47,6 +49,137 @@ type MeRowProps = {
   title: string;
 };
 
+export type MeAccountState =
+  | LocalAccountRead
+  | { status: 'error'; message: string }
+  | { status: 'loading' };
+
+function MeIdentityCard({
+  expanded,
+  onRetry,
+  onToggle,
+  state,
+}: {
+  expanded: boolean;
+  onRetry?: () => void;
+  onToggle: () => void;
+  state: MeAccountState;
+}) {
+  if (state.status === 'loading') {
+    return (
+      <View
+        accessibilityLabel="Loading your protected profile"
+        accessible
+        className="mt-5 min-h-28 flex-row items-center rounded-2xl border border-edge bg-surface px-4"
+        testID="me-account-loading"
+      >
+        <ActivityIndicator color={colors.primary} />
+        <Text className="ml-3 flex-1 font-semibold text-muted">Loading your profile…</Text>
+      </View>
+    );
+  }
+
+  if (state.status === 'error') {
+    const content = (
+      <>
+        <View className="h-12 w-12 items-center justify-center rounded-xl bg-error/10">
+          <Ionicons color={colors.error} name="key-outline" size={23} />
+        </View>
+        <View className="ml-3 min-w-0 flex-1">
+          <Text className="text-lg font-black text-ink">Profile unavailable</Text>
+          <Text className="mt-1 text-sm leading-5 text-muted">{state.message}</Text>
+          {onRetry ? <Text className="mt-2 font-extrabold text-primary">Try again</Text> : null}
+        </View>
+        {onRetry ? <Ionicons color={colors.primary} name="refresh" size={21} /> : null}
+      </>
+    );
+    if (!onRetry) return <View accessibilityRole="alert" className="mt-5 min-h-28 flex-row items-center rounded-2xl border border-edge bg-surface p-4">{content}</View>;
+    return (
+      <Pressable
+        accessibilityLabel={`Profile unavailable. ${state.message}. Try again`}
+        accessibilityRole="button"
+        className="mt-5 min-h-28 flex-row items-center rounded-2xl border border-edge bg-surface p-4 active:bg-surface-soft"
+        onPress={onRetry}
+        testID="me-account-retry"
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  if (state.status !== 'ready') {
+    const missing = state.status === 'missing';
+    return (
+      <View
+        accessibilityRole="alert"
+        className="mt-5 min-h-28 flex-row items-center rounded-2xl border border-edge bg-surface p-4"
+        testID={`me-account-${state.status}`}
+      >
+        <View className="h-12 w-12 items-center justify-center rounded-xl bg-surface-soft">
+          <Ionicons color={colors.ink} name={missing ? 'person-outline' : 'shield-outline'} size={23} />
+        </View>
+        <View className="ml-3 min-w-0 flex-1">
+          <Text className="text-lg font-black text-ink">
+            {missing ? 'No Crays identity on this device' : state.status === 'incomplete' ? 'Finish your profile' : 'Profile could not be verified'}
+          </Text>
+          <Text className="mt-1 text-sm leading-5 text-muted">
+            {missing
+              ? 'Create an account before entering a room.'
+              : state.status === 'incomplete'
+                ? 'Choose the name rooms will see when you enter visibly.'
+                : 'Your protected account data is incomplete or inconsistent.'}
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const { account } = state;
+  const custodyLabel = account.setupComplete ? 'Protected on this device' : 'Account setup not finished';
+  return (
+    <View className="mt-5 overflow-hidden rounded-2xl border border-edge bg-surface" testID="me-account-card">
+      <Pressable
+        accessibilityLabel={`${account.displayName}. Your Crays identity. ${custodyLabel}. ${expanded ? 'Hide' : 'View'} profile`}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        className="min-h-28 flex-row items-center p-4 active:bg-surface-soft"
+        onPress={onToggle}
+        testID="me-account-profile"
+      >
+        <PortraitImage
+          className="h-20 w-20 shrink-0 rounded-[20px]"
+          identity={account.pubkey}
+          picture={account.picture}
+          testID="me-account-portrait"
+        />
+        <View className="ml-4 min-w-0 flex-1">
+          <Text className="text-[22px] font-black leading-7 text-ink">{account.displayName}</Text>
+          <Text className="mt-0.5 text-sm font-semibold text-ink">Your Crays identity</Text>
+          <Text className="mt-1 text-sm text-muted">{abbreviateNpub(account.npub)}</Text>
+          <View className="mt-2 flex-row items-center gap-1.5">
+            <Ionicons color={colors.inkMuted} name="key-outline" size={16} />
+            <Text className="min-w-0 flex-1 text-sm font-semibold text-muted">{custodyLabel}</Text>
+          </View>
+        </View>
+        <View className="ml-2 min-h-12 items-center justify-center">
+          <Text className="text-sm font-extrabold text-primary">{expanded ? 'Hide' : 'View'}</Text>
+          <Ionicons color={colors.primary} name={expanded ? 'chevron-up' : 'chevron-down'} size={19} />
+        </View>
+      </Pressable>
+      {expanded ? (
+        <View className="border-t border-edge bg-surface-soft px-4 py-4" testID="me-account-details">
+          <Text className="text-xs font-black uppercase tracking-[0.8px] text-ink">Public identity</Text>
+          <Text className="mt-2 text-sm leading-5 text-ink" selectable>{account.npub}</Text>
+          <Text className="mt-3 text-sm leading-5 text-muted">
+            This is the name rooms see when you choose to be visible. Your secret key is never shown here.
+          </Text>
+          <Text className="mt-2 text-sm font-semibold text-ink">Saved on this device</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function MeRow({ action, detail, icon, id, title }: MeRowProps) {
   return (
     <Pressable
@@ -69,6 +202,7 @@ function MeRow({ action, detail, icon, id, title }: MeRowProps) {
 }
 
 export function MeScreen({
+  accountState = { status: 'missing' },
   activeOrder,
   error,
   hasMembership,
@@ -77,6 +211,7 @@ export function MeScreen({
   onMessages,
   onOrders,
   onProfile,
+  onRetryAccount,
   onRoom,
   onTickets,
   onWallet,
@@ -85,6 +220,7 @@ export function MeScreen({
   refreshing = false,
   ticketCount,
 }: {
+  accountState?: MeAccountState;
   activeOrder?: RoomOrder;
   error?: string | null;
   hasMembership: boolean;
@@ -93,6 +229,7 @@ export function MeScreen({
   onMessages?: () => void;
   onOrders: () => void;
   onProfile: () => void;
+  onRetryAccount?: () => void;
   onRoom: () => void;
   onTickets: () => void;
   onWallet: () => void;
@@ -101,6 +238,7 @@ export function MeScreen({
   refreshing?: boolean;
   ticketCount: number;
 }) {
+  const [profileExpanded, setProfileExpanded] = useState(false);
   const orderDetail = loading
     ? 'Loading saved orders…'
     : refreshing && !activeOrder
@@ -143,6 +281,13 @@ export function MeScreen({
         Me
       </Text>
       <Text className="text-xs font-black uppercase tracking-[1.4px] text-ink">Keeping the night</Text>
+
+      <MeIdentityCard
+        expanded={profileExpanded}
+        onRetry={onRetryAccount}
+        onToggle={() => setProfileExpanded((value) => !value)}
+        state={accountState}
+      />
 
       {error ? <View className="mt-5"><ErrorBanner message={error} /></View> : null}
       {loading ? (
@@ -234,7 +379,7 @@ export function MeScreen({
         >
           <Ionicons color={colors.ink} name="settings-outline" size={22} />
           <View className="ml-3 min-w-0 flex-1">
-            <Text className="font-extrabold text-ink">Profile & settings</Text>
+            <Text className="font-extrabold text-ink">Settings & privacy</Text>
             <View className="mt-2 flex-row items-center justify-between">
               <NightBadge>Account</NightBadge>
               <Ionicons color={colors.primary} name="chevron-forward" size={20} />

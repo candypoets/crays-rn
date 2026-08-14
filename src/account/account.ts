@@ -26,6 +26,21 @@ export type LocalIdentity = {
   pubkey: string;
 };
 
+export type LocalAccountSummary = {
+  custody: 'device-only';
+  displayName: string;
+  npub: string;
+  picture?: string;
+  pubkey: string;
+  setupComplete: boolean;
+};
+
+export type LocalAccountRead =
+  | { status: 'ready'; account: LocalAccountSummary }
+  | { status: 'incomplete'; npub: string; pubkey: string }
+  | { status: 'invalid' }
+  | { status: 'missing' };
+
 let identityRequest: Promise<LocalIdentity> | null = null;
 
 const secureOptions: SecureStore.SecureStoreOptions = {
@@ -69,6 +84,64 @@ function isStoredProfileValid(profile: string | null, pubkey: string | null): bo
     return event.kind === 0 && event.pubkey === pubkey && verifyEvent(event);
   } catch {
     return false;
+  }
+}
+
+export function abbreviateNpub(npub: string): string {
+  if (npub.length <= 24) return npub;
+  return `${npub.slice(0, 12)}…${npub.slice(-8)}`;
+}
+
+/**
+ * Returns one validated, public-only view of the local account. Reads that
+ * fail are allowed to reject: an unavailable Keychain is never evidence that
+ * the account is missing and must not redirect or create a replacement key.
+ */
+export async function readLocalAccountSummary(): Promise<LocalAccountRead> {
+  const [nsec, pubkey, profile, complete] = await Promise.all([
+    SecureStore.getItemAsync(STORAGE.nsec),
+    SecureStore.getItemAsync(STORAGE.pubkey),
+    SecureStore.getItemAsync(STORAGE.profile),
+    SecureStore.getItemAsync(STORAGE.complete),
+  ]);
+  const hasAnyAccountMaterial = Boolean(nsec || pubkey || profile || complete);
+  if (!hasAnyAccountMaterial) return { status: 'missing' };
+  if (!isStoredIdentityValid(nsec, pubkey)) return { status: 'invalid' };
+
+  const publicIdentity = { npub: nip19.npubEncode(pubkey!), pubkey: pubkey! };
+  if (!profile) {
+    return complete === '1'
+      ? { status: 'invalid' }
+      : { status: 'incomplete', ...publicIdentity };
+  }
+  if (!isStoredProfileValid(profile, pubkey)) return { status: 'invalid' };
+
+  try {
+    const event = JSON.parse(profile) as Event;
+    const metadata = JSON.parse(event.content) as Record<string, unknown>;
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return { status: 'invalid' };
+    const nameValue = typeof metadata.display_name === 'string'
+      ? metadata.display_name
+      : typeof metadata.name === 'string'
+        ? metadata.name
+        : '';
+    const displayName = normaliseDisplayName(nameValue);
+    if (displayName.length < 2 || displayName.length > 50) return { status: 'invalid' };
+    const pictureValue = typeof metadata.picture === 'string' ? metadata.picture.trim() : '';
+    const picture = /^https?:\/\/\S+$/i.test(pictureValue) ? pictureValue : undefined;
+
+    return {
+      status: 'ready',
+      account: {
+        ...publicIdentity,
+        custody: 'device-only',
+        displayName,
+        picture,
+        setupComplete: complete === '1',
+      },
+    };
+  } catch {
+    return { status: 'invalid' };
   }
 }
 

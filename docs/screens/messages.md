@@ -43,7 +43,7 @@ All states are textual and colors/icons are supplementary. Portraits have
 names, errors use an announced banner, controls meet 48 dp, and the shell
 scrolls under large type and the keyboard.
 
-States: empty, outbound waiting, inbound requested, accepted, blocked, relay unavailable/rejected, report confirmed/rejected, no active venue, deleted local record, corrupt storage, and recipient no longer visible. A blocked person cannot be requested or messaged again on that device. Setup failure on Messages home (identity, relay archive, or kind-4 subscription) surfaces an inline error banner above the archive instead of masquerading as “No conversations yet”. A conversation deep link whose pubkey matches no retained record renders a not-found state with a back action; it never spins indefinitely or opens another person's thread.
+States: empty, outbound waiting, inbound requested, accepted, blocked, relay unavailable/rejected, report confirmed/rejected, no active venue, deleted local record, corrupt or temporarily unavailable protected storage, and recipient no longer visible. A blocked person cannot be requested or messaged again on that device. Setup or local-save failure on Messages home (identity, relay archive, local projection, or kind-4 subscription) surfaces an inline error banner above the archive instead of masquerading as “No conversations yet” or becoming an unhandled native promise. A conversation deep link whose pubkey matches no retained record renders a not-found state with a back action; it never spins indefinitely or opens another person's thread.
 
 ## Complete QA strategy
 

@@ -7,6 +7,17 @@ appId: life.crays
     visible:
       id: "me-screen"
     timeout: 15000
+- assertVisible: "${QA_PROFILE_NAME}"
+- assertVisible: "Your Crays identity"
+- assertVisible: "Protected on this device"
+- tapOn:
+    id: "me-account-profile"
+- assertVisible: "Public identity"
+- assertVisible: "${QA_PROFILE_NPUB}"
+- assertVisible: "Saved on this device"
+- assertNotVisible: ".*nsec1.*"
+- tapOn:
+    id: "me-account-profile"
 - assertVisible: "Active order"
 - assertVisible: "Current room"
 - assertVisible: "Ready for pickup"

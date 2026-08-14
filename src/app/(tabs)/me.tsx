@@ -1,9 +1,10 @@
 import { router, useIsFocused } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { readLocalAccountSummary } from '@/account/account';
 import { listTickets } from '@/access/tickets';
 import { useRoomData } from '@/rooms/RoomData';
-import { countUsableEventAccess, hasUsableDurableAccess, MeScreen, selectActiveOrder } from '@/screens/durable/AccountWalletScreens';
+import { countUsableEventAccess, hasUsableDurableAccess, MeScreen, selectActiveOrder, type MeAccountState } from '@/screens/durable/AccountWalletScreens';
 import { useRoomSession } from '@/session/RoomSession';
 
 export default function MeRoute() {
@@ -13,6 +14,42 @@ export default function MeRoute() {
   const [ticketCount, setTicketCount] = useState(0);
   const [ticketsLoaded, setTicketsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [accountState, setAccountState] = useState<MeAccountState>({ status: 'loading' });
+  const accountReadGeneration = useRef(0);
+
+  const loadAccount = useCallback(() => {
+    const generation = ++accountReadGeneration.current;
+    void readLocalAccountSummary().then((result) => {
+      if (generation !== accountReadGeneration.current) return;
+      setAccountState(result);
+      if (__DEV__ && result.status === 'ready') {
+        console.info(`[crays-me-profile]${JSON.stringify({
+          custody: result.account.custody,
+          displayName: result.account.displayName,
+          npub: result.account.npub,
+          pubkey: result.account.pubkey,
+          setupComplete: result.account.setupComplete,
+          verified: true,
+        })}`);
+      }
+    }).catch(() => {
+      if (generation !== accountReadGeneration.current) return;
+      setAccountState({ status: 'error', message: 'Crays could not read the protected profile on this device.' });
+    });
+  }, []);
+
+  const retryAccount = useCallback(() => {
+    setAccountState({ status: 'loading' });
+    loadAccount();
+  }, [loadAccount]);
+
+  useEffect(() => {
+    if (!focused) return;
+    loadAccount();
+    return () => {
+      accountReadGeneration.current += 1;
+    };
+  }, [focused, loadAccount]);
 
   useEffect(() => {
     if (!focused) return;
@@ -38,6 +75,7 @@ export default function MeRoute() {
 
   return (
     <MeScreen
+      accountState={accountState}
       activeOrder={activeOrder}
       error={durableError}
       hasMembership={hasMembership}
@@ -50,6 +88,7 @@ export default function MeRoute() {
       onMessages={() => router.push('/(tabs)/messages' as never)}
       onOrders={() => router.push('/orders' as never)}
       onProfile={() => router.push('/settings' as never)}
+      onRetryAccount={retryAccount}
       onRoom={() => router.navigate('/(tabs)/room' as never)}
       onTickets={() => router.push('/tickets' as never)}
       onWallet={() => router.push('/wallet' as never)}

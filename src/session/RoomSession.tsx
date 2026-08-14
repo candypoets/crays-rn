@@ -67,6 +67,10 @@ export function RoomSessionProvider({ children }: PropsWithChildren) {
         if (expiredName) setEndedRoom({ name: expiredName, reason: 'automatic' });
         setActiveRoom(room);
       })
+      .catch(() => {
+        // A locked/background Keychain is not proof that the session is absent.
+        // The entry router owns the visible retry state for protected reads.
+      })
       .finally(() => setHydrated(true));
   }, []);
 
@@ -88,7 +92,7 @@ export function RoomSessionProvider({ children }: PropsWithChildren) {
     if (!activeRoom) return;
     const remaining = activeRoom.leaveAt - Date.now();
     const timer = setTimeout(() => {
-      void SecureStore.deleteItemAsync(STORAGE_KEY);
+      void SecureStore.deleteItemAsync(STORAGE_KEY).catch(() => undefined);
       setEndedRoom({ name: activeRoom.name, reason: 'automatic' });
       setActiveRoom(null);
     }, Math.max(0, remaining));

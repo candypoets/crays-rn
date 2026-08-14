@@ -51,6 +51,7 @@ import { saveMessageRelays } from '@/messages/relays';
 import { subscribeNip04Messages } from '@/messages/subscription';
 import { useSafety } from '@/safety/Safety';
 import { canOpenRoomSubscriptions, type RoomRelayAuth } from '@/rooms/relayAuthGate';
+import { LatestWriteQueue } from '@/storage/latestWriteQueue';
 import {
   isNewerRoomPresence,
   projectRoomPresence,
@@ -94,6 +95,7 @@ const ORDER_STATUSES = new Set<RoomOrderStatus>(['pending', 'accepted', 'process
 // (30009 type-tag) projections, so v1 caches are abandoned rather than read.
 const ORDER_ARCHIVE_KEY = 'crays.orders.archive.v2';
 const ENTITLEMENT_ARCHIVE_KEY = 'crays.entitlements.archive.v2';
+const ARCHIVE_WRITE_ERROR = 'Saved orders and access could not be updated while protected device storage was unavailable.';
 
 function upsertById<T extends { id: string }>(items: T[], value: T): T[] {
   const index = items.findIndex((item) => item.id === value.id);
@@ -137,6 +139,22 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     sessionKey: string;
     rootPubkey: string;
   } | null>(null);
+  const archiveWriteQueue = useMemo(() => new LatestWriteQueue({
+    canWrite: () => AppState.currentState === 'active',
+    onError: () => setArchiveError(ARCHIVE_WRITE_ERROR),
+    onRecovered: () => setArchiveError((current) => current === ARCHIVE_WRITE_ERROR ? null : current),
+    write: (key, value) => SecureStore.setItemAsync(key, value),
+  }), []);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void archiveWriteQueue.flush();
+    });
+    return () => {
+      subscription.remove();
+      archiveWriteQueue.dispose();
+    };
+  }, [archiveWriteQueue]);
 
   useEffect(() => {
     let current = true;
@@ -217,7 +235,8 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!activeRoom || !viewerPubkey) return;
-    void saveMessageRelays(viewerPubkey, [activeRoom.connectionRelayUrl || activeRoom.relayUrl]);
+    void saveMessageRelays(viewerPubkey, [activeRoom.connectionRelayUrl || activeRoom.relayUrl])
+      .catch(() => setArchiveError(ARCHIVE_WRITE_ERROR));
   }, [activeRoom, viewerPubkey]);
 
   useEffect(() => {
@@ -560,9 +579,9 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     // updaters must be pure because StrictMode double-invokes them.
     const next = [...liveOrders, ...archivedOrdersRef.current.filter((item) => !liveOrders.some((live) => live.id === item.id))].slice(0, 200);
     archivedOrdersRef.current = next;
-    void SecureStore.setItemAsync(ORDER_ARCHIVE_KEY, JSON.stringify(next));
+    archiveWriteQueue.queue(ORDER_ARCHIVE_KEY, JSON.stringify(next));
     setArchivedOrders(next);
-  }, [liveOrders]);
+  }, [archiveWriteQueue, liveOrders]);
 
   const orders = useMemo(() => [...liveOrders, ...archivedOrders.filter((item) => !liveOrders.some((live) => live.id === item.id))].sort((a, b) => b.updatedAt - a.updatedAt), [archivedOrders, liveOrders]);
 
@@ -585,9 +604,9 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     // updaters must be pure because StrictMode double-invokes them.
     const next = [...liveEntitlements, ...archivedEntitlementsRef.current.filter((item) => !liveEntitlements.some((live) => live.awardId === item.awardId))].slice(0, 200);
     archivedEntitlementsRef.current = next;
-    void SecureStore.setItemAsync(ENTITLEMENT_ARCHIVE_KEY, JSON.stringify(next));
+    archiveWriteQueue.queue(ENTITLEMENT_ARCHIVE_KEY, JSON.stringify(next));
     setArchivedEntitlements(next);
-  }, [liveEntitlements]);
+  }, [archiveWriteQueue, liveEntitlements]);
 
   const entitlements = useMemo(
     () => [...liveEntitlements, ...archivedEntitlements.filter((item) => !liveEntitlements.some((live) => live.awardId === item.awardId))],
