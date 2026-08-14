@@ -13,6 +13,18 @@ appId: life.crays
 - assertVisible: "1 saved ticket"
 - assertNotVisible: "CR-QA-READY"
 - assertNotVisible: ".*relay-confirmed.*"
+- tapOn:
+    id: "me-current-room"
+- extendedWaitUntil:
+    visible:
+      id: "room-menu-screen"
+    timeout: 15000
+- tapOn:
+    id: "tab-me"
+- extendedWaitUntil:
+    visible:
+      id: "me-screen"
+    timeout: 15000
 - scrollUntilVisible:
     element:
       id: "me-wallet"

@@ -276,14 +276,16 @@ export function NightBadge({ children, tone = 'neutral' }: PropsWithChildren<{ t
 }
 
 export function NightCard({
+  accessibilityLabel,
   children,
   className = '',
   onPress,
   testID,
-}: PropsWithChildren<{ className?: string; onPress?: () => void; testID?: string }>) {
+}: PropsWithChildren<{ accessibilityLabel?: string; className?: string; onPress?: () => void; testID?: string }>) {
   const Component = onPress ? Pressable : View;
   return (
     <Component
+      accessibilityLabel={accessibilityLabel}
       accessibilityRole={onPress ? 'button' : undefined}
       className={`rounded-2xl border border-edge bg-surface p-4 ${className}`}
       onPress={onPress}

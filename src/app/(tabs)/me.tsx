@@ -50,6 +50,7 @@ export default function MeRoute() {
       onMessages={() => router.push('/(tabs)/messages' as never)}
       onOrders={() => router.push('/orders' as never)}
       onProfile={() => router.push('/settings' as never)}
+      onRoom={() => router.navigate('/(tabs)/room' as never)}
       onTickets={() => router.push('/tickets' as never)}
       onWallet={() => router.push('/wallet' as never)}
     />

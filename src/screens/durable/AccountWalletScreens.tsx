@@ -77,6 +77,7 @@ export function MeScreen({
   onMessages,
   onOrders,
   onProfile,
+  onRoom,
   onTickets,
   onWallet,
   roomName,
@@ -92,6 +93,7 @@ export function MeScreen({
   onMessages?: () => void;
   onOrders: () => void;
   onProfile: () => void;
+  onRoom: () => void;
   onTickets: () => void;
   onWallet: () => void;
   roomName?: string;
@@ -162,14 +164,20 @@ export function MeScreen({
 
       <Text className="mb-2 mt-5 text-[11px] font-black uppercase tracking-[0.8px] text-ink">Current room</Text>
       {roomName ? (
-        <NightCard className="p-0">
+        <NightCard
+          accessibilityLabel={`${roomName}. You’re inside. Return to room`}
+          className="p-0 active:bg-surface-soft"
+          onPress={onRoom}
+          testID="me-current-room"
+        >
           <View className="flex-row overflow-hidden rounded-2xl">
             <VenueImage className="h-24 w-32" index={0} label={`${roomName} interior`} testID="me-room-image" />
             <View className="min-w-0 flex-1 justify-center px-4 py-3">
               <Text className="text-lg font-black text-ink">{roomName}</Text>
               <View className="mt-2 flex-row items-center gap-2">
                 <View className="h-2 w-2 rounded-full bg-success" />
-                <Text className="text-sm font-semibold text-muted">You’re inside</Text>
+                <Text className="flex-1 text-sm font-semibold text-muted">You’re inside</Text>
+                <Ionicons color={colors.primary} name="chevron-forward" size={20} />
               </View>
             </View>
           </View>
