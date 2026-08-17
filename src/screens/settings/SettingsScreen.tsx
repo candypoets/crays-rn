@@ -41,9 +41,10 @@ function SettingsInfoRow({
   );
 }
 
-export function SettingsScreen({ blocks, blocksError, error, loading = false, onBack, onUnblock, unblockingKey }: {
+export function SettingsScreen({ blocks, blocksError, custody = 'unknown', error, loading = false, onBack, onUnblock, unblockingKey }: {
   blocks: BlockRecord[];
   blocksError?: string | null;
+  custody?: 'device-only' | 'remote-signer' | 'unknown';
   error?: string | null;
   loading?: boolean;
   onBack: () => void;
@@ -69,8 +70,17 @@ export function SettingsScreen({ blocks, blocksError, error, loading = false, on
 
       <SettingsHeading>Profile & access</SettingsHeading>
       <View className="overflow-hidden rounded-2xl border border-edge bg-surface">
-        <SettingsInfoRow badge="Local" detail="Your private key stays in device-only protected storage." icon="key-outline" title="Protected on this device" />
-        <SettingsInfoRow badge="Not configured" detail="Provider sign-in is unavailable in this build." icon="link-outline" title="Apple and Google" />
+        <SettingsInfoRow
+          badge={custody === 'remote-signer' ? 'NIP-46' : custody === 'device-only' ? 'Local' : 'Unavailable'}
+          detail={custody === 'remote-signer'
+            ? 'Crays asks your connected signer to approve signed actions.'
+            : custody === 'device-only'
+              ? 'Your private key stays in device-only protected storage.'
+              : 'Crays could not read the configured signing method.'}
+          icon={custody === 'remote-signer' ? 'phone-portrait-outline' : 'key-outline'}
+          title={custody === 'remote-signer' ? 'Connected signer' : 'Protected on this device'}
+        />
+        <SettingsInfoRow badge="Available at login" detail="Connect a Nostr signer or use advanced secret-key import before account setup." icon="link-outline" title="Existing Nostr identity" />
       </View>
 
       <SettingsHeading>Privacy & presence</SettingsHeading>
@@ -130,7 +140,7 @@ export function SettingsScreen({ blocks, blocksError, error, loading = false, on
 
       <SettingsHeading>Recovery & room controls</SettingsHeading>
       <View className="overflow-hidden rounded-2xl border border-edge bg-surface">
-        <SettingsInfoRow badge="Not configured" detail="Cross-device recovery and remote signing need a focused custody flow." icon="shield-outline" title="Recovery options" />
+        <SettingsInfoRow badge={custody === 'remote-signer' ? 'Signer-owned' : 'Not configured'} detail={custody === 'remote-signer' ? 'Reconnect through your signer app; Crays does not hold its secret key.' : 'Cross-device recovery for a device-held key is not configured.'} icon="shield-outline" title="Recovery options" />
         <SettingsInfoRow badge="At join" detail="Room notifications and presence choices remain owned by their room flows." icon="options-outline" title="Room preferences" />
       </View>
     </AppShell>

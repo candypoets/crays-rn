@@ -1,6 +1,6 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ensureLocalIdentity } from '@/account/account';
+import { ensureActiveIdentity } from '@/account/account';
 import { findTicket, saveConfirmedRsvp } from '@/access/tickets';
 import { publishEvent } from '@/nostr/publish';
 import { eventRsvpTemplate } from '@/nostr/protocol';
@@ -24,7 +24,7 @@ export default function EventRoute() {
     if (!event || loading) return;
     setLoading(true); setError(null);
     try {
-      await ensureLocalIdentity();
+      await ensureActiveIdentity();
       const relayUrl = relayUrlFor(activeRoom);
       await publishEvent(eventRsvpTemplate(event.address, 'accepted'), [relayUrl], 'event_rsvp');
       await saveConfirmedRsvp({ event, relayUrl, roomId: activeRoom.id, roomName: activeRoom.name });

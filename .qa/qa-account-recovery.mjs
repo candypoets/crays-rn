@@ -27,7 +27,7 @@ try {
   );
   execFileSync(process.execPath, ['.qa/verify-account-recovery.mjs'], {
     cwd: PROJECT_ROOT,
-    env: { ...process.env, QA_EXPECTED_PUBKEY: qaIdentity.pub },
+    env: { ...process.env, QA_EXPECTED_PUBKEY: qaIdentity.pub, QA_NSEC: qaIdentity.nsec },
     stdio: 'inherit',
   });
   console.log(`QA PASS: ${scenario}`);

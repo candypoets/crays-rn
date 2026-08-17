@@ -213,7 +213,6 @@ export function readTrustedAnchor(relayUrl: string, rootPubkey: string, timeoutM
           relays: [relayUrl],
           limit: 10,
           noCache: true,
-          closeOnEOSE: true,
         }],
         (message: WorkerMessage) => {
           const event = isParsedEvent(message);
@@ -332,7 +331,6 @@ export async function confirmInviteRedemption({
           relays: [relayUrl],
           limit: 1,
           noCache: true,
-          closeOnEOSE: false,
         }],
         (message: WorkerMessage) => {
           const event = isParsedEvent(message);

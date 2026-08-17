@@ -13,7 +13,7 @@ appId: life.crays
       id: "settings-screen"
     timeout: 15000
 - assertVisible: "Protected on this device"
-- assertVisible: "Apple and Google"
+- assertVisible: "Existing Nostr identity"
 - assertVisible: "Not configured"
 - assertVisible: "Presence defaults"
 - takeScreenshot: profile-settings

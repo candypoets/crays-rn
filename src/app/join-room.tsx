@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
-import { ensureLocalIdentity, getLocalProfileTemplate } from '@/account/account';
+import { ensureActiveIdentity, getLocalProfileTemplate } from '@/account/account';
 import { grantVisibleRoomAccess, inviteSourceForVisibility } from '@/invites/roomAccess';
 import { presenceTemplate } from '@/nostr/protocol';
 import { publishEvent, publishEventAfterAccess } from '@/nostr/publish';
@@ -22,7 +22,7 @@ export default function JoinRoomRoute() {
     setError(null);
     try {
       if (preferences.visibility === 'visible') {
-        const [identity, profile] = await Promise.all([ensureLocalIdentity(), getLocalProfileTemplate()]);
+        const [identity, profile] = await Promise.all([ensureActiveIdentity(), getLocalProfileTemplate()]);
         if (!profile) throw new Error('Finish account setup before joining visibly. You can still browse quietly.');
         let confirmedInviteAccess = false;
         const inviteSource = inviteSourceForVisibility(preferences.visibility, {

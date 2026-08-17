@@ -6,7 +6,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
 
-import { ensureLocalIdentity, getLocalPubkey } from '@/account/account';
+import { ensureActiveIdentity, getLocalPubkey } from '@/account/account';
 import {
   CRAYS_PROTOCOL,
   PRESENCE_HEARTBEAT_INTERVAL_MS,
@@ -503,7 +503,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       if (cancelled || publishing || Date.now() >= activeRoom.leaveAt) return;
       publishing = true;
       try {
-        await ensureLocalIdentity();
+        await ensureActiveIdentity();
         if (cancelled) return;
         await publishEvent(
           presenceTemplate({

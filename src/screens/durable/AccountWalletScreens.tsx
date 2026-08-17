@@ -135,7 +135,11 @@ function MeIdentityCard({
   }
 
   const { account } = state;
-  const custodyLabel = account.setupComplete ? 'Protected on this device' : 'Account setup not finished';
+  const custodyLabel = !account.setupComplete
+    ? 'Account setup not finished'
+    : account.custody === 'remote-signer'
+      ? 'Connected signer'
+      : 'Protected on this device';
   return (
     <View className="mt-5 overflow-hidden rounded-2xl border border-edge bg-surface" testID="me-account-card">
       <Pressable
@@ -173,7 +177,9 @@ function MeIdentityCard({
           <Text className="mt-3 text-sm leading-5 text-muted">
             This is the name rooms see when you choose to be visible. Your secret key is never shown here.
           </Text>
-          <Text className="mt-2 text-sm font-semibold text-ink">Saved on this device</Text>
+          <Text className="mt-2 text-sm font-semibold text-ink">
+            {account.custody === 'remote-signer' ? 'Signing stays with your connected signer' : 'Saved on this device'}
+          </Text>
         </View>
       ) : null}
     </View>

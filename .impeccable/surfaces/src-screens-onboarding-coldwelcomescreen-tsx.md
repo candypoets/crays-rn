@@ -2,15 +2,15 @@
 version: 1
 slug: "src-screens-onboarding-coldwelcomescreen-tsx"
 primary_target: "src/screens/onboarding/ColdWelcomeScreen.tsx"
-related_targets: ["src/screens/onboarding/AccountAccessScreen.tsx","src/screens/onboarding/ProfileSetupScreen.tsx","src/screens/onboarding/RecoveryScreen.tsx"]
+related_targets: ["src/screens/onboarding/AccountAccessScreen.tsx","src/screens/onboarding/LoginScreen.tsx","src/screens/onboarding/AccountRecoveryScreen.tsx","src/screens/onboarding/ProfileSetupScreen.tsx","src/screens/onboarding/RecoveryScreen.tsx"]
 ---
 
-Scope: Screens 06, 06B, 07, and 07B; Operate mode with a persuasive first screen.
+Scope: Screens 06, 06B, 07, 07B, 09, and Existing Nostr identity; Operate mode with a persuasive first screen and a progressive custody handoff.
 
-Audience/job: a first-time guest, often in a dim and distracting venue context, creates one understandable local identity without permission or provider detours.
+Audience/job: a first-time or returning guest, often in a dim and distracting venue context, either creates one understandable local identity or brings an existing Nostr identity without learning protocol vocabulary before taking action.
 
-Action and proof: Create on this device, choose a display name, understand device-only recovery, then reach Discover. A valid nipworker-signed kind-0 and resumable protected state prove completion.
+Action and proof: Create on this device or connect a signer (recommended), keep secret-key import advanced, choose the room-facing display name, understand the custody actually configured, then reach Discover. A signer-confirmed public key, valid nipworker-signed kind-0, and resumable protected descriptor prove completion.
 
-Direction: inherit the canonical Crays night-out artifacts. The memorable moment is the shift from a coaster/ticket promise into a protected local identity; one vivid action leads each screen.
+Direction: inherit the canonical Crays Night Playlist artifacts. The memorable moment is the calm two-device handoff: one recommended signer action leads, the scannable request occupies the waiting state, and raw-key custody never competes visually with it.
 
-Constraints: no Apple/Google access, Stripe, permission prompts, arbitrary relay connections, or fabricated Discover results. System Back, text scaling, 48 dp targets, secure storage, and explicit interrupted/error states are mandatory.
+Constraints: no username/password, Apple/Google provider theatre, automatic identity creation from a room, arbitrary profile relays, permission prompts, or fabricated account state. NIP-46 uses only configured discovery or signer-declared relays; secrets never enter copy, logs, or public view models. System Back, cancellation, text scaling, 48 dp targets, secure storage, and explicit interrupted/error states are mandatory.

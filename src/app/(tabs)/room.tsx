@@ -1,7 +1,7 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
-import { ensureLocalIdentity } from '@/account/account';
+import { ensureActiveIdentity } from '@/account/account';
 import { useCart } from '@/commerce/Cart';
 import { publishEvent } from '@/nostr/publish';
 import { roomFeedTemplate, venueReportTemplate } from '@/nostr/protocol';
@@ -33,7 +33,7 @@ export default function RoomRoute() {
     setComposerLoading(true);
     setComposerError(null);
     try {
-      await ensureLocalIdentity();
+      await ensureActiveIdentity();
       await publishEvent(
         roomFeedTemplate(
           activeRoom.id,
@@ -55,7 +55,7 @@ export default function RoomRoute() {
     if (reportingPostId) return;
     setReportingPostId(post.id); setReportNotice(null);
     try {
-      await ensureLocalIdentity();
+      await ensureActiveIdentity();
       await publishEvent(venueReportTemplate(post.pubkey, activeRoom.id, 'other', post.id), [relayUrlFor(activeRoom)], 'feed_report');
       setReportNotice('Report sent to this venue. The post remains visible unless you block its author.');
     } catch (cause) { setReportNotice(cause instanceof Error ? cause.message : 'The venue did not confirm this report.'); }

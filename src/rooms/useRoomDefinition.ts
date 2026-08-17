@@ -94,7 +94,6 @@ export function useRoomDefinition(relayUrl?: string, roomId?: string): RoomDefin
                 relays: [relayUrl],
                 limit: 10,
                 noCache: true,
-                closeOnEOSE: false,
               }],
               (message) => {
                 const event = isParsedEvent(message);
@@ -117,7 +116,6 @@ export function useRoomDefinition(relayUrl?: string, roomId?: string): RoomDefin
                     relays: [relayUrl],
                     limit: 50,
                     noCache: true,
-                    closeOnEOSE: false,
                   }],
                   (roomMessage) => {
                     const roomEvent = isParsedEvent(roomMessage);

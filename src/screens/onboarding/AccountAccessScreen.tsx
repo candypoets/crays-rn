@@ -14,7 +14,7 @@ import { colors } from '@/theme/colors';
 /**
  * THESIS: Identity creation is a pre-show checklist, not a wall of competing choices.
  * OWN-WORLD: Pale lilac field, plum mark, soft lilac icon discs, one blue committed action.
- * STORY: Read the three boundaries, understand providers are absent, then create locally.
+ * STORY: Read the three boundaries, understand the Nostr alternative, then create locally.
  * FIRST VIEWPORT: Back and mark lead; headline, checklist, then the single create action.
  * FORM: Night Playlist board 02 panel 02 — one local method; providers explained, not rendered.
  */
@@ -45,9 +45,9 @@ const checklist: ChecklistRow[] = [
     body: 'Join verified rooms. Your presence isn’t shown before you enter.',
   },
   {
-    icon: 'ban-outline',
-    title: 'Provider login isn’t available',
-    body: 'Apple and Google sign-in aren’t configured in this build.',
+    icon: 'link-outline',
+    title: 'Already use Nostr?',
+    body: 'Connect your signer instead. Crays never needs its secret key.',
   },
 ];
 

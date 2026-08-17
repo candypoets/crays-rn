@@ -14,9 +14,18 @@ describe('SettingsScreen', () => {
     expect(view.getByText('Permission not requested')).toBeTruthy();
     expect(view.getAllByText('Not configured').length).toBeGreaterThan(0);
     expect(view.getByText('Presence defaults')).toBeTruthy();
+    expect(view.getByText('Existing Nostr identity')).toBeTruthy();
     expect(view.queryByTestId('settings-screen-brand-header')).toBeNull();
     fireEvent.press(view.getByTestId('settings-back'));
     expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('distinguishes connected-signer custody from a device-held key', () => {
+    const view = render(<SettingsScreen blocks={[]} custody="remote-signer" onBack={jest.fn()} onUnblock={jest.fn()} />);
+    expect(view.getByText('Connected signer')).toBeTruthy();
+    expect(view.getByText('NIP-46')).toBeTruthy();
+    expect(view.getByText(/asks your connected signer/)).toBeTruthy();
+    expect(view.queryByText(/private key stays in device-only/)).toBeNull();
   });
 
   it('names block scope and exposes an explicit unblock action', () => {

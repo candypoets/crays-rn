@@ -57,7 +57,7 @@ describe('local account summary', () => {
         setupComplete: true,
       },
     });
-    expect(SecureStore.getItemAsync).toHaveBeenCalledTimes(4);
+    expect(SecureStore.getItemAsync).toHaveBeenCalledTimes(5);
     expect(JSON.stringify(result)).not.toContain(nsec);
   });
 
@@ -102,6 +102,33 @@ describe('local account summary', () => {
     await expect(readLocalAccountSummary()).resolves.toEqual({
       status: 'ready',
       account: { custody: 'device-only', displayName: 'Maya QA', npub, picture: undefined, pubkey, setupComplete: true },
+    });
+  });
+
+  it('reports connected-signer custody without requiring or exposing an nsec', async () => {
+    const profile = signedProfile(JSON.stringify({ display_name: 'Remote Maya' }));
+    mockStored({
+      'crays.identity.profile': JSON.stringify(profile),
+      'crays.identity.pubkey': pubkey,
+      'crays.identity.signer': JSON.stringify({
+        type: 'nip46',
+        payload: {
+          clientSecret: 'c'.repeat(64),
+          url: `bunker://${pubkey}?relay=wss%3A%2F%2Frelay.example`,
+        },
+      }),
+      'crays.onboarding.complete': '1',
+    });
+    await expect(readLocalAccountSummary()).resolves.toEqual({
+      status: 'ready',
+      account: {
+        custody: 'remote-signer',
+        displayName: 'Remote Maya',
+        npub,
+        picture: undefined,
+        pubkey,
+        setupComplete: true,
+      },
     });
   });
 

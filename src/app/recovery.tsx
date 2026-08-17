@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { completeLocalOnboarding } from '@/account/account';
+import { completeLocalOnboarding, readLocalAccountSummary, type LocalAccountSummary } from '@/account/account';
 import { entryContextHref, getEntryContext } from '@/account/context';
 import { RecoveryScreen } from '@/screens/onboarding/RecoveryScreen';
 
@@ -9,6 +9,19 @@ export default function RecoveryRoute() {
   const params = useLocalSearchParams<{ resume?: string }>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [custody, setCustody] = useState<LocalAccountSummary['custody'] | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    void readLocalAccountSummary().then((result) => {
+      if (!active) return;
+      if (result.status === 'ready') setCustody(result.account.custody);
+      else setError('Crays could not verify the identity setup on this device.');
+    }).catch(() => {
+      if (active) setError('Crays could not read the protected identity on this device.');
+    });
+    return () => { active = false; };
+  }, []);
 
   const finish = async () => {
     if (loading) return;
@@ -27,6 +40,7 @@ export default function RecoveryRoute() {
 
   return (
     <RecoveryScreen
+      custody={custody}
       error={error}
       loading={loading}
       onBack={() => router.replace('/profile')}

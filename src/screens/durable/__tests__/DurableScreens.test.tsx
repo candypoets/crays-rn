@@ -94,6 +94,14 @@ describe('durable screens', () => {
     expect(view.getByText(/secret key is never shown/i)).toBeTruthy();
     expect(view.queryByText(/nsec1/i)).toBeNull();
   });
+  it('labels a NIP-46 profile as signer-held instead of device-key custody', () => {
+    const remoteAccount = { ...account, custody: 'remote-signer' as const };
+    const view = render(<MeScreen accountState={{ status: 'ready', account: remoteAccount }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    expect(view.getByText('Connected signer')).toBeTruthy();
+    fireEvent.press(view.getByTestId('me-account-profile'));
+    expect(view.getByText('Signing stays with your connected signer')).toBeTruthy();
+    expect(view.queryByText('Saved on this device')).toBeNull();
+  });
   it('keeps protected-profile loading, failure, and invalid states separate from durable data', () => {
     const retry = jest.fn();
     const view = render(<MeScreen accountState={{ status: 'loading' }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);

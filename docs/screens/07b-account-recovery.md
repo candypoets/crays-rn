@@ -2,7 +2,7 @@
 
 ## Product requirement
 
-The current slice has device-only custody. Screen 07B must explain that consequence before completion without pretending that Apple/Google, biometric, or cross-device recovery exists. It also establishes the future guard: before adding money or purchasing durable items, Crays must require a real recoverable configuration.
+Screen 07B explains the custody that was actually configured before completion. A local/imported key states the device-only consequence without pretending that biometric or cross-device recovery exists. NIP-46 states that signing and recovery remain with the connected signer and never claims its key is on this device. It also preserves the durable-item guard for device-only custody.
 
 Visual authority: the Night Playlist entry/account board `docs/design-explorations/night-playlist/mockups/02-entry-and-account-v1.png`, **panel 08** as the visual family for this serious variant (blue lock/ring medallion language), with the treatment notes in `docs/design-explorations/night-playlist/screens/07b-account-recovery.md`. This supersedes the older `assets/screens/07b-account-recovery.png` reference.
 
@@ -26,7 +26,9 @@ Visual authority: the Night Playlist entry/account board `docs/design-exploratio
 
 ## States and failures
 
-- Default device-only consequence.
+- Loading: no custody claim or finish action until the protected descriptor is validated.
+- Device-only consequence.
+- Connected NIP-46 signer consequence and signer-owned recovery copy.
 - Saving with disabled repeat action.
 - Missing/corrupt profile or SecureStore failure: remain on-screen and explain the corrective step.
 - Relaunch before finish resumes here; relaunch after finish resolves to Discover.

@@ -1,36 +1,51 @@
 appId: life.crays
 ---
 - runFlow: launch.yaml
-- openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
-- extendedWaitUntil:
-    visible:
-      id: "qa-seed-continue"
-    timeout: 30000
 - tapOn:
-    id: "qa-seed-continue"
-- openLink: "crays:///login"
+    id: "log-in-button"
 - extendedWaitUntil:
     visible:
       id: "login-screen"
     timeout: 15000
+- assertVisible: "Log in with Nostr"
 - tapOn:
-    id: "login-other-ways"
+    id: "login-existing-identity"
 - extendedWaitUntil:
     visible:
       id: "account-recovery-screen"
     timeout: 15000
-- assertVisible: "Key import, remote signer, and provider recovery are not configured.*"
-- assertVisible: ".*No local identity will be overwritten.*"
-- takeScreenshot: account-recovery-unconfigured
-- tapOn: "Back to login"
-- extendedWaitUntil:
-    visible:
-      id: "login-screen"
-    timeout: 15000
-- assertVisible: "Unlock on this device"
+- assertVisible: "Use your Nostr identity"
+- assertVisible: "Recommended"
+- assertVisible: "Connect a signer"
+- assertVisible: "Import a secret key"
 - tapOn:
-    id: "login-device-unlock"
+    id: "nostr-connect-method"
 - extendedWaitUntil:
     visible:
-      id: "discover-screen"
+      id: "nostr-connect-qr"
+    timeout: 30000
+- assertVisible: "Connect your signer"
+- assertVisible: ".*Waiting for approval in your signer.*"
+- takeScreenshot: nostr-connect-waiting
+- tapOn:
+    id: "back-button"
+- tapOn:
+    id: "secret-import-method"
+- assertVisible: "Import a secret key"
+- tapOn:
+    id: "nsec-input"
+- inputText: "${QA_NSEC}"
+- hideKeyboard
+- tapOn:
+    id: "import-secret-button"
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-screen"
+    timeout: 30000
+- assertVisible: "How should the room call you?"
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "profile-setup-screen"
     timeout: 30000

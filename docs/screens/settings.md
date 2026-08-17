@@ -1,15 +1,17 @@
-# Profile, settings, and advanced recovery
+# Profile, settings, and custody
 
-## Product + implementation contract
+## Product and implementation contract
 
-Settings reports the custody state truthfully: the local private key is protected in device-only SecureStore, Apple/Google are not configured, and export/remote signer require focused custody design. Privacy defaults and notifications are explicit states rather than silent toggles. The screen lists persisted venue/global blocks and allows exact-scope unblock. “Other ways to log in” never imports, overwrites, merges, or exposes a key in this build.
+Settings reports the validated signing method instead of assuming every identity owns a local key. A device-held or imported key shows **Protected on this device · Local** and its device-only storage consequence. A NIP-46 identity shows **Connected signer · NIP-46**, explains that Crays asks that signer to approve actions, and never implies that the user's secret key is stored here. **Existing Nostr identity** truthfully points out that signer connection and advanced import are available during login; Apple/Google/provider rows are absent.
 
-States include local identity, invalid protected state, provider unlinked/linked, recovery unavailable, remote signer pending, notification denied, block list empty, and storage error. Durable purchase is forbidden until recovery consequence is acknowledged.
+The rest of Settings remains the operational privacy surface: persisted venue/global blocks with exact-scope unblock, per-room presence, request limits, notification state, custody-specific recovery copy, and room controls. This route reads only the public account summary and never exposes nsec or signer client credentials.
 
-## Complete QA strategy
+## States, interaction, and accessibility
 
-`.qa/qa-settings.mjs` uses a deterministic dev signer and asserts custody, provider, notification, and empty-block truth. `qa-safety-blocks.mjs` covers populated global/venue rows, relaunch, filtering, and unblock. `.qa/qa-account-recovery.mjs` proves the no-overwrite fallback. Existing entry QA verifies device-only key/profile signatures. Provider/import work is D-008; push delivery is D-009.
+- Custody: device-only, remote-signer, or protected-account read unavailable. Unknown never falls back to a false local-key claim.
+- Blocks: loading, empty, populated local/venue scopes, storage failure, confirmation, removal, and conversation-refresh warning.
+- All rows use text status plus badges, wrap at large type, and remain inside the safe-area-aware child shell. Read-only states have no false chevrons or switches. Unblock is the only mutation and is locked against repeat submits.
 
-## Night Playlist implementation
+## QA
 
-Board 04 panel 08 becomes a quiet grouped control room with compact child-route chrome: Profile & access, Privacy & presence, exact-scope Blocked people, Notifications, and Recovery & room controls. Read-only or unavailable settings use stacked, large-text-safe status badges without disclosure chevrons, so they cannot masquerade as working routes or switches. Block-list hydration is a loading state, and a SecureStore read failure is an error state; **Nobody is blocked** appears only after a successful empty read. The only mutations here remain exact-scope Unblock actions: a native confirmation names the person and whether removal applies in this room or everywhere, then one removal locks all repeated submits until storage settles and announces its result. Conversation refresh failure after a successful global unblock is reported as a refresh warning, never as a false block-removal failure. Room and identity behavior stays with its existing owner. Every deferred provider, notification, recovery, and room-control state is named in text.
+`.qa/qa-settings.mjs` uses a deterministic device signer and asserts **Protected on this device**, **Existing Nostr identity**, notifications, privacy, and empty-block truth. `qa-safety-blocks.mjs` covers exact-scope unblock and persistence. `SettingsScreen.test.tsx` additionally injects remote custody and requires **Connected signer · NIP-46** while forbidding device-key copy. Account-layer tests prove that the public summary never contains an nsec or NIP-46 client secret.

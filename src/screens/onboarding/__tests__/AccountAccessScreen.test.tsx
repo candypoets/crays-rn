@@ -19,8 +19,8 @@ describe('AccountAccessScreen', () => {
     expect(screen.getByText(/identity lives on this device/)).toBeOnTheScreen();
     expect(screen.getByText('Built for real places')).toBeOnTheScreen();
     expect(screen.getByText(/Join verified rooms/)).toBeOnTheScreen();
-    expect(screen.getByText(/Provider login isn.t available/)).toBeOnTheScreen();
-    expect(screen.getByText(/Apple and Google sign-in aren.t configured/)).toBeOnTheScreen();
+    expect(screen.getByText('Already use Nostr?')).toBeOnTheScreen();
+    expect(screen.getByText(/Connect your signer instead/)).toBeOnTheScreen();
     expect(screen.getAllByText('Create on this device')).toHaveLength(1);
     expect(screen.queryByText('Continue with Apple')).not.toBeOnTheScreen();
     expect(screen.queryByText('Continue with Google')).not.toBeOnTheScreen();

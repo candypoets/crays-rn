@@ -26,7 +26,7 @@
     "doctor": "npx expo-doctor"
   },
   "dependencies": {
-    "@candypoets/nipworker": "0.99.3",
+    "@candypoets/nipworker": "0.99.6",
     "@expo/vector-icons": "^15.0.2",
     "expo": "~57.0.8",
     "expo-constants": "~57.0.8",

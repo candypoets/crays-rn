@@ -14,7 +14,7 @@ appId: life.crays
       id: "login-screen"
     timeout: 15000
 - assertVisible: "Unlock on this device"
-- assertVisible: "Provider login isn.t configured"
+- assertVisible: "No Crays password"
 - assertNotVisible: "Continue with Apple"
 - assertNotVisible: "Continue with Google"
 - tapOn:

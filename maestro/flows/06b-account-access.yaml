@@ -19,7 +19,7 @@ appId: life.crays
     visible:
       id: "login-screen"
     timeout: 15000
-- assertVisible: "Pick up where you left off."
+- assertVisible: "Bring the identity you already use."
 - tapOn:
     id: "back-button"
 - extendedWaitUntil:

@@ -2,7 +2,7 @@
 
 ## Product requirement
 
-Ask only for the name people should see. Photo, bio, intent, and room-specific context remain optional until useful. Continuing signs a real Nostr kind-0 profile with the already-created local identity.
+Ask only for the name people should see. Photo, bio, intent, and room-specific context remain optional until useful. Continuing signs a real Nostr kind-0 profile with the already-established local key or connected signer.
 
 Visual authority: the Night Playlist entry/account board `docs/design-explorations/night-playlist/mockups/02-entry-and-account-v1.png`, **panel 03**, with the treatment notes in `docs/design-explorations/night-playlist/screens/07-account-setup.md`. This supersedes the older `assets/screens/07-account-setup.png` reference.
 
@@ -49,7 +49,7 @@ Visual authority: the Night Playlist entry/account board `docs/design-exploratio
 
 ## Nostr and relay behavior
 
-The local custody boundary keeps the durable `nsec` in SecureStore, passes only its decoded hex scalar to nipworker 0.97.11's React Native signer (the backend's required input), and signs the kind-0 through `useSignEvent` on the one shared manager. The secret never crosses into route or screen state. The returned event must match the protected draft pubkey and pass independent signature verification before storage. No publish or subscription occurs. A later relay-owned workflow publishes the stored signed kind-0 when the relay contract requires it.
+For local custody, the durable `nsec` stays in SecureStore and only its decoded hex scalar reaches nipworker's React Native signer boundary. For NIP-46 custody, Crays restores the saved bunker session and the external signer handles the approval; an `auth_url` challenge opens only when it is a valid HTTPS URL. Both modes sign through the one shared manager, allow up to 90 seconds for human approval, require the returned event pubkey to match the saved identity, and independently verify the signature before storage. No profile publish or data subscription occurs here.
 
 ## QA strategy
 

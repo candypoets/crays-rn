@@ -1,9 +1,11 @@
 import '@/polyfills/text-encoding';
 
 import { useSignEvent } from '@candypoets/nipworker/hooks';
+import type { NostrManagerLike } from '@candypoets/nipworker/react-native';
 import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
-import { getPublicKey, nip19, type Event, type EventTemplate, verifyEvent } from 'nostr-tools';
+import { Linking } from 'react-native';
+import { getPublicKey, nip19, type Event as NostrEvent, type EventTemplate, verifyEvent } from 'nostr-tools';
 
 import {
   normaliseDisplayName,
@@ -15,6 +17,7 @@ import { getNostrRuntime } from '@/nostr/manager';
 const STORAGE = {
   nsec: 'crays.identity.nsec',
   pubkey: 'crays.identity.pubkey',
+  signer: 'crays.identity.signer',
   profile: 'crays.identity.profile',
   complete: 'crays.onboarding.complete',
 } as const;
@@ -22,12 +25,22 @@ const STORAGE = {
 export type { EntryDestination } from '@/account/state';
 
 export type LocalIdentity = {
-  nsec: string;
+  nsec?: string;
   pubkey: string;
+  signer: 'nip46' | 'privkey';
 };
 
+type Nip46SignerPayload = {
+  clientSecret: string;
+  url: string;
+};
+
+type StoredSigner =
+  | { type: 'nip46'; payload: Nip46SignerPayload }
+  | { type: 'privkey' };
+
 export type LocalAccountSummary = {
-  custody: 'device-only';
+  custody: 'device-only' | 'remote-signer';
   displayName: string;
   npub: string;
   picture?: string;
@@ -48,14 +61,15 @@ const secureOptions: SecureStore.SecureStoreOptions = {
 };
 
 export async function getEntryDestination(): Promise<EntryDestination> {
-  const [nsec, pubkey, profile, complete] = await Promise.all([
+  const [nsec, pubkey, signer, profile, complete] = await Promise.all([
     SecureStore.getItemAsync(STORAGE.nsec),
     SecureStore.getItemAsync(STORAGE.pubkey),
+    SecureStore.getItemAsync(STORAGE.signer),
     SecureStore.getItemAsync(STORAGE.profile),
     SecureStore.getItemAsync(STORAGE.complete),
   ]);
 
-  const hasIdentity = isStoredIdentityValid(nsec, pubkey);
+  const hasIdentity = Boolean(readStoredSigner(nsec, pubkey, signer));
   return resolveEntryDestination({
     complete: complete === '1',
     hasIdentity,
@@ -63,7 +77,7 @@ export async function getEntryDestination(): Promise<EntryDestination> {
   });
 }
 
-function isStoredIdentityValid(nsec: string | null, pubkey: string | null): boolean {
+function isStoredPrivateKeyValid(nsec: string | null, pubkey: string | null): boolean {
   if (!nsec || !pubkey) return false;
   try {
     const decoded = nip19.decode(nsec);
@@ -77,10 +91,47 @@ function isStoredIdentityValid(nsec: string | null, pubkey: string | null): bool
   }
 }
 
+function isNip46Payload(value: unknown): value is Nip46SignerPayload {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const payload = value as Record<string, unknown>;
+  return (
+    typeof payload.clientSecret === 'string' &&
+    /^[0-9a-f]{64}$/i.test(payload.clientSecret) &&
+    typeof payload.url === 'string' &&
+    /^(?:bunker|nostrconnect):\/\//i.test(payload.url)
+  );
+}
+
+function readStoredSigner(
+  nsec: string | null,
+  pubkey: string | null,
+  stored: string | null,
+): StoredSigner | null {
+  if (!pubkey || !/^[0-9a-f]{64}$/i.test(pubkey)) return null;
+
+  // Identities created before signer metadata was introduced are local-key
+  // identities. This preserves upgrades without weakening validation.
+  if (!stored) return isStoredPrivateKeyValid(nsec, pubkey) ? { type: 'privkey' } : null;
+
+  try {
+    const descriptor = JSON.parse(stored) as { type?: unknown; payload?: unknown };
+    if (descriptor.type === 'privkey') {
+      return isStoredPrivateKeyValid(nsec, pubkey) ? { type: 'privkey' } : null;
+    }
+    if (descriptor.type === 'nip46' && !nsec && isNip46Payload(descriptor.payload)) {
+      return { type: 'nip46', payload: descriptor.payload };
+    }
+  } catch {
+    // Invalid signer metadata is an inconsistent account, never a cue to
+    // generate a replacement identity.
+  }
+  return null;
+}
+
 function isStoredProfileValid(profile: string | null, pubkey: string | null): boolean {
   if (!profile || !pubkey) return false;
   try {
-    const event = JSON.parse(profile) as Event;
+    const event = JSON.parse(profile) as NostrEvent;
     return event.kind === 0 && event.pubkey === pubkey && verifyEvent(event);
   } catch {
     return false;
@@ -98,15 +149,17 @@ export function abbreviateNpub(npub: string): string {
  * the account is missing and must not redirect or create a replacement key.
  */
 export async function readLocalAccountSummary(): Promise<LocalAccountRead> {
-  const [nsec, pubkey, profile, complete] = await Promise.all([
+  const [nsec, pubkey, signerValue, profile, complete] = await Promise.all([
     SecureStore.getItemAsync(STORAGE.nsec),
     SecureStore.getItemAsync(STORAGE.pubkey),
+    SecureStore.getItemAsync(STORAGE.signer),
     SecureStore.getItemAsync(STORAGE.profile),
     SecureStore.getItemAsync(STORAGE.complete),
   ]);
-  const hasAnyAccountMaterial = Boolean(nsec || pubkey || profile || complete);
+  const hasAnyAccountMaterial = Boolean(nsec || pubkey || signerValue || profile || complete);
   if (!hasAnyAccountMaterial) return { status: 'missing' };
-  if (!isStoredIdentityValid(nsec, pubkey)) return { status: 'invalid' };
+  const signer = readStoredSigner(nsec, pubkey, signerValue);
+  if (!signer) return { status: 'invalid' };
 
   const publicIdentity = { npub: nip19.npubEncode(pubkey!), pubkey: pubkey! };
   if (!profile) {
@@ -117,7 +170,7 @@ export async function readLocalAccountSummary(): Promise<LocalAccountRead> {
   if (!isStoredProfileValid(profile, pubkey)) return { status: 'invalid' };
 
   try {
-    const event = JSON.parse(profile) as Event;
+    const event = JSON.parse(profile) as NostrEvent;
     const metadata = JSON.parse(event.content) as Record<string, unknown>;
     if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return { status: 'invalid' };
     const nameValue = typeof metadata.display_name === 'string'
@@ -134,7 +187,7 @@ export async function readLocalAccountSummary(): Promise<LocalAccountRead> {
       status: 'ready',
       account: {
         ...publicIdentity,
-        custody: 'device-only',
+        custody: signer.type === 'nip46' ? 'remote-signer' : 'device-only',
         displayName,
         picture,
         setupComplete: complete === '1',
@@ -158,7 +211,7 @@ async function generateIdentity(): Promise<LocalIdentity> {
     const secret = await Crypto.getRandomBytesAsync(32);
     try {
       const pubkey = getPublicKey(secret);
-      return { nsec: nip19.nsecEncode(secret), pubkey };
+      return { nsec: nip19.nsecEncode(secret), pubkey, signer: 'privkey' };
     } catch {
       // Extremely unlikely invalid scalar; retry with fresh secure randomness.
     }
@@ -167,83 +220,250 @@ async function generateIdentity(): Promise<LocalIdentity> {
   throw new Error('This device could not create a secure identity. Please try again.');
 }
 
-async function createOrRestoreLocalIdentity(): Promise<LocalIdentity> {
+type AuthDetail = {
+  error?: string;
+  hasSigner?: boolean;
+  pubkey?: string | null;
+};
+
+function waitForSigner(
+  manager: NostrManagerLike,
+  start: () => void,
+  { expectedPubkey, signal, timeoutMs = 30_000 }: {
+    expectedPubkey?: string;
+    signal?: AbortSignal;
+    timeoutMs?: number;
+  } = {},
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (pubkey?: string, error?: Error) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timeout);
+      manager.removeEventListener('auth', onAuth);
+      signal?.removeEventListener('abort', onAbort);
+      if (error) reject(error);
+      else resolve(pubkey!);
+    };
+    const onAbort = () => finish(undefined, new Error('Signer connection cancelled.'));
+    const onAuth = ((event: globalThis.Event & { detail?: AuthDetail }) => {
+      const detail = event.detail;
+      if (detail?.error) {
+        finish(undefined, new Error(`The signer rejected the connection: ${detail.error}`));
+        return;
+      }
+      if (!detail?.pubkey || !detail.hasSigner) return;
+      if (!/^[0-9a-f]{64}$/i.test(detail.pubkey)) {
+        finish(undefined, new Error('The signer returned an invalid public identity.'));
+        return;
+      }
+      if (expectedPubkey && detail.pubkey !== expectedPubkey) {
+        finish(undefined, new Error('The signer returned a different public identity.'));
+        return;
+      }
+      finish(detail.pubkey);
+    }) as EventListener;
+    const timeout = setTimeout(
+      () => finish(undefined, new Error('The signer did not respond in time. Try again from your signer app.')),
+      timeoutMs,
+    );
+    manager.addEventListener('auth', onAuth);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    try {
+      start();
+    } catch (cause) {
+      finish(undefined, cause instanceof Error ? cause : new Error('The signer could not be started.'));
+    }
+  });
+}
+
+async function readIdentityMaterial() {
+  const [nsec, pubkey, signer, profile, complete] = await Promise.all([
+    SecureStore.getItemAsync(STORAGE.nsec),
+    SecureStore.getItemAsync(STORAGE.pubkey),
+    SecureStore.getItemAsync(STORAGE.signer),
+    SecureStore.getItemAsync(STORAGE.profile),
+    SecureStore.getItemAsync(STORAGE.complete),
+  ]);
+  return { complete, nsec, profile, pubkey, signer };
+}
+
+async function assertNoStoredIdentity(): Promise<void> {
+  const material = await readIdentityMaterial();
+  if (Object.values(material).some(Boolean)) {
+    throw new Error('An identity already exists on this device. Remove it from Settings before adding another.');
+  }
+}
+
+async function persistIdentity(identity: LocalIdentity, signer: StoredSigner): Promise<void> {
+  try {
+    await Promise.all([
+      identity.nsec
+        ? SecureStore.setItemAsync(STORAGE.nsec, identity.nsec, secureOptions)
+        : SecureStore.deleteItemAsync(STORAGE.nsec),
+      SecureStore.setItemAsync(STORAGE.pubkey, identity.pubkey, secureOptions),
+      SecureStore.setItemAsync(STORAGE.signer, JSON.stringify(signer), secureOptions),
+      SecureStore.deleteItemAsync(STORAGE.profile),
+      SecureStore.deleteItemAsync(STORAGE.complete),
+    ]);
+  } catch (error) {
+    await Promise.allSettled(Object.values(STORAGE).map((key) => SecureStore.deleteItemAsync(key)));
+    throw error;
+  }
+}
+
+async function activateStoredIdentity(): Promise<LocalIdentity> {
   const runtime = getNostrRuntime();
   if (!runtime.manager) {
     throw new Error('The secure Nostr engine is unavailable. Use a Crays development build.');
   }
 
-  const [savedNsec, savedPubkey] = await Promise.all([
-    SecureStore.getItemAsync(STORAGE.nsec),
-    SecureStore.getItemAsync(STORAGE.pubkey),
-  ]);
-
-  if (savedNsec && savedPubkey) {
-    if (!isStoredIdentityValid(savedNsec, savedPubkey)) {
-      throw new Error('The protected account key is inconsistent. Restore or reset this account.');
-    }
-    runtime.manager.setSigner('privkey', nsecToSignerHex(savedNsec));
-    return { nsec: savedNsec, pubkey: savedPubkey };
+  const { nsec, pubkey, signer: signerValue } = await readIdentityMaterial();
+  const signer = readStoredSigner(nsec, pubkey, signerValue);
+  if (!signer || !pubkey) {
+    throw new Error('No valid Nostr identity is available on this device. Log in or create one first.');
+  }
+  if (runtime.manager.getActivePubkey() === pubkey) {
+    return { ...(nsec ? { nsec } : {}), pubkey, signer: signer.type };
   }
 
-  const identity = await generateIdentity();
-  // nipworker's React Native private-key signer accepts a 64-character hex
-  // scalar. The durable representation remains an nsec in SecureStore.
-  runtime.manager.setSigner('privkey', nsecToSignerHex(identity.nsec));
-  try {
-    await SecureStore.setItemAsync(STORAGE.nsec, identity.nsec, secureOptions);
-    await SecureStore.setItemAsync(STORAGE.pubkey, identity.pubkey, secureOptions);
-  } catch (error) {
-    await Promise.allSettled([
-      SecureStore.deleteItemAsync(STORAGE.nsec),
-      SecureStore.deleteItemAsync(STORAGE.pubkey),
-    ]);
-    throw error;
-  }
-  if (__DEV__) console.info(`[onboarding-identity]${JSON.stringify({ pubkey: identity.pubkey })}`);
-  return identity;
+  await waitForSigner(
+    runtime.manager,
+    () => {
+      if (signer.type === 'privkey') runtime.manager!.setSigner('privkey', nsecToSignerHex(nsec!));
+      else runtime.manager!.setSigner('nip46', signer.payload);
+    },
+    { expectedPubkey: pubkey, timeoutMs: signer.type === 'nip46' ? 60_000 : 15_000 },
+  );
+  return { ...(nsec ? { nsec } : {}), pubkey, signer: signer.type };
 }
 
-export function ensureLocalIdentity(): Promise<LocalIdentity> {
+export function ensureActiveIdentity(): Promise<LocalIdentity> {
   if (!identityRequest) {
-    identityRequest = createOrRestoreLocalIdentity().finally(() => {
+    identityRequest = activateStoredIdentity().finally(() => {
       identityRequest = null;
     });
   }
   return identityRequest;
 }
 
-export function signActiveEvent(template: EventTemplate): Promise<Event> {
+export async function createLocalIdentity(): Promise<LocalIdentity> {
+  await assertNoStoredIdentity();
+  const runtime = getNostrRuntime();
+  if (!runtime.manager) throw new Error('The secure Nostr engine is unavailable. Use a Crays development build.');
+  const identity = await generateIdentity();
+  await waitForSigner(
+    runtime.manager,
+    () => runtime.manager!.setSigner('privkey', nsecToSignerHex(identity.nsec!)),
+    { expectedPubkey: identity.pubkey, timeoutMs: 15_000 },
+  );
+  await persistIdentity(identity, { type: 'privkey' });
+  if (__DEV__) console.info(`[onboarding-identity]${JSON.stringify({ pubkey: identity.pubkey, signer: 'privkey' })}`);
+  return identity;
+}
+
+export async function importNostrSecret(secretInput: string): Promise<LocalIdentity> {
+  await assertNoStoredIdentity();
+  const nsec = secretInput.trim();
+  let pubkey: string;
+  try {
+    const decoded = nip19.decode(nsec);
+    if (decoded.type !== 'nsec' || !(decoded.data instanceof Uint8Array)) throw new Error('not nsec');
+    pubkey = getPublicKey(decoded.data);
+  } catch {
+    throw new Error('Enter a valid Nostr secret key beginning with nsec1.');
+  }
+  const runtime = getNostrRuntime();
+  if (!runtime.manager) throw new Error('The secure Nostr engine is unavailable. Use a Crays development build.');
+  await waitForSigner(
+    runtime.manager,
+    () => runtime.manager!.setSigner('privkey', nsecToSignerHex(nsec)),
+    { expectedPubkey: pubkey, timeoutMs: 15_000 },
+  );
+  const identity: LocalIdentity = { nsec, pubkey, signer: 'privkey' };
+  await persistIdentity(identity, { type: 'privkey' });
+  if (__DEV__) console.info(`[onboarding-identity]${JSON.stringify({ pubkey, signer: 'imported-privkey' })}`);
+  return identity;
+}
+
+export async function connectNip46Signer({
+  clientSecret,
+  signal,
+  url,
+}: Nip46SignerPayload & { signal?: AbortSignal }): Promise<LocalIdentity> {
+  await assertNoStoredIdentity();
+  if (!isNip46Payload({ clientSecret, url })) throw new Error('Enter a valid Nostr Connect or bunker link.');
+  const runtime = getNostrRuntime();
+  if (!runtime.manager) throw new Error('The secure Nostr engine is unavailable. Use a Crays development build.');
+  try {
+    const pubkey = await waitForSigner(
+      runtime.manager,
+      () => runtime.manager!.setSigner('nip46', { clientSecret, url }),
+      { signal, timeoutMs: 120_000 },
+    );
+    const saved = runtime.manager.getAccounts()[pubkey];
+    const payload = saved?.type === 'nip46' && isNip46Payload(saved.payload)
+      ? saved.payload
+      : { clientSecret, url };
+    if (url.startsWith('nostrconnect://') && !payload.url.startsWith('bunker://')) {
+      runtime.manager.removeAccount();
+      throw new Error('The signer connected without a reusable bunker session. Please try again.');
+    }
+    const identity: LocalIdentity = { pubkey, signer: 'nip46' };
+    await persistIdentity(identity, { type: 'nip46', payload });
+    if (__DEV__) console.info(`[onboarding-identity]${JSON.stringify({ pubkey, signer: 'nip46' })}`);
+    return identity;
+  } catch (error) {
+    runtime.manager.logout();
+    throw error;
+  }
+}
+
+export function cancelPendingSignerConnection(): void {
+  getNostrRuntime().manager?.logout();
+}
+
+export function signActiveEvent(template: EventTemplate): Promise<NostrEvent> {
   return new Promise((resolve, reject) => {
+    const manager = getNostrRuntime().manager;
     let settled = false;
     const timeout = setTimeout(() => {
       if (settled) return;
       settled = true;
       reject(new Error('The protected signer did not respond. Please try again.'));
-    }, 15000);
+      manager?.removeEventListener('authUrl', onAuthUrl);
+    }, 90_000);
+
+    const onAuthUrl = ((event: globalThis.Event & { detail?: { url?: string } }) => {
+      const url = event.detail?.url;
+      if (/^https?:\/\//i.test(url || '')) void Linking.openURL(url!).catch(() => undefined);
+    }) as EventListener;
+    manager?.addEventListener('authUrl', onAuthUrl);
 
     useSignEvent(template, (event) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
+      manager?.removeEventListener('authUrl', onAuthUrl);
       resolve(event);
     });
   });
 }
 
-export async function createLocalProfile(displayNameInput: string): Promise<Event> {
+export async function createLocalProfile(displayNameInput: string): Promise<NostrEvent> {
   const displayName = normaliseDisplayName(displayNameInput);
   if (displayName.length < 2) throw new Error('Enter at least two characters for your name.');
   if (displayName.length > 50) throw new Error('Keep your display name to 50 characters or fewer.');
 
-  const identity = await ensureLocalIdentity();
+  const identity = await ensureActiveIdentity();
   const template: EventTemplate = {
     kind: 0,
     created_at: Math.floor(Date.now() / 1000),
     tags: [],
     content: JSON.stringify({ display_name: displayName, name: displayName }),
   };
-  // nipworker 0.97.11 routes the React Native SignedEvent callback by request
+  // nipworker routes the React Native SignedEvent callback by request
   // id. The secret remains inside the configured signer and never enters the
   // route or screen state.
   const event = await signActiveEvent(template);
@@ -267,24 +487,27 @@ export async function createLocalProfile(displayNameInput: string): Promise<Even
 }
 
 export async function completeLocalOnboarding(): Promise<void> {
-  const [profile, pubkey, nsec] = await Promise.all([
+  const [profile, pubkey, nsec, signerValue] = await Promise.all([
     SecureStore.getItemAsync(STORAGE.profile),
     SecureStore.getItemAsync(STORAGE.pubkey),
     SecureStore.getItemAsync(STORAGE.nsec),
+    SecureStore.getItemAsync(STORAGE.signer),
   ]);
-  if (!isStoredIdentityValid(nsec, pubkey) || !isStoredProfileValid(profile, pubkey)) {
+  const signer = readStoredSigner(nsec, pubkey, signerValue);
+  if (!signer || !isStoredProfileValid(profile, pubkey)) {
     throw new Error('Your saved profile is missing or invalid. Return and save it again.');
   }
   await SecureStore.setItemAsync(STORAGE.complete, '1', secureOptions);
-  if (__DEV__) console.info(`[onboarding-complete]${JSON.stringify({ recovery: 'device-only' })}`);
+  if (__DEV__) console.info(`[onboarding-complete]${JSON.stringify({ recovery: signer.type === 'nip46' ? 'remote-signer' : 'device-only' })}`);
 }
 
 export async function getLocalPubkey(): Promise<string | null> {
-  const [nsec, pubkey] = await Promise.all([
+  const [nsec, pubkey, signer] = await Promise.all([
     SecureStore.getItemAsync(STORAGE.nsec),
     SecureStore.getItemAsync(STORAGE.pubkey),
+    SecureStore.getItemAsync(STORAGE.signer),
   ]);
-  return isStoredIdentityValid(nsec, pubkey) ? pubkey : null;
+  return readStoredSigner(nsec, pubkey, signer) ? pubkey : null;
 }
 
 export async function getLocalProfileTemplate(): Promise<EventTemplate | null> {
@@ -293,7 +516,7 @@ export async function getLocalProfileTemplate(): Promise<EventTemplate | null> {
     SecureStore.getItemAsync(STORAGE.pubkey),
   ]);
   if (!isStoredProfileValid(profile, pubkey)) return null;
-  const event = JSON.parse(profile!) as Event;
+  const event = JSON.parse(profile!) as NostrEvent;
   return {
     kind: 0,
     created_at: Math.floor(Date.now() / 1000),
@@ -317,7 +540,7 @@ export async function seedQaIdentity(nsec: string, displayName = 'Maya QA'): Pro
   if (decoded.type !== 'nsec' || !(decoded.data instanceof Uint8Array)) {
     throw new Error('The QA fixture key is invalid.');
   }
-  const identity = { nsec, pubkey: getPublicKey(decoded.data) };
+  const identity: LocalIdentity = { nsec, pubkey: getPublicKey(decoded.data), signer: 'privkey' };
   const runtime = getNostrRuntime();
   if (!runtime.manager) throw new Error('The secure Nostr engine is unavailable.');
   runtime.manager.setSigner('privkey', nsecToSignerHex(nsec));
@@ -332,8 +555,9 @@ export async function seedQaIdentity(nsec: string, displayName = 'Maya QA'): Pro
     throw new Error('The QA profile signature could not be verified.');
   }
   await Promise.all([
-    SecureStore.setItemAsync(STORAGE.nsec, identity.nsec, secureOptions),
+    SecureStore.setItemAsync(STORAGE.nsec, nsec, secureOptions),
     SecureStore.setItemAsync(STORAGE.pubkey, identity.pubkey, secureOptions),
+    SecureStore.setItemAsync(STORAGE.signer, JSON.stringify({ type: 'privkey' }), secureOptions),
     SecureStore.setItemAsync(STORAGE.profile, JSON.stringify(profile), secureOptions),
     SecureStore.setItemAsync(STORAGE.complete, '1', secureOptions),
   ]);
