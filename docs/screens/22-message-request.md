@@ -28,6 +28,11 @@ canvas rather than a stack of generic cards.
 
 The app publishes a standard kind-4 event through nipworker. Route code supplies the recipient `p` tag and a plaintext versioned envelope; nipworker performs NIP-04 encryption with the active signer and signs the encrypted event. Request type, room id/name, stable message id, reply linkage, and user text are all inside ciphertext. Local waiting state is committed only after the selected direct-message relay returns `OK`.
 
+The route consumes `usePublish` statuses directly: `ok`/`true` commits the protected
+local projection, `failed`/`false`/`error` retains the draft and exact relay reason, and
+timeout/unmount stops the publish handle. It does not run a parallel signer or
+Promise-based publishing service.
+
 The hosted Test Room's root-signed membership definition includes `permission=4,write` alongside profile, room-feed, and NIP-53 presence writes. Existing awards reference that addressable definition, so its latest valid replacement governs access. A Test Room member who entered visibly or quietly may therefore publish the same kind-4 request exercised by isolated QA; missing kind-4 capability must produce the relay rejection state and preserve the draft.
 
 Independent QA queries the exact kind-4 event, validates its app-identity signature and sole recipient tag, proves the relay content is ciphertext, decrypts it with the fixture recipient secret, and checks exact plaintext, room context, type, and stable message id. The conversation lifecycle seeds a real incoming NIP-04 event and independently decrypts the app's acceptance and reply with exact encrypted linkage. Authenticated relay reads, multi-relay reconciliation, deletion, and migration remain production-hardening requirements.

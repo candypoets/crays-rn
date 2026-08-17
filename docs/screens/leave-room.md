@@ -34,6 +34,11 @@ expiration. At least one required relay must return true before
 with Room Ended. A quiet visitor has no published presence to replace and
 clears the local session without fabricating a relay event.
 
+The route owns nipworker's `usePublish` callback and stop handle directly.
+`ok`/`true` settles the leave after the first required relay accepts it; `failed`/`false`/`error`
+immediately exposes the relay's reason instead of degrading into a timeout.
+The handle is stopped on success, failure, timeout, and route unmount.
+
 An error or timeout remains on this screen, keeps the active room selected,
 restores the action, and never claims that privacy completion occurred.
 
@@ -60,3 +65,6 @@ visibly joins a real isolated room, captures the confirmation state, confirms
 leave, and waits for Room Ended. `scenario:leave-room` owns bootstrap,
 Maestro, independent signed `left`-event verification with polling, and exact
 relay/volume teardown.
+`src/app/__tests__/leave-room.test.tsx` deterministically covers direct
+accepted/rejected status handling across native and proxy transports, relay-reason retention, timeout, quiet leave,
+successful navigation, and unmount cleanup.

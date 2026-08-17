@@ -27,6 +27,10 @@ appear in People.
 
 Publish with `roomFeedTemplate`: kind 1, room `h`, `client=life.crays`, and expiration at the local automatic-leave boundary. The configured nipworker signer signs; success is shown only after one target relay explicitly returns OK. A false response or timeout preserves the draft and offers retry. The screen never provides a second send path while an outcome is uncertain.
 
+The route owns independent nipworker publish handles for posting and reporting.
+It treats `failed`/`false`/`error` as a terminal relay response and displays `message()`
+immediately; each handle is stopped after `ok`/`true`, rejection, timeout, or unmount.
+
 ## Required states
 
 - connecting/loading, empty, populated, venue announcement, guest post;

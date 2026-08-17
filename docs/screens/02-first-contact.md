@@ -25,6 +25,10 @@ Required states include active visible profile, profile disappearing while open,
 
 All actions are labelled buttons with minimum 48-point touch targets. The consent explanation is readable text, not a tooltip. Venue hide is visible; global block and venue report remain reachable in the labelled overflow and in the request/thread. The text sticker—not a color-only live dot—states that the person is in this room.
 
+Venue report publishing is owned by this route through nipworker `usePublish`.
+The first `ok`/`true` confirms the report; `failed`/`false`/`error` displays the relay reason; timeout
+and unmount stop the handle and restore the action.
+
 ## QA strategy
 
 Unit coverage checks stable kind-0 image handoff, action hierarchy, the no-contact/pending gift lock, accepted-contact unlock, safety actions, and the non-anonymous contract. `maestro/flows/02-first-contact.yaml` enters an isolated relay-backed room, selects People in the room navbar, opens Jonas from actual presence/profile events, publishes a venue report, and verifies acknowledgement.

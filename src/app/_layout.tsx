@@ -3,11 +3,12 @@ import '@/polyfills/text-encoding';
 
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState, type PropsWithChildren } from 'react';
+import { useEffect, useState, useSyncExternalStore, type PropsWithChildren } from 'react';
 import { AppState, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { TempoRail } from '@/components/night/NightPrimitives';
+import { nostrAuthStore } from '@/nostr/auth';
 import { getNostrRuntime, type NostrRuntimeStatus } from '@/nostr/manager';
 import { FoundationScreen } from '@/screens/FoundationScreen';
 import { CartProvider } from '@/commerce/Cart';
@@ -17,6 +18,7 @@ import { SafetyProvider } from '@/safety/Safety';
 
 function RuntimeGate({ children }: PropsWithChildren) {
   const [runtimeStatus, setRuntimeStatus] = useState<NostrRuntimeStatus | null>(null);
+  const auth = useSyncExternalStore(nostrAuthStore.subscribe, nostrAuthStore.getSnapshot);
 
   useEffect(() => {
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -44,7 +46,7 @@ function RuntimeGate({ children }: PropsWithChildren) {
     };
   }, []);
 
-  if (!runtimeStatus) {
+  if (!runtimeStatus || (runtimeStatus === 'ready' && !auth.resolved)) {
     return (
       <View className="flex-1 items-center justify-center bg-base-100" testID="runtime-gate">
         <Text className="text-3xl font-black tracking-[-0.8px] text-base-content">CRAYS</Text>

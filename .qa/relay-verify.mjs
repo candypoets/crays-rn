@@ -27,8 +27,12 @@ assert(roomDefinition.tags.some((tag) => tag[0] === 'room' && tag[1] === state.r
 assert(roomDefinition.tags.some((tag) => tag[0] === 'status' && tag[1] === 'open'), 'room definition is open');
 assert(roomDefinition.tags.some((tag) => tag[0] === 'service' && tag[1] === state.base_url), 'room definition carries its NIP-53 service URL');
 assert(roomDefinition.tags.some((tag) => tag[0] === 'p' && tag[1] === state.operator_pubkey && tag[3] === 'Host'), 'room definition carries a Host provider');
-assert(state.presence_ids.every((id) => events.some((event) => event.id === id && event.kind === 10312)), 'all NIP-53 visible-presence fixtures are stored');
-const presences = events.filter((event) => state.presence_ids.includes(event.id));
+const fixturePubkeys = state.fixture_pubkeys || [];
+const presences = events.filter((event) => event.kind === 10312 && fixturePubkeys.includes(event.pubkey));
+assert(
+  fixturePubkeys.every((pubkey) => presences.some((event) => event.pubkey === pubkey)),
+  'every fixture identity has a current NIP-53 presence replacement',
+);
 assert(
   presences.every((event) => event.tags.some((tag) => tag[0] === 'a' && tag[1] === state.room_address && tag[2] === state.relay_url && tag[3] === 'root')),
   'all NIP-53 fixtures link the exact kind-30312 room definition',

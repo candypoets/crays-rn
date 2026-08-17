@@ -1,19 +1,18 @@
 import { extractTagValue, extractTagValues, type RequestObject, type WorkerMessage } from '@candypoets/nipworker';
-import { useSubscription as subscribeToNostr } from '@candypoets/nipworker/hooks';
-import { isEoce, isParsedEvent } from '@candypoets/nipworker/utils';
+import { usePublish as publishToNostr, useSubscription as subscribeToNostr } from '@candypoets/nipworker/hooks';
+import { isConnectionStatus, isEoce, isParsedEvent } from '@candypoets/nipworker/utils';
 import type { PropsWithChildren } from 'react';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
 
-import { ensureActiveIdentity, getLocalPubkey } from '@/account/account';
+import { getLocalPubkey } from '@/account/account';
 import { nostrAuthStore } from '@/nostr/auth';
 import {
   CRAYS_PROTOCOL,
   PRESENCE_HEARTBEAT_INTERVAL_MS,
   presenceTemplate,
 } from '@/nostr/protocol';
-import { publishEvent } from '@/nostr/publish';
 import { isNewerAnchor, parseCommunityAnchor, type CommunityAnchor } from '@/access/nip97';
 import {
   awardIssuerValid,
@@ -535,14 +534,26 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
 
     let cancelled = false;
     let publishing = false;
+    let stopPublish: (() => void) | null = null;
     const transportRelayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;
-    const refreshPresence = async () => {
+    const refreshPresence = () => {
       if (cancelled || publishing || Date.now() >= activeRoom.leaveAt) return;
       publishing = true;
+      let settled = false;
+      let stop: () => void = () => undefined;
+      const finish = (failure?: string) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeout);
+        stop();
+        stopPublish = null;
+        publishing = false;
+        if (failure && __DEV__) console.warn(`[crays-room-presence] heartbeat failed: ${failure}`);
+      };
+      const timeout = setTimeout(() => finish('The room did not confirm the presence refresh.'), 12_000);
       try {
-        await ensureActiveIdentity();
-        if (cancelled) return;
-        await publishEvent(
+        stop = publishToNostr(
+          `room_presence_heartbeat_${Date.now().toString(36)}`,
           presenceTemplate({
             roomAddress: activeRoom.address,
             relayUrl: activeRoom.relayUrl,
@@ -550,26 +561,42 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
             context: activeRoom.context,
             expiresAt: Math.floor(activeRoom.leaveAt / 1000),
           }),
-          [transportRelayUrl],
-          'room_presence_heartbeat',
+          (message: WorkerMessage) => {
+            const status = isConnectionStatus(message);
+            const value = status?.status()?.toString().toLowerCase() ?? '';
+            if (value === 'ok' || value === 'true' || value.startsWith('true ')) finish();
+            else if (value === 'failed' || value.startsWith('false') || value.startsWith('error')) {
+              finish(status?.message()?.trim() || 'The room rejected the presence refresh.');
+            }
+          },
+          { trackStatus: true, defaultRelays: [transportRelayUrl] },
         );
+        stopPublish = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          stop();
+          publishing = false;
+        };
       } catch (error) {
         // Joining already required a confirmed initial write. A transient
         // heartbeat failure must not eject the user; freshness/expiry safely
         // removes presence if the relay remains unavailable.
         if (__DEV__) console.warn(`[crays-room-presence] heartbeat failed: ${error instanceof Error ? error.message : error}`);
-      } finally {
+        clearTimeout(timeout);
+        stop();
         publishing = false;
       }
     };
 
-    void refreshPresence();
-    const timer = setInterval(() => void refreshPresence(), PRESENCE_HEARTBEAT_INTERVAL_MS);
+    refreshPresence();
+    const timer = setInterval(refreshPresence, PRESENCE_HEARTBEAT_INTERVAL_MS);
     const appStateSubscription = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void refreshPresence();
+      if (state === 'active') refreshPresence();
     });
     return () => {
       cancelled = true;
+      stopPublish?.();
       clearInterval(timer);
       appStateSubscription.remove();
     };

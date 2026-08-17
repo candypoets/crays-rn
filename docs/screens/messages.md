@@ -6,6 +6,11 @@ Messages is globally reachable and stores a protected local projection only afte
 
 Conversation distinguishes outgoing **Waiting** from incoming **Request**; the sender cannot accept their own request. It subscribes to inbound and outbound kind-4 filters through nipworker and reads `Kind4Parsed.decryptedContent()` directly from the FlatBuffer callback. Accept publishes an encrypted `message-acceptance` envelope before unlocking the composer. Every reply publishes an encrypted `message` envelope referencing the prior stable message id. Block is immediately local and suppresses subsequently received messages from that person. Report publishes standard kind 1984 to the active venue relay.
 
+Conversation owns separate nipworker publish handles for delivery and venue
+reporting. The first `ok`/`true` settles each action; `failed`/`false`/`error` preserves the relay
+message; timeout and unmount stop the exact in-flight handle. Messages are
+saved only after delivery acknowledgement.
+
 The incoming kind-4 filter is the first request on a newly joined venue
 connection. Public room families and the outgoing half open only after its
 relay-scoped `ConnectionStatus("EOSE")`; the earlier cache EOSE is deliberately

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
-import { ensureActiveIdentity } from '@/account/account';
+import { getLocalPubkey } from '@/account/account';
 import { parseCraysDirectMessage } from '@/messages/nip04';
 import { loadMessageRelays, saveMessageRelays } from '@/messages/relays';
 import { latestConversationMessages, loadLocalMessages, saveLocalMessage, type LocalMessage } from '@/messages/store';
@@ -27,30 +27,31 @@ export default function MessagesRoute() {
     let stopped = false;
     let unsubscribe: () => void = () => undefined;
     void (async () => {
-      const identity = await ensureActiveIdentity();
+      const pubkey = await getLocalPubkey();
+      if (!pubkey) throw new Error('No Nostr account is available on this device. Log in or create one first.');
       const stored = await loadLocalMessages();
       if (stopped) return;
       setMessages(stored);
-      const archivedRelays = await loadMessageRelays(identity.pubkey);
+      const archivedRelays = await loadMessageRelays(pubkey);
       const relays = Array.from(new Set([
         ...(activeRelay ? [activeRelay] : []),
         ...archivedRelays,
         ...stored.flatMap((message) => message.relayUrls || []),
       ]));
-      if (activeRelay) await saveMessageRelays(identity.pubkey, relays);
+      if (activeRelay) await saveMessageRelays(pubkey, relays);
       if (stopped) return;
       unsubscribe = subscribeNip04Messages({
-        pubkey: identity.pubkey,
+        pubkey,
         relays,
         onEvent: (event) => {
           const envelope = parseCraysDirectMessage(event.plaintext);
           if (!envelope) return;
-          const peerPubkey = event.senderPubkey === identity.pubkey ? event.recipientPubkey : event.senderPubkey;
-          if (peerPubkey === identity.pubkey) return;
+          const peerPubkey = event.senderPubkey === pubkey ? event.recipientPubkey : event.senderPubkey;
+          if (peerPubkey === pubkey) return;
           void (async () => {
             const current = (await loadLocalMessages()).find((item) => item.recipientPubkey === peerPubkey);
             if (current?.state === 'blocked' || isBlocked(peerPubkey, envelope.roomId)) return;
-            const incoming = event.senderPubkey !== identity.pubkey;
+            const incoming = event.senderPubkey !== pubkey;
             const requested = envelope.messageType === 'message-request';
             if (incoming && requested && current?.state === 'ignored') return;
             const next: LocalMessage = {

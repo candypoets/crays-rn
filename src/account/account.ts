@@ -62,7 +62,6 @@ export type LocalAccountRead =
   | { status: 'invalid' }
   | { status: 'missing' };
 
-let identityRequest: Promise<LocalIdentity> | null = null;
 let legacyCredentialPurge: Promise<void> | null = null;
 
 const secureOptions: SecureStore.SecureStoreOptions = {
@@ -305,38 +304,6 @@ async function resetOnboardingProjection(): Promise<void> {
   ]);
 }
 
-async function activateStoredIdentity(): Promise<LocalIdentity> {
-  await purgeLegacyCredentialStorage();
-  const runtime = getNostrRuntime();
-  if (!runtime.manager) {
-    throw new Error('The secure Nostr engine is unavailable. Use a Crays development build.');
-  }
-
-  const identity = readPersistedIdentity(runtime.manager);
-  if (!identity) {
-    throw new Error('No valid Nostr identity is available on this device. Log in or create one first.');
-  }
-  if (runtime.manager.getActivePubkey() === identity.pubkey) {
-    return { pubkey: identity.pubkey, signer: identity.signer.type };
-  }
-
-  await waitForSigner(
-    runtime.manager,
-    () => runtime.manager!.switchAccount(identity.pubkey),
-    { expectedPubkey: identity.pubkey, timeoutMs: identity.signer.type === 'nip46' ? 60_000 : 15_000 },
-  );
-  return { pubkey: identity.pubkey, signer: identity.signer.type };
-}
-
-export function ensureActiveIdentity(): Promise<LocalIdentity> {
-  if (!identityRequest) {
-    identityRequest = activateStoredIdentity().finally(() => {
-      identityRequest = null;
-    });
-  }
-  return identityRequest;
-}
-
 export async function createLocalIdentity(): Promise<LocalIdentity> {
   await assertNoStoredIdentity();
   const runtime = getNostrRuntime();
@@ -445,7 +412,8 @@ export async function createLocalProfile(displayNameInput: string): Promise<Nost
   if (displayName.length < 2) throw new Error('Enter at least two characters for your name.');
   if (displayName.length > 50) throw new Error('Keep your display name to 50 characters or fewer.');
 
-  const identity = await ensureActiveIdentity();
+  const pubkey = await getLocalPubkey();
+  if (!pubkey) throw new Error('No valid Nostr identity is available on this device. Log in or create one first.');
   const template: EventTemplate = {
     kind: 0,
     created_at: Math.floor(Date.now() / 1000),
@@ -457,7 +425,7 @@ export async function createLocalProfile(displayNameInput: string): Promise<Nost
   // route or screen state.
   const event = await signActiveEvent(template);
 
-  if (event.pubkey !== identity.pubkey || !verifyEvent(event)) {
+  if (event.pubkey !== pubkey || !verifyEvent(event)) {
     throw new Error('The profile signature could not be verified. Please try again.');
   }
 

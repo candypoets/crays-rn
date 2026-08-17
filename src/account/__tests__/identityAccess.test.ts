@@ -11,7 +11,7 @@ jest.mock('@/nostr/manager', () => ({ getNostrRuntime: jest.fn() }));
 import * as SecureStore from 'expo-secure-store';
 import { getPublicKey, nip19 } from 'nostr-tools';
 
-import { connectNip46Signer, ensureActiveIdentity, importNostrSecret } from '@/account/account';
+import { connectNip46Signer, importNostrSecret } from '@/account/account';
 import { getNostrRuntime } from '@/nostr/manager';
 
 const hex = (bytes: Uint8Array) => Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
@@ -98,15 +98,6 @@ describe('existing Nostr identity access', () => {
     jest.mocked(getNostrRuntime).mockReturnValue({ manager, status: 'ready' });
 
     await expect(importNostrSecret('not-a-secret')).rejects.toThrow(/nsec1/);
-    expect(manager.setSigner).not.toHaveBeenCalled();
-    expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
-  });
-
-  it('never creates a replacement identity when no account is stored', async () => {
-    const manager = fakeManager('a'.repeat(64));
-    jest.mocked(getNostrRuntime).mockReturnValue({ manager, status: 'ready' });
-
-    await expect(ensureActiveIdentity()).rejects.toThrow(/Log in or create one first/);
     expect(manager.setSigner).not.toHaveBeenCalled();
     expect(SecureStore.setItemAsync).not.toHaveBeenCalled();
   });

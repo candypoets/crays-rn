@@ -1,7 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import type { Event, EventTemplate } from 'nostr-tools';
 
-import { ensureActiveIdentity, signActiveEvent } from '@/account/account';
+import { signActiveEvent } from '@/account/account';
 
 /**
  * Shared Stripe payment-service origin. The production service uses Stripe's
@@ -108,7 +108,6 @@ export async function makeCheckoutAuthorization(url: string, body: string): Prom
  * redemption service, and RoomData observes that award from the relay.
  */
 export async function requestCheckoutUrl(request: CheckoutRequest): Promise<string> {
-  await ensureActiveIdentity();
   const body = checkoutRequestBody(request);
   const authorization = await makeCheckoutAuthorization(CHECKOUT_API_URL, body);
   const response = await fetch(CHECKOUT_API_URL, {

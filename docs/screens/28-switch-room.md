@@ -4,6 +4,11 @@
 
 Exactly one room relay may be active. Selecting another signed room while one is active shows current and destination names, verifies the destination kind-30312 definition first, explains what ends/remains, and requires “Leave and enter new room.” Visible presence must receive a confirmed room-bound kind-10312 `left` replacement before active-room state clears. The app then opens the destination Join privacy screen; it does not silently join or copy visibility. Cancel and destination failure retain the current room and subscriptions.
 
+The route publishes through its own nipworker `usePublish` callback. The first
+`ok`/`true` continues the switch, while `failed`/`false`/`error` shows the relay-provided reason
+immediately. Timeout and unmount both stop the owned publish handle; neither
+may clear the current room.
+
 Visual authority is the Night Playlist discovery/access board
 `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`,
 panel 05. The screen is a two-chapter comparison, **You are in** and **You’re

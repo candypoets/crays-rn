@@ -65,10 +65,12 @@ are never retried this way.
   replacement. While active, the app refreshes presence every 60 seconds and
   on foreground without extending the fixed leave time.
 - Any required publish succeeds after one intended relay accepts it. Rejection
-  keeps a retryable state and must never show the user in People.
+  uses nipworker's `failed`/`false`/`error` status and relay message, keeps a retryable state,
+  and must never show the user in People. Each publish handle belongs to this
+  route and is stopped on settlement, timeout, retry, or unmount.
 - Immediately after a confirmed invite award, profile and presence use a
   bounded retry window for the relay gate to observe the new NIP-97 award.
-  This retry wrapper is never used without exact award confirmation, and
+  This owner-scoped retry is never used without exact award confirmation, and
   exhausting the window remains a retryable screen error.
 - Relay switch must complete old leave/lock before new selection.
 

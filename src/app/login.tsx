@@ -1,12 +1,13 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ensureActiveIdentity, getLocalPubkey } from '@/account/account';
+import { getLocalPubkey } from '@/account/account';
 import { entryContextHref, getEntryContext } from '@/account/context';
+import { nostrAuthStore } from '@/nostr/auth';
 import { LoginScreen } from '@/screens/onboarding/LoginScreen';
 
 export default function LoginRoute() {
   const [hasIdentity, setHasIdentity] = useState(false); const [preservingInvite, setPreservingInvite] = useState(false); const [loading, setLoading] = useState(true); const [error, setError] = useState<string | null>(null);
   useEffect(() => { Promise.all([getLocalPubkey(), getEntryContext()]).then(([key, context]) => { setHasIdentity(Boolean(key)); setPreservingInvite(context?.kind === 'invite'); }).catch((cause) => setError(cause instanceof Error ? cause.message : 'This device could not read the saved account state.')).finally(() => setLoading(false)); }, []);
-  const unlock = async () => { setLoading(true); setError(null); try { await ensureActiveIdentity(); const context = await getEntryContext(); router.replace(context ? entryContextHref(context) as never : '/discover'); } catch (cause) { setError(cause instanceof Error ? cause.message : 'This account could not be unlocked.'); } finally { setLoading(false); } };
+  const unlock = async () => { setLoading(true); setError(null); try { const pubkey = await getLocalPubkey(); const auth = nostrAuthStore.getSnapshot(); if (!pubkey || !auth.hasSigner || auth.pubkey !== pubkey) throw new Error(auth.error || 'This account is not active. Restart the app or recover the account.'); const context = await getEntryContext(); router.replace(context ? entryContextHref(context) as never : '/discover'); } catch (cause) { setError(cause instanceof Error ? cause.message : 'This account could not be unlocked.'); } finally { setLoading(false); } };
   return <LoginScreen error={error} hasDeviceIdentity={hasIdentity} loading={loading} onBack={() => router.back()} onCreateAccount={() => router.replace('/account-access')} onRecovery={() => router.push('/account-recovery' as never)} onUnlock={unlock} preservingInvite={preservingInvite} />;
 }

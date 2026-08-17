@@ -17,6 +17,9 @@ the page does not become a generic card grid.
   **Sending RSVP…**, is busy/disabled, and prevents a duplicate event.
 - The action changes to **Going · RSVP sent** only after the route owner has a
   confirmed publish and saved RSVP.
+- The route owns the nipworker publish handle directly. `ok`/`true` commits the local
+  RSVP; `failed`/`false`/`error` preserves the relay reason; timeout or unmount stops the
+  handle without creating local attendance.
 - A paid event says **Ticket payment not configured** and cannot call RSVP or
   synthesize a checkout.
 - The saved-RSVP surface explicitly says it is a preview and not a scannable
