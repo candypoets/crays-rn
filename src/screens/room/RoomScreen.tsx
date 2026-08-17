@@ -254,47 +254,66 @@ function FeedPost({
   profile?: RoomProfile;
   reporting: boolean;
 }) {
+  const authorName = profile?.name || (post.announcement ? 'The room' : 'Room guest');
   return (
-    <View className="relative flex-row" testID={`post-${post.id}`}>
-      <View className="w-12 items-center">
-        <View className={`mt-3 h-4 w-4 rounded-full border-2 border-surface ${post.announcement ? 'bg-primary' : 'bg-ink'}`} />
-      </View>
-      <View className={`mb-4 min-w-0 flex-1 rounded-2xl border p-4 ${post.announcement ? 'border-primary/20 bg-surface-soft' : 'border-edge bg-surface'}`}>
-        <View className="flex-row items-center gap-3">
-          {post.announcement ? (
-            <View className="h-10 w-10 items-center justify-center rounded-full bg-primary">
-              <Ionicons color={colors.surface} name="megaphone" size={20} />
-            </View>
-          ) : (
-            <PortraitImage
-              className="h-10 w-10 rounded-full"
-              identity={post.pubkey}
-              label={`Profile image for ${profile?.name || 'room guest'}`}
-              picture={profile?.picture}
-            />
-          )}
-          <Pressable accessibilityLabel={`Open profile of ${profile?.name || 'room guest'}`} accessibilityRole="button" className="min-h-12 flex-1 justify-center" onPress={onOpenPerson} testID={`post-author-${post.id}`}>
-            <Text className="text-xs font-black uppercase text-ink">{profile?.name || (post.announcement ? 'The room' : 'Room guest')}</Text>
-            <Text className="mt-0.5 text-[10px] text-muted">{formatMoment(post.createdAt)}</Text>
-          </Pressable>
-          {post.announcement ? <Text className="rounded-full bg-surface px-2 py-1 text-[9px] font-black uppercase text-primary">Announcement</Text> : null}
-        </View>
-        <Text className="mt-3 text-base leading-6 text-ink">{post.content}</Text>
-        <View className="mt-3 flex-row gap-5">
-          <Pressable accessibilityLabel={`Message ${profile?.name || 'room guest'}`} accessibilityRole="button" className="min-h-12 justify-center" onPress={onOpenPerson} testID={`message-post-${post.id}`}>
-            <Text className="text-xs font-black text-primary">Message</Text>
-          </Pressable>
+    <View
+      className={`mb-3 rounded-2xl border p-4 ${post.announcement ? 'border-primary/25 bg-surface-soft' : 'border-edge bg-surface'}`}
+      testID={`post-${post.id}`}
+    >
+      <View className="flex-row items-start">
+        {post.announcement ? (
+          <View className="h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary">
+            <Ionicons color={colors.surface} name="megaphone" size={20} />
+          </View>
+        ) : (
+          <PortraitImage
+            className="h-11 w-11 shrink-0 rounded-full"
+            identity={post.pubkey}
+            label={`Profile image for ${authorName}`}
+            picture={profile?.picture}
+          />
+        )}
+        <View className="ml-3 min-w-0 flex-1">
           <Pressable
-            accessibilityLabel={`Report post by ${profile?.name || 'room guest'}`}
+            accessibilityLabel={`Open profile of ${authorName}`}
             accessibilityRole="button"
-            accessibilityState={{ disabled: reporting }}
             className="min-h-12 justify-center"
-            disabled={reporting}
-            onPress={onReportPost}
-            testID={`report-post-${post.id}`}
+            onPress={onOpenPerson}
+            testID={`post-author-${post.id}`}
           >
-            <Text className="text-xs font-bold text-muted">{reporting ? 'Reporting…' : 'Report'}</Text>
+            <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
+              <Text className="text-[15px] font-black text-ink">{authorName}</Text>
+              <Text className="text-xs text-muted">{formatMoment(post.createdAt)}</Text>
+              {post.announcement ? (
+                <Text className="rounded-full bg-surface px-2 py-1 text-[9px] font-black uppercase text-primary">Announcement</Text>
+              ) : null}
+            </View>
           </Pressable>
+          <Text className="mt-1 text-base leading-6 text-ink">{post.content}</Text>
+          <View className="mt-2 flex-row items-center gap-5">
+            <Pressable
+              accessibilityLabel={`Message ${authorName}`}
+              accessibilityRole="button"
+              className="min-h-12 flex-row items-center gap-1.5 pr-2"
+              onPress={onOpenPerson}
+              testID={`message-post-${post.id}`}
+            >
+              <Ionicons color={colors.primary} name="chatbubble-outline" size={17} />
+              <Text className="text-xs font-black text-primary">Message</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel={`Report post by ${authorName}`}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: reporting }}
+              className="min-h-12 flex-row items-center gap-1.5 px-2"
+              disabled={reporting}
+              onPress={onReportPost}
+              testID={`report-post-${post.id}`}
+            >
+              <Ionicons color={colors.inkMuted} name="flag-outline" size={17} />
+              <Text className="text-xs font-bold text-muted">{reporting ? 'Reporting…' : 'Report'}</Text>
+            </Pressable>
+          </View>
         </View>
       </View>
     </View>
@@ -316,8 +335,7 @@ function FeedView(props: Pick<RoomScreenProps, 'composer' | 'composerError' | 'c
       {props.loading ? <ActivityIndicator className="mt-10" color={colors.primary} /> : null}
       {!props.loading && !props.posts.length ? <EmptyRoom icon="chatbubble-ellipses-outline">No room posts yet. Venue announcements and guest posts will appear here.</EmptyRoom> : null}
 
-      <View className="relative mt-5">
-        {props.posts.length ? <View className="absolute bottom-3 left-[23px] top-3 w-px bg-edge" /> : null}
+      <View className="mt-5">
         {props.posts.map((post) => (
           <FeedPost
             key={post.id}

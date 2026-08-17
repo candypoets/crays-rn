@@ -97,7 +97,19 @@ describe('RoomScreen', () => {
     expect(screen.getByText('Add a note')).toBeOnTheScreen();
     expect(screen.getByText('Announcement')).toBeOnTheScreen();
     expect(screen.getByText('Jazz starts at 20:30.')).toBeOnTheScreen();
+    expect(screen.getByTestId(`post-${post.id}`)).toHaveProp('className', expect.stringContaining('rounded-2xl'));
+    expect(screen.getByRole('button', { name: 'Open profile of Maya' })).toBeOnTheScreen();
     expect(screen.getByRole('alert')).toHaveTextContent('Relay rejected it.');
+  });
+
+  it('renders a plain kind-1 room note as a compact social card with fallback identity', () => {
+    const guestPost = { ...post, id: 'guest-post', pubkey: 'c'.repeat(64), announcement: false, content: 'Anyone heading downstairs?' };
+    render(<RoomScreen {...props({ posts: [guestPost], profiles: new Map(), view: 'feed' })} />);
+
+    expect(screen.getByText('Room guest')).toBeOnTheScreen();
+    expect(screen.getByText('Anyone heading downstairs?')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Message Room guest')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Report post by Room guest')).toBeOnTheScreen();
   });
 
   it('keeps publish disabled for an empty draft and exposes the 500-character boundary', () => {

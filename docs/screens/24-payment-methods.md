@@ -2,7 +2,7 @@
 
 ## Product contract
 
-Wallet, Apple Pay, Google Pay, and Card appear as peer choices when configured. The app defaults only to the person's last explicitly successful available method. Selecting a row changes review state; it never initiates payment.
+Wallet, Apple Pay, Google Pay, and Card appear as peer choices when configured. The app defaults only to the person's last explicitly successful available method. Selecting a row changes review state; it never initiates payment. Selection dismisses back to the existing owning review route with the new method parameter; it must not replace the selector with a second checkout route or leave duplicate order cards in the native stack.
 
 The current pilot labels Wallet as setup required and provider-backed methods as not connected. No provider logos or availability are allowed to imply configuration. Returning preserves the originating self-order or gift-review context.
 
@@ -22,4 +22,4 @@ Visual authority: the Night Playlist commerce/messages board `docs/design-explor
 
 ## Paths and QA
 
-No methods, one method, all methods, unavailable remembered method, wallet hidden balance, insufficient wallet, provider unsupported on platform, selection, cancellation/back, gift return, self-order return, relaunch. Unit coverage verifies all equal options, the selected radio state, and the no-charge honesty copy. `maestro/flows/24-payment-methods.yaml` opens from a real relay-backed cart, selects Wallet, and returns to review. `scenario:24-payment-methods` owns source relay setup/verification/teardown. Provider and mint integrations require separate sandbox contracts before any method becomes payable.
+No methods, one method, all methods, unavailable remembered method, wallet hidden balance, insufficient wallet, provider unsupported on platform, selection, cancellation/back, gift return, self-order return, relaunch. Unit coverage verifies all equal options, the selected radio state, and the no-charge honesty copy. `maestro/flows/24-payment-methods.yaml` owns the native-stack boundary: it opens from a real relay-backed cart, selects Wallet, returns to the same review route, then uses native Back to prove no duplicate review route remains underneath. `scenario:24-payment-methods` owns source relay setup/verification/teardown. Provider and mint integrations require separate sandbox contracts before any method becomes payable.

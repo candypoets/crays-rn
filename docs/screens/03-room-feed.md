@@ -10,13 +10,14 @@ This is Crays Mobile's only public feed. It reads and writes against exactly the
 
 - Fixed venue context, the same room-session rail (**Joined / Leave at**) as People, and the explicit **Chronological · locks when you leave** consequence. The kind-30312 room description never occupies an event-like slot.
 - One keyboard-safe **Add a note** composer, maximum 500 characters for the pilot. It retains the draft and char count while publishing.
-- Notes follow a thin vertical tempo rail. Venue announcements use a strong labelled block and icon, never color alone; guest posts use white notes and portrait crops.
+- Each kind-1 note uses a compact social card informed by `nuts-rn`'s note anatomy: a 44dp portrait (or room megaphone), author and time on one wrapping header line, readable content, then restrained Message and Report actions. Crays deliberately omits `nuts-rn`'s global relay indicators, thread expansion, reactions, reposts, and engagement counts because this surface is one pinned room, not a global Nostr client.
+- Venue announcements use the same card anatomy with an explicit **Announcement** label and icon, never color alone. Guest notes use white cards and a deterministic portrait fallback. There is no decorative timeline rail competing with the note content.
 - Posts offer Message and Report; reply can be added against the same room credential.
 - Menu, People with the visible count, and Feed use the same room navbar as screen 01 inside the edge-to-edge Room scroll surface; Feed retains its selected state when revisiting the Room primary tab. My night and Leave remain in shared room chrome.
 
 ## Relay contract
 
-Read kind 1 with `#h=<active room id>` from only `connectionRelayUrl`. Require non-empty ID, pubkey, content, and a future NIP-40 `expiration` when present. Display newest first; relay arrival order must not reorder history incorrectly.
+Read NIP-01 kind 1 with `#h=<active room id>` from only `connectionRelayUrl`. Require non-empty ID, pubkey, content, and a future NIP-40 `expiration` when present. Display newest first; relay arrival order must not reorder history incorrectly. The screen keeps the existing minimal stable projection because posts outlive nipworker callback buffers; it does not unpack or mirror the full parsed event tree.
 
 Resolve each author from the latest kind-0 profile on that same pinned relay.
 Kind-0 is display metadata, not evidence that the author is currently present;

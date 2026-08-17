@@ -86,6 +86,7 @@ export default function MeRoute() {
       roomName={activeRoom?.name}
       onMemberships={() => router.push('/memberships' as never)}
       onMessages={() => router.push('/(tabs)/messages' as never)}
+      onNotifications={() => router.push('/settings' as never)}
       onOrders={() => router.push('/orders' as never)}
       onProfile={() => router.push('/settings' as never)}
       onRetryAccount={retryAccount}

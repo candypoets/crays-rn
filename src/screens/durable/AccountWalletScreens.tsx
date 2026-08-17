@@ -215,6 +215,7 @@ export function MeScreen({
   loading = false,
   onMemberships,
   onMessages,
+  onNotifications,
   onOrders,
   onProfile,
   onRetryAccount,
@@ -233,6 +234,7 @@ export function MeScreen({
   loading?: boolean;
   onMemberships: () => void;
   onMessages?: () => void;
+  onNotifications: () => void;
   onOrders: () => void;
   onProfile: () => void;
   onRetryAccount?: () => void;
@@ -272,13 +274,16 @@ export function MeScreen({
   return (
     <AppShell
       headerAction={(
-        <View
-          accessibilityElementsHidden
-          className="h-12 w-12 items-center justify-center rounded-full bg-surface-soft"
-          importantForAccessibility="no-hide-descendants"
+        <Pressable
+          accessibilityLabel="Open notification settings"
+          accessibilityRole="button"
+          className="h-12 w-12 items-center justify-center rounded-full bg-surface-soft active:bg-edge"
+          hitSlop={4}
+          onPress={onNotifications}
+          testID="me-notifications"
         >
           <Ionicons color={colors.ink} name="notifications-outline" size={22} />
-        </View>
+        </Pressable>
       )}
       testID="me-screen"
       underTabBar
@@ -384,13 +389,8 @@ export function MeScreen({
           testID="me-profile"
         >
           <Ionicons color={colors.ink} name="settings-outline" size={22} />
-          <View className="ml-3 min-w-0 flex-1">
-            <Text className="font-extrabold text-ink">Settings & privacy</Text>
-            <View className="mt-2 flex-row items-center justify-between">
-              <NightBadge>Account</NightBadge>
-              <Ionicons color={colors.primary} name="chevron-forward" size={20} />
-            </View>
-          </View>
+          <Text className="ml-3 min-w-0 flex-1 font-extrabold text-ink">Settings & privacy</Text>
+          <Ionicons color={colors.primary} name="chevron-forward" size={20} />
         </Pressable>
       </View>
     </AppShell>

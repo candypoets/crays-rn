@@ -4,7 +4,7 @@
 
 Settings reports the validated nipworker signing method instead of assuming every identity owns a local key. A device-held or imported key shows **Saved in Crays · Local** and states that removing the app removes local access. A NIP-46 identity shows **Connected signer · NIP-46**, explains that Crays asks that signer to approve actions, and never implies that the user's secret key is stored here. **Existing Nostr identity** truthfully points out that signer connection and advanced import are available during login; Apple/Google/provider rows are absent.
 
-The rest of Settings remains the operational privacy surface: persisted venue/global blocks with exact-scope unblock, per-room presence, request limits, notification state, custody-specific recovery copy, and room controls. This route reads only the public account summary and never exposes nsec or signer client credentials.
+The rest of Settings remains the operational privacy surface: persisted venue/global blocks with exact-scope unblock, per-room presence, request limits, notification state, custody-specific recovery copy, and room controls. It is entered from the final **Settings & privacy** row or the Me bell, whose accessible name makes clear that it opens notification settings rather than a notification inbox. Neither entry requests permission. This route reads only the public account summary and never exposes nsec or signer client credentials.
 
 ## States, interaction, and accessibility
 

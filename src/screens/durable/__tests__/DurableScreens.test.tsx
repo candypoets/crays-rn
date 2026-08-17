@@ -72,16 +72,18 @@ describe('durable screens', () => {
     expect(view.getByText(/venue is unavailable and no saved order matches/i)).toBeTruthy();
   });
   it('routes the current room and every urgency-ranked Me row without exposing internal or relay language', () => {
-    const memberships = jest.fn(); const messages = jest.fn(); const orders = jest.fn(); const profile = jest.fn(); const room = jest.fn(); const tickets = jest.fn(); const wallet = jest.fn();
-    const view = render(<MeScreen accountState={{ status: 'ready', account }} activeOrder={order} hasMembership onMemberships={memberships} onMessages={messages} onOrders={orders} onProfile={profile} onRoom={room} onTickets={tickets} onWallet={wallet} roomName="Skyline" ticketCount={1} />);
+    const memberships = jest.fn(); const messages = jest.fn(); const notifications = jest.fn(); const orders = jest.fn(); const profile = jest.fn(); const room = jest.fn(); const tickets = jest.fn(); const wallet = jest.fn();
+    const view = render(<MeScreen accountState={{ status: 'ready', account }} activeOrder={order} hasMembership onMemberships={memberships} onMessages={messages} onNotifications={notifications} onOrders={orders} onProfile={profile} onRoom={room} onTickets={tickets} onWallet={wallet} roomName="Skyline" ticketCount={1} />);
     expect(view.getByText('Ready for pickup')).toBeTruthy(); expect(view.getByText('1 saved ticket')).toBeTruthy(); expect(view.queryByText(order.orderRef, { exact: false })).toBeNull(); expect(view.queryByText(/relay-confirmed/i)).toBeNull();
     expect(view.getByText(account.displayName)).toBeTruthy(); expect(view.getByText('Saved in Crays')).toBeTruthy(); expect(view.getByText('Settings & privacy')).toBeTruthy();
     expect(view.getByLabelText('Skyline. You’re inside. Return to room')).toBeTruthy();
-    ['me-current-room', 'me-orders', 'me-memberships', 'me-tickets', 'me-wallet', 'me-messages', 'me-profile'].forEach((id) => fireEvent.press(view.getByTestId(id)));
-    expect(room).toHaveBeenCalledTimes(1); expect(orders).toHaveBeenCalled(); expect(memberships).toHaveBeenCalled(); expect(tickets).toHaveBeenCalled(); expect(wallet).toHaveBeenCalled(); expect(messages).toHaveBeenCalled(); expect(profile).toHaveBeenCalled();
+    expect(view.queryByText('Account')).toBeNull();
+    expect(view.getByRole('button', { name: 'Open notification settings' })).toBeTruthy();
+    ['me-notifications', 'me-current-room', 'me-orders', 'me-memberships', 'me-tickets', 'me-wallet', 'me-messages', 'me-profile'].forEach((id) => fireEvent.press(view.getByTestId(id)));
+    expect(notifications).toHaveBeenCalledTimes(1); expect(room).toHaveBeenCalledTimes(1); expect(orders).toHaveBeenCalled(); expect(memberships).toHaveBeenCalled(); expect(tickets).toHaveBeenCalled(); expect(wallet).toHaveBeenCalled(); expect(messages).toHaveBeenCalled(); expect(profile).toHaveBeenCalled();
   });
   it('shows the validated local profile and expands its full public identity without exposing a secret', () => {
-    const view = render(<MeScreen accountState={{ status: 'ready', account }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    const view = render(<MeScreen accountState={{ status: 'ready', account }} hasMembership={false} onMemberships={jest.fn()} onNotifications={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
     const card = view.getByTestId('me-account-profile');
     expect(card).toHaveProp('accessibilityState', { expanded: false });
     expect(view.getByText(`${account.npub.slice(0, 12)}…${account.npub.slice(-8)}`)).toBeTruthy();
@@ -96,7 +98,7 @@ describe('durable screens', () => {
   });
   it('labels a NIP-46 profile as signer-held instead of device-key custody', () => {
     const remoteAccount = { ...account, custody: 'remote-signer' as const };
-    const view = render(<MeScreen accountState={{ status: 'ready', account: remoteAccount }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    const view = render(<MeScreen accountState={{ status: 'ready', account: remoteAccount }} hasMembership={false} onMemberships={jest.fn()} onNotifications={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
     expect(view.getByText('Connected signer')).toBeTruthy();
     fireEvent.press(view.getByTestId('me-account-profile'));
     expect(view.getByText('Signing stays with your connected signer')).toBeTruthy();
@@ -104,24 +106,24 @@ describe('durable screens', () => {
   });
   it('keeps protected-profile loading, failure, and invalid states separate from durable data', () => {
     const retry = jest.fn();
-    const view = render(<MeScreen accountState={{ status: 'loading' }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    const view = render(<MeScreen accountState={{ status: 'loading' }} hasMembership={false} onMemberships={jest.fn()} onNotifications={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
     expect(view.getByTestId('me-account-loading')).toBeTruthy();
     expect(view.getByText('No saved tickets')).toBeTruthy();
-    view.rerender(<MeScreen accountState={{ status: 'error', message: 'Crays could not read the protected profile on this device.' }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    view.rerender(<MeScreen accountState={{ status: 'error', message: 'Crays could not read the protected profile on this device.' }} hasMembership={false} onMemberships={jest.fn()} onNotifications={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
     fireEvent.press(view.getByTestId('me-account-retry'));
     expect(retry).toHaveBeenCalledTimes(1);
-    view.rerender(<MeScreen accountState={{ status: 'invalid' }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    view.rerender(<MeScreen accountState={{ status: 'invalid' }} hasMembership={false} onMemberships={jest.fn()} onNotifications={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRetryAccount={retry} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
     expect(view.getByText('Profile could not be verified')).toBeTruthy();
     expect(view.getByText('No saved tickets')).toBeTruthy();
   });
-  it('renders honest empty durable context without inventing an actionable room, ticket, or wallet balance', () => { const view = render(<MeScreen hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />); expect(view.getByText('No room selected')).toBeTruthy(); expect(view.queryByTestId('me-current-room')).toBeNull(); expect(view.getByText('No saved tickets')).toBeTruthy(); expect(view.getByText('Setup required · balance unavailable')).toBeTruthy(); });
+  it('renders honest empty durable context without inventing an actionable room, ticket, or wallet balance', () => { const view = render(<MeScreen hasMembership={false} onMemberships={jest.fn()} onNotifications={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />); expect(view.getByText('No room selected')).toBeTruthy(); expect(view.queryByTestId('me-current-room')).toBeNull(); expect(view.getByText('No saved tickets')).toBeTruthy(); expect(view.getByText('Setup required · balance unavailable')).toBeTruthy(); });
   it('does not announce empty durable categories while local archives are loading', () => {
-    const view = render(<MeScreen hasMembership={false} loading onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
+    const view = render(<MeScreen hasMembership={false} loading onMemberships={jest.fn()} onNotifications={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />);
     expect(view.getByTestId('me-durable-loading')).toBeTruthy();
     expect(view.getByText('Loading saved tickets…')).toBeTruthy();
     expect(view.queryByText('No saved tickets')).toBeNull();
   });
-  it('does not turn an archived order venue into a current-room claim', () => { const view = render(<MeScreen activeOrder={{ ...order, roomName: 'Archive Room' }} hasMembership={false} onMemberships={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />); expect(view.getByText('No room selected')).toBeTruthy(); expect(view.queryByTestId('me-current-room')).toBeNull(); expect(view.getByText('Ready for pickup')).toBeTruthy(); expect(view.queryByText('Archive Room')).toBeNull(); });
+  it('does not turn an archived order venue into a current-room claim', () => { const view = render(<MeScreen activeOrder={{ ...order, roomName: 'Archive Room' }} hasMembership={false} onMemberships={jest.fn()} onNotifications={jest.fn()} onOrders={jest.fn()} onProfile={jest.fn()} onRoom={jest.fn()} onTickets={jest.fn()} onWallet={jest.fn()} ticketCount={0} />); expect(view.getByText('No room selected')).toBeTruthy(); expect(view.queryByTestId('me-current-room')).toBeNull(); expect(view.getByText('Ready for pickup')).toBeTruthy(); expect(view.queryByText('Archive Room')).toBeNull(); });
   it('selects the most urgent active order deterministically', () => { const pending = { ...order, id: 'z-pending', status: 'pending' as const, updatedAt: 10 }; const preparing = { ...order, id: 'b-preparing', status: 'processing' as const, updatedAt: 2 }; const readyA = { ...order, id: 'a-ready', status: 'ready' as const, updatedAt: 3 }; const readyB = { ...order, id: 'b-ready', status: 'ready' as const, updatedAt: 3 }; const served = { ...order, id: 'served', status: 'fulfilled' as const, updatedAt: 99 }; expect(selectActiveOrder([pending, readyB, served, preparing, readyA])?.id).toBe('a-ready'); expect(selectActiveOrder([served])).toBeUndefined(); });
   it('uses only trusted usable entitlements for the Me membership-ready claim', () => { expect(hasUsableDurableAccess([entitlement])).toBe(true); expect(hasUsableDurableAccess([{ ...entitlement, state: 'revoked' }])).toBe(false); expect(hasUsableDurableAccess([{ ...entitlement, type: 'event_access' }])).toBe(false); });
   it('counts only usable trusted event access in the Me ticket summary', () => { expect(countUsableEventAccess([eventAccess, { ...eventAccess, awardId: 'x', state: 'revoked' }, entitlement])).toBe(1); });

@@ -22,7 +22,7 @@ Visual authority: the Night Playlist commerce/messages board `docs/design-explor
 - App shell header: plum mark, venue eyebrow, **Review and pay** title, tempo rail; **Keep ordering** return link.
 - **Order** section: one white card per cart line with name, recipient (**For {name}** / **For me**), exact line total, a 48 dp quantity stepper, and Remove. Quantity edits and removals go straight to the cart callbacks with the line's product id and recipient; a quantity reduced below 1 is handed to the cart (removal semantics live there, not on screen). **Add another item** returns to the menu via the same Back callback.
 - Totals card: Subtotal, **Taxes and fees — Included**, then the bold **Total**.
-- **Payment method** row opens the child route and returns with the chosen method; it never charges.
+- **Payment method** row opens one child route and dismisses back to this existing review instance with the chosen method; it never charges or pushes a second review instance.
 - The secure-browser banner explains that Stripe owns payment entry and that a
   room order appears only after a signed product award reaches the relay.
 - The one commitment action reads **Continue to Stripe · {total}**. It is

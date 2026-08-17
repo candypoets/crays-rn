@@ -1,6 +1,23 @@
 appId: life.crays
 ---
-- runFlow: 14-review-pay.yaml
+- runFlow: seed-and-join.yaml
+- tapOn:
+    id: "room-menu"
+- extendedWaitUntil:
+    visible:
+      id: "menu-screen"
+    timeout: 15000
+- tapOn: "Mezcal Negroni"
+- extendedWaitUntil:
+    visible:
+      id: "item-screen"
+    timeout: 15000
+- tapOn:
+    id: "add-item"
+- extendedWaitUntil:
+    visible:
+      id: "review-pay-screen"
+    timeout: 15000
 - tapOn:
     id: "review-payment-method"
 - extendedWaitUntil:
@@ -18,4 +35,13 @@ appId: life.crays
       id: "review-pay-screen"
     timeout: 15000
 - assertVisible: "Wallet"
-- takeScreenshot: 24-payment-methods-relay
+# A replace-based return leaves the original review beneath a new review.
+# Native Back must instead leave checkout and reveal the room menu.
+- pressKey: BACK
+- extendedWaitUntil:
+    visible:
+      id: "room-menu-screen"
+    timeout: 15000
+- assertNotVisible:
+    id: "review-pay-screen"
+- takeScreenshot: 24-payment-methods-return-stack

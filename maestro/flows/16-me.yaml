@@ -18,6 +18,19 @@ appId: life.crays
 - assertNotVisible: ".*nsec1.*"
 - tapOn:
     id: "me-account-profile"
+- tapOn:
+    id: "me-notifications"
+- extendedWaitUntil:
+    visible:
+      id: "settings-screen"
+    timeout: 15000
+- assertVisible: "Notifications"
+- tapOn:
+    id: "settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "me-screen"
+    timeout: 15000
 - assertVisible: "Active order"
 - assertVisible: "Current room"
 - assertVisible: "Ready for pickup"
