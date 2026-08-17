@@ -7,6 +7,9 @@ appId: life.crays
     visible:
       id: "messages-screen"
     timeout: 15000
+- extendedWaitUntil:
+    visible: "Want to hear the second set?"
+    timeout: 15000
 - tapOn:
     text: "Jonas"
     index: 0
@@ -20,7 +23,8 @@ appId: life.crays
 - stopApp
 - launchApp
 - extendedWaitUntil:
-    visible: "Crays"
+    visible:
+      id: "room-menu-screen"
     timeout: 30000
 - tapOn:
     id: "tab-messages"

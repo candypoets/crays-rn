@@ -53,7 +53,10 @@ export function CartProvider({ children }: PropsWithChildren) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    SecureStore.getItemAsync(STORAGE_KEY).then((value) => setCart(validCart(value))).finally(() => setHydrated(true));
+    SecureStore.getItemAsync(STORAGE_KEY)
+      .then((value) => setCart(validCart(value)))
+      .catch(() => undefined)
+      .finally(() => setHydrated(true));
   }, []);
 
   const persist = useCallback(async (next: CartState | null) => {

@@ -5,10 +5,24 @@ import WebSocket from 'ws';
 import { finalizeEvent, getPublicKey } from 'nostr-tools';
 import { SimplePool, useWebSocketImplementation } from 'nostr-tools/pool';
 
-useWebSocketImplementation(WebSocket);
+// nostr-tools clears its `onerror` callback when a pool is closed. Node's `ws`
+// can still emit a late transport error from an in-flight TCP/TLS connection
+// after that cleanup; without an EventEmitter listener, Node treats it as an
+// uncaught exception. Keep a no-op listener alongside nostr-tools' callback so
+// a verifier reports its own query/timeout result instead of crashing during
+// connection teardown.
+class QaWebSocket extends WebSocket {
+  constructor(...args) {
+    super(...args);
+    this.on('error', () => {});
+  }
+}
+
+useWebSocketImplementation(QaWebSocket);
 
 export const COORDINATOR_URL = (process.env.COORDINATOR_URL || 'https://coordinator.nuts.cash').replace(/\/$/, '');
 export const STATE_PATH = process.env.CRAYS_QA_STATE || '/tmp/qa-crays-room.json';
+export const PUBLISHED_TEST_ROOM_STATE_PATH = process.env.CRAYS_PUBLISHED_TEST_ROOM_STATE || '/tmp/crays-manual-test-room.json';
 export const DEFAULT_KEYS_JSON = '/root/code/strfry-badge-node/test/env/keys.json';
 export const RESERVED_RELAY_DOMAIN = process.env.CRAYS_QA_RELAY_DOMAIN || 'crays-test.relays.nuts.cash';
 export const FIXTURE_CAPABILITY_D = 'crays-qa-write-capabilities';
@@ -212,12 +226,81 @@ export function fixtureSignerMap(keys, badgeIssuerSecret) {
   return { signers, badgeIssuerPubkey };
 }
 
-export async function queryFixtureEvents(pool, relayUrl, signers) {
+function eventTagValue(event, name) {
+  return event.tags.find((tag) => tag[0] === name)?.[1];
+}
+
+/**
+ * The badge issuer is shared by QA fixtures and real Test Room visitors. Only
+ * awards addressed to a known fixture identity belong to the harness; deleting
+ * every issuer-authored award would revoke unrelated devices after a QA run.
+ */
+export function isFixtureCleanupTarget(event, signerPubkeys, badgeIssuerPubkey) {
+  if (event.kind === 5) return false;
+  if (event.pubkey !== badgeIssuerPubkey) return true;
+  const recipient = eventTagValue(event, 'p');
+  return Boolean(recipient && signerPubkeys.has(recipient));
+}
+
+const persistedEventIdFields = [
+  'anchor_id',
+  'cleanup_capability_definition_id',
+  'event_access_award_id',
+  'event_id',
+  'incoming_message_event_id',
+  'membership_award_id',
+  'membership_definition_id',
+  'order_award_id',
+  'order_status_id',
+  'pass_award_id',
+  'pass_status_id',
+  'room_definition_id',
+  'test_room_membership_definition_id',
+  'venue_profile_id',
+];
+
+const persistedEventIdArrayFields = [
+  'cleanup_capability_award_ids',
+  'definition_ids',
+  'feed_ids',
+  'presence_ids',
+  'profile_ids',
+];
+
+export function fixtureEventIdsFromState(state) {
+  if (!state || typeof state !== 'object') return [];
+  const ids = [
+    ...persistedEventIdFields.map((field) => state[field]),
+    ...persistedEventIdArrayFields.flatMap((field) => Array.isArray(state[field]) ? state[field] : []),
+  ];
+  return [...new Set(ids.filter((value) => typeof value === 'string' && /^[0-9a-f]{64}$/i.test(value)))];
+}
+
+export function publishedTestRoomEventIds({ publishedStatePath = PUBLISHED_TEST_ROOM_STATE_PATH, scenarioStatePath = STATE_PATH } = {}) {
+  if (publishedStatePath === scenarioStatePath || !existsSync(publishedStatePath)) return [];
+  try {
+    const state = JSON.parse(readFileSync(publishedStatePath, 'utf8'));
+    return state.phase === 'ready' ? fixtureEventIdsFromState(state) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function fixtureAddressD(value, roomId, persistent) {
+  return persistent ? value : `${roomId}:${value}`;
+}
+
+export function fixtureUsersAtOffset(users, offset, count = 3) {
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('CRAYS_FIXTURE_USER_OFFSET must be a non-negative integer');
+  const selected = users.slice(offset, offset + count);
+  if (selected.length !== count) throw new Error(`CRAYS_FIXTURE_USER_OFFSET ${offset} cannot select ${count} fixture users`);
+  return selected;
+}
+
+export async function queryFixtureEvents(pool, relayUrl, signers, badgeIssuerPubkey) {
   const events = await pool.querySync([relayUrl], { authors: [...signers.keys()], limit: 5000 });
-  // NIP-09 tombstones are the cleanup proof and may remain stored. They are
-  // never cleanup targets themselves, otherwise every sweep creates another
-  // unbounded generation of tombstones.
-  return events.filter((event) => event.kind !== 5);
+  const signerPubkeys = new Set(signers.keys());
+  return events.filter((event) => isFixtureCleanupTarget(event, signerPubkeys, badgeIssuerPubkey));
 }
 
 /**
@@ -265,7 +348,7 @@ export async function deleteFixtureEvents({ pool, relayUrl, keys, badgeIssuerSec
   const { signers, badgeIssuerPubkey } = fixtureSignerMap(keys, badgeIssuerSecret);
   if (signers.has(communityRoot)) throw new Error('fixture cleanup signer set unexpectedly contains the community root');
   const excluded = new Set(excludeIds);
-  const targets = (await queryFixtureEvents(pool, relayUrl, signers)).filter((event) => !excluded.has(event.id));
+  const targets = (await queryFixtureEvents(pool, relayUrl, signers, badgeIssuerPubkey)).filter((event) => !excluded.has(event.id));
   if (!targets.length) {
     assert(true, `${label}: no fixture-authored leftovers`);
     return { deleted: 0, deletionIds: [] };
@@ -310,7 +393,7 @@ export async function deleteFixtureEvents({ pool, relayUrl, keys, badgeIssuerSec
     (events) => events.length === 0,
     `${label}: all ${targets.length} fixture-authored targets were deleted`,
   );
-  const remaining = (await queryFixtureEvents(pool, relayUrl, signers)).filter((event) => !excluded.has(event.id));
+  const remaining = (await queryFixtureEvents(pool, relayUrl, signers, badgeIssuerPubkey)).filter((event) => !excluded.has(event.id));
   assert(remaining.length === 0, `${label}: reserved relay has no non-deletion fixture events outside the protected run capability`);
   return { deleted: targets.length, deletionIds };
 }

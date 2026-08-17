@@ -15,7 +15,7 @@ copy states exactly what ends before the red commitment action.
 - Opening is a normal sheet/stack transition, not a swipeable card that could
   accidentally switch rooms.
 - Destination verification enters with a quiet progress rail; it never implies
-  success before the manifest resolves.
+  success before the destination room definition resolves.
 - Confirming first settles the leave/switch protocol, then transitions to Join
   Privacy. A failed switch reverses to this screen and preserves the current
   room.

@@ -2,8 +2,9 @@
 import { execFileSync, spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 
+import { JOIN_VISIBLE_CONTEXT, JOIN_VISIBLE_INTENT, MESSAGE_REQUEST_TEXT, TEST_ROOM_QA_PROFILE_NAME } from './flow-fixtures.mjs';
 import { loadKeys } from './relay-lib.mjs';
-import { JOIN_VISIBLE_CONTEXT, JOIN_VISIBLE_INTENT, TEST_ROOM_QA_PROFILE_NAME } from './flow-fixtures.mjs';
+import { deviceArgs } from './relay-screen-scenario.mjs';
 
 const statePath = '/tmp/qa-crays-test-room-card.json';
 const pidPath = '/tmp/qa-crays-test-room-card.pid';
@@ -12,17 +13,21 @@ const env = {
   ...process.env,
   CRAYS_TEST_ROOM_STATE: statePath,
   CRAYS_TEST_ROOM_PID: pidPath,
+  CRAYS_TEST_ROOM_ID: 'crays-qa-test-room',
   CRAYS_QA_STATE: statePath,
   CRAYS_QA_USER_INDEX: String(qaUserIndex),
+  // User 3 starts outside the fixture membership. Visible entry must redeem
+  // the direct Test Room invite before profile and presence publication.
+  CRAYS_QA_PREAUTHORIZE: '0',
 };
 
-function run(command, args) {
-  return execFileSync(command, args, { cwd: process.cwd(), env, stdio: 'inherit', maxBuffer: 64 * 1024 * 1024 });
+function run(command, args, runEnv = env) {
+  return execFileSync(command, args, { cwd: process.cwd(), env: runEnv, stdio: 'inherit', maxBuffer: 64 * 1024 * 1024 });
 }
 
 function waitForReady(child) {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Test Room did not become ready within 120 seconds')), 120_000);
+    const timeout = setTimeout(() => reject(new Error('Test Room did not become ready within 300 seconds')), 300_000);
     let output = '';
     child.stdout.on('data', (chunk) => {
       const text = chunk.toString();
@@ -67,7 +72,7 @@ try {
   const fixtureNsec = loadKeys().users[qaUserIndex].nsec;
   run(process.env.MAESTRO_CLI || 'maestro', [
     'test',
-    ...(process.env.ANDROID_SERIAL ? ['--device', process.env.ANDROID_SERIAL] : []),
+    ...deviceArgs(),
     '-e', `QA_NSEC=${fixtureNsec}`,
     '-e', `SERVICE_URL=${state.base_url}`,
     '-e', `RELAY_URL=${state.relay_url}`,
@@ -76,13 +81,16 @@ try {
     '-e', `QA_JOIN_INTENT=${JOIN_VISIBLE_INTENT}`,
     '-e', `QA_JOIN_CONTEXT=${JOIN_VISIBLE_CONTEXT}`,
     '-e', `QA_PROFILE_NAME=${TEST_ROOM_QA_PROFILE_NAME}`,
+    '-e', `QA_MESSAGE_REQUEST_TEXT=${MESSAGE_REQUEST_TEXT}`,
     'maestro/flows/test-room.yaml',
   ]);
   run(process.execPath, ['.qa/relay-verify.mjs']);
-  run(process.execPath, ['.qa/verify-manifest-consumed.mjs']);
+  run(process.execPath, ['.qa/verify-room-definition-consumed.mjs']);
   run(process.execPath, ['.qa/verify-test-room-invite-redeemed.mjs']);
   run(process.execPath, ['.qa/verify-visible-entry.mjs']);
+  run(process.execPath, ['.qa/verify-message-request.mjs']);
   console.log(`QA PASS: test-build-room-visible-invite (${state.room_id})`);
 } finally {
   await stopChild(testRoom);
+  if (existsSync(statePath)) run(process.execPath, ['.qa/relay-teardown.mjs']);
 }

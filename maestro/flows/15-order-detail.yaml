@@ -8,7 +8,15 @@ appId: life.crays
       id: "order-detail-screen"
     timeout: 15000
 - assertVisible: "Ready"
+- assertVisible: "Order status"
+- assertVisible: "For you.*"
 - assertVisible: "Progress"
+- assertVisible: "Mezcal Negroni"
+- scrollUntilVisible:
+    element:
+      text: "Receipt pending settlement"
+    direction: DOWN
+    timeout: 8000
 - assertVisible: "Receipt pending settlement"
 - assertVisible: "Payment details appear after payment is confirmed."
 - assertNotVisible: ".*payment rail.*"

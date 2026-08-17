@@ -1,7 +1,7 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
-import { ensureLocalIdentity } from '@/account/account';
+import { ensureActiveIdentity } from '@/account/account';
 import { loadLocalMessages, type LocalMessage } from '@/messages/store';
 import { venueReportTemplate } from '@/nostr/protocol';
 import { publishEvent } from '@/nostr/publish';
@@ -36,7 +36,7 @@ export default function PersonRoute() {
       onBlock={() => void applyBlock('global')}
       onHideInRoom={() => void applyBlock('venue')}
       onMessage={() => router.push({ pathname: contact ? '/conversation' as never : '/message-request' as never, params: { pubkey: person.pubkey } })}
-      onReport={() => void (async () => { if (reporting) return; setReporting(true); setSafetyNotice(null); try { await ensureLocalIdentity(); await publishEvent(venueReportTemplate(person.pubkey, activeRoom.id, 'other'), [relayUrlFor(activeRoom)], 'profile_report'); setSafetyNotice('Report sent to this venue.'); } catch (cause) { setSafetyNotice(cause instanceof Error ? cause.message : 'The venue did not confirm this report.'); } finally { setReporting(false); } })()}
+      onReport={() => void (async () => { if (reporting) return; setReporting(true); setSafetyNotice(null); try { await ensureActiveIdentity(); await publishEvent(venueReportTemplate(person.pubkey, activeRoom.id, 'other'), [relayUrlFor(activeRoom)], 'profile_report'); setSafetyNotice('Report sent to this venue.'); } catch (cause) { setSafetyNotice(cause instanceof Error ? cause.message : 'The venue did not confirm this report.'); } finally { setReporting(false); } })()}
       onSendDrink={() => router.push({ pathname: '/gift-select' as never, params: { pubkey: person.pubkey } })}
       person={person}
       reporting={reporting}

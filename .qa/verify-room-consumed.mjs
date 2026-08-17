@@ -44,8 +44,8 @@ for (const [name, about] of FIXTURE_PEOPLE) {
 const presence = events.filter((event) => event.kind === 10312 && state.presence_ids.includes(event.id));
 assert(presence.length === FIXTURE_PEOPLE.length, 'all seeded visible presence fixtures exist on the relay');
 assert(
-  presence.every((event) => event.tags.some((tag) => tag[0] === 'a' && tag[1] === `31727:${state.community_root}:community` && tag[2] === state.relay_url && tag[3] === 'root')),
-  'seeded NIP-53 presence fixtures are bound to the root-signed community anchor',
+  presence.every((event) => event.tags.some((tag) => tag[0] === 'a' && tag[1] === state.room_address && tag[2] === state.relay_url && tag[3] === 'root')),
+  'seeded NIP-53 presence fixtures are bound to the exact kind-30312 room definition',
 );
 
 assert(state.feed_ids.every((id) => events.some((event) => event.id === id && event.kind === 1)), 'all seeded room feed posts exist on the relay');

@@ -45,7 +45,7 @@ export const CONVERSATION_ACCEPTANCE_TEXT = 'Conversation accepted';
 // back to this constant for older state files.
 export const ROOM_DISPLAY_NAME = 'The Skyline Room';
 
-// Room "about" tag seeded into the deprecated kind-30078 selector fixture;
+// Room summary seeded into the root-authorized NIP-53 kind-30312 definition;
 // asserted by maestro/flows/10-room-preview.yaml (${QA_ROOM_ABOUT}).
 export const ROOM_ABOUT = 'Rooftop jazz, cocktails and a view over the city.';
 

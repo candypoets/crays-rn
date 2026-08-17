@@ -14,14 +14,22 @@ appId: life.crays
       id: "join-privacy-screen"
     timeout: 30000
 - extendedWaitUntil:
+    visible: "Joining · The Skyline Room"
+    timeout: 45000
+- extendedWaitUntil:
+    visible: "Browse quietly"
+    timeout: 15000
+- tapOn:
+    id: "visibility-quiet"
+- extendedWaitUntil:
     visible: "Enter quietly"
     timeout: 15000
 - tapOn:
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-people-screen"
+      id: "room-menu-screen"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "Maya"
+    visible: "Mezcal Negroni"
     timeout: 15000

@@ -58,15 +58,17 @@ terminal:
 npm run test-room
 ```
 
-Discover will show **Crays Test Room** after its legacy signed room selector
-arrives. That kind-30078 selector is temporary compatibility, not community
-authority; the direct invite is verified through NIP-11, the root-signed
-NIP-97 anchor, and the returned award. The
-card simulates a version-2 Nearby result with the hosted service and direct
-broadcast invite. Quiet entry never redeems it; visible entry confirms the
-exact relay award before publishing presence. Bluetooth is not involved. The
-command uses the live reserved Nuts relay, seeds the signed fixture, and
-removes its fixture events when stopped. Stop it with Ctrl-C or
+Discover will show **Crays Test Room** after the pinned relay's NIP-11 document
+establishes its root, the root-signed kind-31727 anchor establishes the current
+admin set, and an authorized NIP-53 kind-30312 room definition resolves. The
+definition's exact `30312:<author>:<d>` address is retained for later
+kind-10312 presence. The direct invite is verified through that trust path,
+the returned award, and the pinned relay. The card simulates a version-2
+Nearby result with the hosted service and direct broadcast invite. Quiet entry
+never redeems it; visible entry confirms the exact relay award before
+publishing presence. Bluetooth is not involved. The command uses the live
+reserved Nuts relay, seeds the signed fixture, and removes its fixture events
+when stopped. Stop it with Ctrl-C or
 `npm run test-room:stop`.
 
 For a TestFlight build, publish the 90-day fixture and public, effectively

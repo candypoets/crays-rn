@@ -13,6 +13,9 @@ appId: life.crays
     visible:
       id: "join-privacy-screen"
     timeout: 30000
+- extendedWaitUntil:
+    visible: "Joining · The Skyline Room"
+    timeout: 45000
 - tapOn:
     id: "visibility-visible"
 # Selecting visible reveals the intent/context fields and pushes the enter
@@ -25,7 +28,7 @@ appId: life.crays
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-people-screen"
+      id: "room-menu-screen"
     timeout: 30000
 - tapOn:
     id: "room-leave"
@@ -45,5 +48,5 @@ appId: life.crays
       text: ".*Nothing announces that you left.*"
     direction: DOWN
 - assertVisible: ".*Nothing announces that you left.*"
-- assertVisible: "Private messages · orders and receipts.*"
+- assertVisible: "Private messages and durable items remain available."
 - takeScreenshot: 21-room-ended-relay

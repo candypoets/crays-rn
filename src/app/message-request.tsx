@@ -2,7 +2,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import { useState } from 'react';
 
-import { ensureLocalIdentity } from '@/account/account';
+import { ensureActiveIdentity } from '@/account/account';
 import { createNip04MessageTemplate } from '@/messages/nip04';
 import { publishEvent } from '@/nostr/publish';
 import { relayUrlFor } from '@/rooms/relayUrl';
@@ -36,7 +36,7 @@ export default function MessageRequestRoute() {
       const existing = (await loadLocalMessages()).find((item) => item.recipientPubkey === person.pubkey);
       if (existing?.state === 'requested' || existing?.state === 'ignored') throw new Error('A request is already waiting. You cannot send another one.');
       if (existing?.state === 'accepted') { router.replace({ pathname: '/conversation', params: { pubkey: person.pubkey } } as never); return; }
-      await ensureLocalIdentity();
+      await ensureActiveIdentity();
       const messageId = Crypto.randomUUID();
       const relayUrl = relayUrlFor(activeRoom);
       const { template } = createNip04MessageTemplate({ messageId, messageType: 'message-request', recipientPubkey: person.pubkey, roomId: activeRoom.id, roomName: activeRoom.name, text: plaintext });

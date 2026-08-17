@@ -1,6 +1,6 @@
 import { extractTagValue, extractTagValues, type ParsedEvent, type WorkerMessage } from '@candypoets/nipworker';
-import { useSubscription as subscribeToNostr } from '@candypoets/nipworker/hooks';
-import { isEoce, isParsedEvent } from '@candypoets/nipworker/utils';
+import { isConnectionStatus, useSubscription as subscribeToNostr } from '@candypoets/nipworker/hooks';
+import { isParsedEvent } from '@candypoets/nipworker/utils';
 import * as SecureStore from 'expo-secure-store';
 
 import { isNewerAnchor, parseCommunityAnchor, type CommunityAnchor } from '@/access/nip97';
@@ -58,7 +58,16 @@ export type InviteRedemption = {
   redeemedAt: number;
   badgeAddress?: string;
   serviceUrl?: string;
+  /** Transient marker; persisted records are tagged only when read back. */
+  cached?: boolean;
 };
+
+export class MissingInviteRedemptionError extends Error {
+  constructor() {
+    super('Your saved room access is no longer available on this relay. Ask the venue for a fresh invite.');
+    this.name = 'MissingInviteRedemptionError';
+  }
+}
 
 function decodeBase64Url(value: string): string {
   const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
@@ -101,6 +110,27 @@ function normalizedServiceUrl(value: string): string {
   const url = new URL(value);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') throw new Error('The invite service address is invalid.');
   return url.toString().replace(/\/$/, '');
+}
+
+function normalizedRelayUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    url.hash = '';
+    url.search = '';
+    url.pathname = url.pathname.replace(/\/+$/, '');
+    return url.toString().replace(/\/$/, '');
+  } catch {
+    return value.replace(/\/+$/, '');
+  }
+}
+
+function relayScope(relayUrl: string): string {
+  let hash = 0x811c9dc5;
+  for (const character of normalizedRelayUrl(relayUrl)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
 }
 
 export async function fetchInviteHandoff(urlInput: string): Promise<InviteHandoff> {
@@ -154,7 +184,7 @@ export async function loadInvitePreview(serviceUrlInput: string, token: string):
   return { claims, community, serviceUrl };
 }
 
-function readTrustedAnchor(relayUrl: string, rootPubkey: string, timeoutMs: number): Promise<CommunityAnchor> {
+export function readTrustedAnchor(relayUrl: string, rootPubkey: string, timeoutMs: number): Promise<CommunityAnchor> {
   return new Promise((resolve, reject) => {
     let current: CommunityAnchor | null = null;
     let unsubscribe = () => {};
@@ -175,7 +205,7 @@ function readTrustedAnchor(relayUrl: string, rootPubkey: string, timeoutMs: numb
     );
     try {
       unsubscribe = subscribeToNostr(
-        `join_anchor_${rootPubkey.slice(0, 16)}`,
+        `join_anchor_${rootPubkey.slice(0, 16)}_${relayScope(relayUrl)}`,
         [{
           kinds: [CRAYS_PROTOCOL.anchorKind],
           authors: [rootPubkey],
@@ -183,7 +213,6 @@ function readTrustedAnchor(relayUrl: string, rootPubkey: string, timeoutMs: numb
           relays: [relayUrl],
           limit: 10,
           noCache: true,
-          closeOnEOSE: true,
         }],
         (message: WorkerMessage) => {
           const event = isParsedEvent(message);
@@ -192,9 +221,18 @@ function readTrustedAnchor(relayUrl: string, rootPubkey: string, timeoutMs: numb
             if (candidate?.pubkey === rootPubkey && (!current || isNewerAnchor(candidate, current))) current = candidate;
             return;
           }
-          // Native delivery can place EVENT and EOSE in one wake. Drain that
-          // batch before deciding the relay returned no anchor.
-          if (isEoce(message) && !eoseDrain) {
+          // EOCE only marks the end of nipworker's local cache phase. A
+          // ConnectionStatus EOSE from this exact relay is the network proof
+          // that the authoritative result set is complete. Native delivery can
+          // still place EVENT and EOSE in one wake, so drain that batch first.
+          const status = isConnectionStatus(message);
+          const statusRelay = status?.relayUrl();
+          if (
+            status?.status() === 'EOSE' &&
+            statusRelay &&
+            normalizedRelayUrl(statusRelay) === normalizedRelayUrl(relayUrl) &&
+            !eoseDrain
+          ) {
             eoseDrain = setTimeout(() => finish(current || undefined), 250);
           }
         },
@@ -268,10 +306,12 @@ export async function confirmInviteRedemption({
   await new Promise<void>((resolve, reject) => {
     let unsubscribe = () => {};
     let settled = false;
+    let eoseDrain: ReturnType<typeof setTimeout> | null = null;
     const finish = (error?: Error) => {
       if (settled) return;
       settled = true;
       clearTimeout(timeout);
+      if (eoseDrain) clearTimeout(eoseDrain);
       unsubscribe();
       if (error) reject(error);
       else resolve();
@@ -291,7 +331,6 @@ export async function confirmInviteRedemption({
           relays: [relayUrl],
           limit: 1,
           noCache: true,
-          closeOnEOSE: false,
         }],
         (message: WorkerMessage) => {
           const event = isParsedEvent(message);
@@ -303,6 +342,17 @@ export async function confirmInviteRedemption({
             nonce: preview.claims.nonce,
             pubkey,
           })) finish();
+          if (event) return;
+          const status = isConnectionStatus(message);
+          const statusRelay = status?.relayUrl();
+          if (
+            status?.status() === 'EOSE' &&
+            statusRelay &&
+            normalizedRelayUrl(statusRelay) === normalizedRelayUrl(relayUrl) &&
+            !eoseDrain
+          ) {
+            eoseDrain = setTimeout(() => finish(new MissingInviteRedemptionError()), 250);
+          }
         },
         { closeOnEose: false, bytesPerEvent: 8 * 1024 },
       );
@@ -326,11 +376,16 @@ export async function listInviteRedemptions(): Promise<InviteRedemption[]> {
 
 const pending = new Map<string, Promise<InviteRedemption>>();
 
-export async function redeemInvite(preview: InvitePreview, token: string, pubkey: string): Promise<InviteRedemption> {
+export async function redeemInvite(
+  preview: InvitePreview,
+  token: string,
+  pubkey: string,
+  options: { force?: boolean } = {},
+): Promise<InviteRedemption> {
   if (!/^[0-9a-f]{64}$/i.test(pubkey)) throw new Error('Log in before accepting this invite.');
   const key = `${preview.claims.nonce}:${pubkey}`;
   const existing = (await storedRedemptions())[key];
-  if (existing) return existing;
+  if (existing && !options.force) return { ...existing, cached: true };
   const inFlight = pending.get(key);
   if (inFlight) return inFlight;
   const request = (async () => {

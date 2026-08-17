@@ -4,7 +4,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import type { ActiveRoom, RoomDescriptor, RoomJoinPreferences } from '@/rooms/types';
 
-const STORAGE_KEY = 'crays.room.active';
+// v2 rejects sessions created from the retired app-data room selector.
+const STORAGE_KEY = 'crays.room.active.v2';
 
 type RoomSessionValue = {
   activeRoom: ActiveRoom | null;
@@ -22,8 +23,13 @@ export function parseStoredRoom(value: string | null, now = Date.now()): { room:
     const room = JSON.parse(value) as ActiveRoom;
     if (
       typeof room.id === 'string' &&
+      /^30312:[0-9a-f]{64}:.+$/i.test(room.address) &&
+      /^31727:[0-9a-f]{64}:community$/i.test(room.communityAddress) &&
+      /^[0-9a-f]{64}$/i.test(room.rootPubkey) &&
       typeof room.relayUrl === 'string' &&
       typeof room.operatorPubkey === 'string' &&
+      typeof room.serviceUrl === 'string' &&
+      ['open', 'private', 'closed'].includes(room.status) &&
       (room.visibility === 'quiet' || room.visibility === 'visible')
     ) {
       const joinedAt = Number.isSafeInteger(room.joinedAt) ? room.joinedAt : now;
@@ -61,6 +67,10 @@ export function RoomSessionProvider({ children }: PropsWithChildren) {
         if (expiredName) setEndedRoom({ name: expiredName, reason: 'automatic' });
         setActiveRoom(room);
       })
+      .catch(() => {
+        // A locked/background Keychain is not proof that the session is absent.
+        // The entry router owns the visible retry state for protected reads.
+      })
       .finally(() => setHydrated(true));
   }, []);
 
@@ -82,7 +92,7 @@ export function RoomSessionProvider({ children }: PropsWithChildren) {
     if (!activeRoom) return;
     const remaining = activeRoom.leaveAt - Date.now();
     const timer = setTimeout(() => {
-      void SecureStore.deleteItemAsync(STORAGE_KEY);
+      void SecureStore.deleteItemAsync(STORAGE_KEY).catch(() => undefined);
       setEndedRoom({ name: activeRoom.name, reason: 'automatic' });
       setActiveRoom(null);
     }, Math.max(0, remaining));

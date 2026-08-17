@@ -7,6 +7,8 @@ describe('JoinPrivacyScreen', () => {
     const onEnter = jest.fn();
     render(<JoinPrivacyScreen onBack={jest.fn()} onEnter={onEnter} roomName="Skyline" />);
     expect(screen.getByTestId('visibility-quiet')).toHaveProp('accessibilityState', { selected: true });
+    expect(screen.getByTestId('visibility-visible')).toHaveProp('accessibilityState', { selected: false });
+    expect(screen.getByTestId('join-room-button')).toBeEnabled();
     fireEvent.press(screen.getByTestId('join-room-button'));
     expect(onEnter).toHaveBeenCalledWith({ visibility: 'quiet', intent: 'social', context: '', leaveAfterMinutes: 120 });
   });

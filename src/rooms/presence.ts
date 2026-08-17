@@ -17,17 +17,17 @@ export type RoomPresenceProjection = {
 
 /**
  * Reduce a NIP-53 room-presence FlatBuffer to the minimum stable roster input.
- * The exact NIP-97 anchor address is the room boundary; other event kinds and
- * presence for another community are rejected.
+ * The exact NIP-53 kind-30312 address is the room boundary; other event kinds
+ * and presence for another room are rejected.
  */
 export function projectRoomPresence(
   event: ParsedEvent,
-  communityAddress: string,
+  roomAddress: string,
   now = Math.floor(Date.now() / 1000),
 ): RoomPresenceProjection | null {
   if (
     event.kind() !== CRAYS_PROTOCOL.roomPresenceKind ||
-    extractTagValue(event, 'a') !== communityAddress
+    extractTagValue(event, 'a') !== roomAddress
   ) return null;
 
   const id = event.id() ?? '';

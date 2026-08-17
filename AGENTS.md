@@ -32,8 +32,8 @@ Entitlements and Community Access Control". Pure helpers live in
 - Trust chain: the room relay's NIP-11 `pubkey` is the community root key —
   the only out-of-band fact. The root-signed anchor declares admins and the
   delegated `badge_issuer`. Everything entitlement-related is resolved from
-  the pinned community relay; the manifest `award_issuer` tag is parsed for
-  interop but never trusted.
+  the pinned community relay. Room metadata is a NIP-53 kind-30312 definition
+  authored by the root or a current anchor admin.
 - Issuance: anchor admins may award any definition; the `badge_issuer` may
   award sellable (well-formed `price` tag, zero price included) definitions
   only. Revocation is a kind `5` from the award issuer or an anchor admin.

@@ -2,16 +2,16 @@ import {
   CRAYS_PROTOCOL,
   communityAnchorAddress,
   leaveTemplate,
-  pilotD,
   presenceTemplate,
+  roomDefinitionAddress,
   roomFeedTemplate,
 } from '@/nostr/protocol';
 
-describe('Crays pilot protocol templates', () => {
-  it('keeps the deprecated room selector isolated and uses NIP-53 for presence', () => {
-    expect(CRAYS_PROTOCOL.roomManifestKind).toBe(30078);
+describe('Crays protocol templates', () => {
+  it('uses the NIP-53 room definition and presence kinds', () => {
+    expect(CRAYS_PROTOCOL.roomDefinitionKind).toBe(30312);
     expect(CRAYS_PROTOCOL.roomPresenceKind).toBe(10312);
-    expect(pilotD.room('skyline')).toBe('life.crays/room/v1/skyline');
+    expect(roomDefinitionAddress('a'.repeat(64), 'skyline')).toBe(`30312:${'a'.repeat(64)}:skyline`);
   });
 
   it('builds room feed notes with room context and expiry', () => {
@@ -31,9 +31,10 @@ describe('Crays pilot protocol templates', () => {
     expect(() => communityAnchorAddress('not-a-key')).toThrow('community root key');
   });
 
-  it('publishes anchor-bound NIP-53 presence with bounded context and exact expiry', () => {
+  it('publishes room-bound NIP-53 presence with bounded context and exact expiry', () => {
+    const address = `30312:${'a'.repeat(64)}:skyline`;
     const visible = presenceTemplate({
-      communityRootPubkey: 'a'.repeat(64),
+      roomAddress: address,
       relayUrl: 'wss://room.example',
       intent: 'business',
       context: `  ${'x'.repeat(100)}  `,
@@ -42,7 +43,7 @@ describe('Crays pilot protocol templates', () => {
     expect(visible.kind).toBe(10312);
     expect(visible.tags).toContainEqual([
       'a',
-      `31727:${'a'.repeat(64)}:community`,
+      address,
       'wss://room.example',
       'root',
     ]);
@@ -52,9 +53,10 @@ describe('Crays pilot protocol templates', () => {
     expect(visible.tags.some(([name]) => ['d', 'h', 'schema', 'type', 'visibility'].includes(name))).toBe(false);
   });
 
-  it('leaving publishes a newer same-kind anchor-bound replacement', () => {
+  it('leaving publishes a newer same-kind room-bound replacement', () => {
+    const address = `30312:${'b'.repeat(64)}:skyline`;
     const left = leaveTemplate({
-      communityRootPubkey: 'b'.repeat(64),
+      roomAddress: address,
       relayUrl: 'wss://room.example',
       expiresAt: 2_000_000_000,
     });
@@ -62,10 +64,19 @@ describe('Crays pilot protocol templates', () => {
     expect(left.tags).toContainEqual(['status', 'left']);
     expect(left.tags).toContainEqual([
       'a',
-      `31727:${'b'.repeat(64)}:community`,
+      address,
       'wss://room.example',
       'root',
     ]);
     expect(left.tags).toContainEqual(['expiration', '2000000000']);
+  });
+
+  it('rejects presence without an exact kind-30312 address', () => {
+    expect(() => presenceTemplate({
+      roomAddress: `31727:${'a'.repeat(64)}:community`,
+      relayUrl: 'wss://room.example',
+      intent: 'social',
+      expiresAt: 2_000_000_000,
+    })).toThrow('NIP-53 room address');
   });
 });

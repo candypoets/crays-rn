@@ -2,6 +2,8 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`, panel 01. The bright Night Playlist board supersedes the incumbent dark Discover treatment while the signed-descriptor rules below remain authoritative.
+
 Purpose: choose one verified room relay without implying attendance, popularity,
 or exact distance. Discover is the pre-selection home and must remain useful
 when Bluetooth is denied or the search relay is offline.
@@ -12,23 +14,22 @@ Discover tab, direct room link/QR, or a preserved authentication intent.
 Primary action: open a room preview. Secondary actions: switch Map/Nearby and
 learn why Nearby permission is useful. Neither action joins a room.
 
+The surface is titled **Tonight / Rooms around you**. A fresh descriptor appears as one photographic card with a blue selection border, text-labelled lime **Verified** badge, signed name and description, and **Preview room** action. The card never shows attendance, popularity, distance, or an invented event. Map/Nearby remain one segmented control below the result state.
+
 ## Data and state
 
-The bullets below describe the current legacy implementation, not the target
-protocol. Kind `30078` has no community/discovery authority. Community identity
-must migrate to the relay's NIP-11 root and root-signed NIP-97 `31727` anchor;
-geographic discovery remains undecided and must not receive another arbitrary
-namespace.
-
-- A direct result subscribes to kind `30078`, optionally filtered by
-  `d=life.crays/room/v1/<room-id>`, on the supplied search/direct relay.
-- The screen copies only the verified room selector fields required to cross
-  into navigation: id, name, relay, operator, expiry and capabilities.
-- The compatibility parser requires schema v1, unexpired timestamp,
-  signer=operator, and a relay URL. This self-consistency is not NIP-97 trust
-  proof; displaying **Verified** from it is a migration risk to remove.
-- Map and Nearby resolve to the same `RoomDescriptor`; Nearby is a discovery
-  channel, not a second room record.
+- The supplied relay URL is pinned first. Its NIP-11 `pubkey` establishes the
+  community root, and the latest root-signed NIP-97 kind-31727 anchor establishes
+  the current admin set.
+- A direct result then subscribes to NIP-53 kind `30312`, optionally filtered by
+  the exact `d=<room-id>`, and accepts only a definition authored by the root or
+  one of those current admins.
+- The definition must carry the NIP-53 fields `d`, `room`, `status`, `service`,
+  and at least one Host `p` tag. The screen copies only the stable fields needed
+  for navigation, including the exact `30312:<author>:<d>` address used later by
+  kind-10312 presence.
+- Map and Nearby resolve to the same trusted `RoomDescriptor`; Nearby is a
+  discovery channel, not a second room record.
 
 States: loading signature; verified result; empty Map (reachable only with a
 search/direct relay); Nearby off (the newcomer default); stale or
@@ -47,9 +48,8 @@ actions (a signed room link from the venue, or Nearby). It does not ship a
 fake place list or pretend retry can reach a nonexistent service, and it does
 not size or style the note as an error. The internal diagnostic
 `Search service design pending · D-001` lives only inside the Developer
-section. Direct relay links and GATT pointers currently continue through that
-legacy selector while the anchor-backed projection and discovery schema are
-pending.
+section. Direct relay links and GATT pointers resolve through the same NIP-11 →
+31727 → 30312 trust chain. Geographic indexing remains pending.
 
 Development builds and builds compiled with `EXPO_PUBLIC_CRAYS_TEST_BUILD=1`
 also render a compact **Developer** or **Test build** section at the bottom of
@@ -65,9 +65,11 @@ but Join privacy redeems it only after explicit visible selection. Internal
 labels ("Development test mode", "local signed test relay", "Waiting for test
 relay") never appear on the newcomer surface. This section and its
 subscription are absent from ordinary release builds; they are not a
-substitute for D-001 or a fabricated production listing. When a direct link already targets
-the test room's relay and id, the duplicate card and its subscription are
-suppressed because relays replace a REQ that reuses a subscription ID.
+substitute for D-001 or a fabricated production listing. Local-proxy QA selects
+the next free port when needed; the hosted Test Room path connects directly.
+When a direct link already targets the test room's relay and id, the duplicate
+card and its subscription are suppressed because relays replace a REQ that
+reuses a subscription ID.
 
 Accessibility: Map/Nearby are real tabs with selected and disabled states;
 room cards have a single descriptive action; verification is text plus icon;
@@ -91,11 +93,11 @@ Required paths: cold account → newcomer Nearby with Map disabled; Test Room
 online → synthetic Nearby result → preview → visible join with direct invite
 redemption and no Bluetooth prompt; quiet selection → no redemption; Test Room
 offline → disabled recovery copy appropriate to developer or TestFlight;
-ordinary release build → no Test Room; Nearby → rationale; direct fresh manifest →
-preview; stale/wrong signer → no card; relay unavailable → retry copy while
+ordinary release build → no Test Room; Nearby → rationale; direct authorized
+room definition → preview; stale/wrong signer → no card; relay unavailable → retry copy while
 Messages/Me remain; relaunch of direct link; repeated tap does not change
 active room; no permissions before rationale.
 
-Pass criteria for the legacy regression suite: the displayed id/operator/relay
-equal the compatibility event queried independently, exactly zero room selection/presence mutations occur, and
+Pass criteria: the displayed id/operator/relay/address equal the root-authorized
+kind-30312 event queried independently, exactly zero room selection/presence mutations occur, and
 teardown leaves no `craysqa-*` relay or state file for the run.

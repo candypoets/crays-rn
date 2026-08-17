@@ -6,9 +6,8 @@ appId: life.crays
     visible:
       id: "bluetooth-rationale-screen"
     timeout: 30000
-- assertVisible: "Find the room you’re in"
-- assertVisible: ".*does not make you visible.*"
-- assertVisible: ".*does not publish your exact location.*"
+- assertVisible: "Why we ask for Nearby"
+- assertVisible: ".*do not publish your presence or exact location.*"
 - assertVisible:
     id: "use-map-button"
 - takeScreenshot: 10b-bluetooth-rationale

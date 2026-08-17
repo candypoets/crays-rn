@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { createTestRoomPointer, TEST_ROOM_BUILD } from '@/config/testRoom';
 import { nearbyRoomEntryParams } from '@/discovery/blePointer';
 import { useNearbyRoom } from '@/discovery/useNearbyRoom';
-import { useRoomManifest } from '@/rooms/useRoomManifest';
+import { useRoomDefinition } from '@/rooms/useRoomDefinition';
 import { DiscoverHandoffScreen } from '@/screens/DiscoverHandoffScreen';
 import { useRoomSession } from '@/session/RoomSession';
 
@@ -16,18 +16,16 @@ export default function DiscoverRoute() {
   const nearby = useNearbyRoom(focused && mode === 'nearby' && params.nearby === '1' && !params.relay);
   const transportRelay = params.relay || nearby.pointer?.relayUrl;
   const roomId = params.room || nearby.pointer?.roomId;
-  const manifest = useRoomManifest(transportRelay, roomId);
+  const result = useRoomDefinition(transportRelay, roomId);
   const testPointer = createTestRoomPointer();
-  // A second manifest hook with the same relay+room would reuse subId
-  // `room_manifest_crays-test-room`, and relays replace a REQ that reuses an ID.
-  const duplicatesPrimaryManifest = transportRelay === testPointer?.relayUrl && roomId === testPointer?.roomId;
-  const testRoom = useRoomManifest(
-    testPointer && !duplicatesPrimaryManifest ? testPointer.relayUrl : undefined,
+  // A second hook with the same relay+room would reuse its deterministic REQ
+  // id, so the test card shares the primary result when both pointers match.
+  const duplicatesPrimaryRoom = transportRelay === testPointer?.relayUrl && roomId === testPointer?.roomId;
+  const testRoom = useRoomDefinition(
+    testPointer && !duplicatesPrimaryRoom ? testPointer.relayUrl : undefined,
     testPointer?.roomId,
   );
   const changeMode = (next: 'map' | 'nearby') => {
-    // Map stays unselectable while no search/direct relay exists (D-001), and
-    // re-tapping the active tab must not navigate anywhere.
     if (next === mode || (next === 'map' && !transportRelay)) return;
     setMode(next);
     if (next === 'nearby' && params.nearby !== '1') router.push({ pathname: '/bluetooth-rationale', params: { relay: params.relay, room: params.room } } as never);
@@ -40,13 +38,13 @@ export default function DiscoverRoute() {
   };
   return (
     <DiscoverHandoffScreen
-      error={manifest.error || nearby.error}
-      loading={manifest.loading || nearby.scanning}
+      error={result.error || nearby.error}
+      loading={result.loading || nearby.scanning}
       mapAvailable={!!transportRelay}
       mode={mode}
       onChangeMode={changeMode}
-      room={manifest.room}
-      testRoom={TEST_ROOM_BUILD && testPointer && !duplicatesPrimaryManifest ? { ...testRoom, testBuild: !__DEV__ } : undefined}
+      room={result.room}
+      testRoom={TEST_ROOM_BUILD && testPointer && !duplicatesPrimaryRoom ? { ...testRoom, testBuild: !__DEV__ } : undefined}
       onOpenTestRoom={(room) => testPointer && open(room, nearbyRoomEntryParams(testPointer))}
       onOpenRoom={(room) => {
         const pointer = nearby.pointer?.roomId === room.id ? nearby.pointer : null;

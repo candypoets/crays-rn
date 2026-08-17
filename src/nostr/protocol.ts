@@ -1,15 +1,8 @@
 import type { EventTemplate } from 'nostr-tools';
 
-/**
- * Stable NIP kinds stay literal. `roomManifestKind` exposes the remaining
- * pre-migration discovery pilot only so existing screens can remove it in a
- * deliberate cut-over. It is not authoritative community/discovery semantics
- * and MUST NOT be copied into new product or relay contracts.
- */
 export const CRAYS_PROTOCOL = {
   appNamespace: 'life.crays',
-  /** @deprecated Legacy Crays pilot; community identity belongs in NIP-97 kind 31727. */
-  roomManifestKind: 30078,
+  roomDefinitionKind: 30312,
   roomPresenceKind: 10312,
   roomFeedKind: 1,
   profileKind: 0,
@@ -27,11 +20,6 @@ export const CRAYS_PROTOCOL = {
 
 export const PRESENCE_HEARTBEAT_INTERVAL_MS = 60_000;
 export const PRESENCE_FALLBACK_FRESHNESS_SECONDS = 5 * 60;
-
-/** @deprecated Address for the remaining legacy kind-30078 room selector. */
-export const pilotD = {
-  room: (roomId: string) => `${CRAYS_PROTOCOL.appNamespace}/room/v1/${roomId}`,
-} as const;
 
 export type PresenceVisibility = 'visible' | 'quiet';
 export type PresenceIntent = 'social' | 'business' | 'dating' | 'curious';
@@ -58,27 +46,40 @@ export function communityAnchorAddress(rootPubkey: string): string {
   return `${CRAYS_PROTOCOL.anchorKind}:${rootPubkey.toLowerCase()}:community`;
 }
 
-/** NIP-53 Room Presence bound to the root-signed NIP-97 community anchor. */
+export function roomDefinitionAddress(authorPubkey: string, roomId: string): string {
+  if (!/^[0-9a-f]{64}$/i.test(authorPubkey)) throw new Error('The room author key is invalid.');
+  if (!roomId.trim()) throw new Error('The room identifier is missing.');
+  return `${CRAYS_PROTOCOL.roomDefinitionKind}:${authorPubkey.toLowerCase()}:${roomId}`;
+}
+
+function assertRoomDefinitionAddress(roomAddress: string): void {
+  if (!/^30312:[0-9a-f]{64}:.+$/i.test(roomAddress)) {
+    throw new Error('The NIP-53 room address is invalid.');
+  }
+}
+
+/** NIP-53 Room Presence bound to the exact kind-30312 meeting space. */
 export function presenceTemplate({
-  communityRootPubkey,
+  roomAddress,
   relayUrl,
   intent,
   context,
   expiresAt,
 }: {
-  communityRootPubkey: string;
+  roomAddress: string;
   relayUrl: string;
   intent: PresenceIntent;
   context?: string;
   expiresAt: number;
 }): EventTemplate {
+  assertRoomDefinitionAddress(roomAddress);
   const normalizedContext = context?.trim().slice(0, 80) ?? '';
   return {
     kind: CRAYS_PROTOCOL.roomPresenceKind,
     created_at: Math.floor(Date.now() / 1000),
     content: '',
     tags: [
-      ['a', communityAnchorAddress(communityRootPubkey), relayUrl, 'root'],
+      ['a', roomAddress, relayUrl, 'root'],
       ['intent', intent],
       ...(normalizedContext ? [['context', normalizedContext]] : []),
       ['expiration', String(expiresAt)],
@@ -88,20 +89,21 @@ export function presenceTemplate({
 
 /** A newer same-kind/same-author replacement makes leave visible immediately. */
 export function leaveTemplate({
-  communityRootPubkey,
+  roomAddress,
   relayUrl,
   expiresAt,
 }: {
-  communityRootPubkey: string;
+  roomAddress: string;
   relayUrl: string;
   expiresAt: number;
 }): EventTemplate {
+  assertRoomDefinitionAddress(roomAddress);
   return {
     kind: CRAYS_PROTOCOL.roomPresenceKind,
     created_at: Math.floor(Date.now() / 1000),
     content: '',
     tags: [
-      ['a', communityAnchorAddress(communityRootPubkey), relayUrl, 'root'],
+      ['a', roomAddress, relayUrl, 'root'],
       ['status', 'left'],
       ['expiration', String(expiresAt)],
     ],

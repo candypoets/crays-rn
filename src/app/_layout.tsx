@@ -7,6 +7,7 @@ import { useEffect, useState, type PropsWithChildren } from 'react';
 import { AppState, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { TempoRail } from '@/components/night/NightPrimitives';
 import { getNostrRuntime, type NostrRuntimeStatus } from '@/nostr/manager';
 import { FoundationScreen } from '@/screens/FoundationScreen';
 import { CartProvider } from '@/commerce/Cart';
@@ -46,8 +47,9 @@ function RuntimeGate({ children }: PropsWithChildren) {
   if (!runtimeStatus) {
     return (
       <View className="flex-1 items-center justify-center bg-base-100" testID="runtime-gate">
-        <Text className="text-3xl font-black tracking-[8px] text-base-content">CRAYS</Text>
-        <Text className="mt-3 text-xs font-bold uppercase tracking-[3px] text-muted">
+        <Text className="text-3xl font-black tracking-[-0.8px] text-base-content">CRAYS</Text>
+        <TempoRail className="mt-5 w-44" />
+        <Text className="mt-3 text-xs font-bold tracking-[0.8px] text-muted">
           Waking the room
         </Text>
       </View>
@@ -70,7 +72,7 @@ export default function RootLayout() {
           <SafetyProvider>
             <RoomDataProvider>
               <CartProvider>
-                <StatusBar style="light" />
+                <StatusBar style="dark" />
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
                 </Stack>

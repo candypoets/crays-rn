@@ -22,7 +22,7 @@ Every scenario follows the same lifecycle:
 registered flow (or references a missing one), when a flow does not reach the
 shared `maestro/flows/launch.yaml` startup transitively, or when a screen has
 no mapped jest test (`screenTests` in `verify-screen-contracts.mjs`;
-`entry-router.md` is a warn-listed exception). Scenarios that harden an
+`entry-router.md` is covered directly). Scenarios that harden an
 existing spec rather than add a screen are registered in
 `additionalScenarios`. This catches a newly added screen spec that has no
 executable QA scaffold before device tests begin.
@@ -40,7 +40,7 @@ executable QA scaffold before device tests begin.
   run standalone. The entry flows are launched without env overrides and keep
   their literals; the owning flow for each constant is named in
   `flow-fixtures.mjs`.
-- Logcat consumption verifiers (`verify-manifest-consumed`,
+- Logcat consumption verifiers (`verify-room-definition-consumed`,
   `verify-room-consumed`, `verify-order-consumed`) independently query the
   relay for the underlying events and their seeded content first; the logcat
   `__DEV__` marker check only complements that proof.
@@ -62,7 +62,7 @@ executable QA scaffold before device tests begin.
   no kind-31925 and no confirmed-RSVP marker was logged, so nothing entered
   the durable archive.
 - `qa-11c-join-relay-unavailable.mjs` points join-room at a dead relay URL
-  and asserts the manifest error state renders instead of a hang. It
+  and asserts the room-definition error state renders instead of a hang. It
   provisions no relay, so it has nothing to tear down.
 
 ## Entry and cold signup
@@ -115,26 +115,59 @@ creation cooldown.
 Do not use a JavaScript mock store as proof of relay behavior. Keep fixtures
 deterministic and make operations idempotent where the product requires it.
 Addressable fixture `d` tags are stable and replace across runs; non-replaceable
-awards are removed before each seed. Scenario state files contain the
+awards addressed to fixture identities are removed before each seed. Awards
+from the shared badge issuer to unrelated Test Room visitors are never cleanup
+targets. Scenario state files contain the
 re-fetched badge issuer secret, are always mode `0600`, and must never be
 printed or committed.
 
-The reserved relay persists, but fixture data does not. Bootstrap first grants
+The reserved relay persists, but scenario fixture data does not. When a
+published Test Room state exists at `/tmp/crays-manual-test-room.json`, every
+scenario protects its recorded event IDs during both pre-seed sweep and
+teardown. The published room uses a dedicated fixture-user window, while
+ephemeral scenarios namespace their addressable `d` tags and leave the
+published venue kind-0 coordinate untouched. Routine QA therefore cannot
+supersede or take the persistent development/TestFlight room offline.
+Bootstrap first grants
 fixture identities a temporary, UI-invisible NIP-97 capability and sweeps old
 events. Teardown publishes kind-5 deletions signed by each original fixture
 author, verifies the tombstones landed, waits before checking absence, and
-requires all non-kind-5 fixture events to be gone. Root-authored infrastructure
+requires all targeted non-kind-5 fixture events to be gone. Root-authored infrastructure
 (the kind-31727 community anchor and kind-30009 `members` definition) is never
 in the cleanup signer set. `node .qa/relay-teardown.mjs --sweep` recovers only
 fixture data; it never deletes the relay or a Docker volume, and is safe only
 when no other Crays QA run is active.
 
-The invite-oriented relay screen scenarios connect through the Test Room bridge
-at `ws://10.0.2.2:8787`. It proxies WebSocket traffic to the reserved WSS
-relay, passes NIP-11 HTTP requests through to the deployed HTTPS origin, and
-forwards invite-service calls. The manual development Test Room connects
-directly to the reserved WSS relay instead. Independent verifiers always query
-the WSS relay directly.
+The switch-room scenario is the deliberate exception to the one-bootstrap
+cleanup rule: the deployed coordinator currently limits this QA owner to the
+reserved relay, so `.qa/qa-28-switch-room.mjs` seeds room A and then room B on
+that same real relay with distinct room IDs and signed kind-30312 definitions. Its second
+bootstrap sets `CRAYS_QA_PRESERVE_FIXTURES=1` to retain A while adding B; the
+runner verifies A's left replacement before asserting that the app published
+no B presence at the destination privacy screen. A non-owning instance of the
+same Test Room bridge carries both room IDs during the device flow; stopping
+that bridge never tears down the externally seeded A/B fixture family.
+
+Relay-backed UI runs connect through a Test Room bridge on the first available
+port from 8787, exposed to the Android emulator as `ws://10.0.2.2:<port>`. It
+proxies WebSocket traffic to the reserved WSS relay, serves the exact NIP-11
+document fetched and root-key-validated by bootstrap for that scenario, and
+forwards invite-service calls when the scenario minted an invite. This
+scenario-lifetime snapshot prevents a transient HTTP outage from erasing trust
+while relay WebSocket traffic remains healthy. The manual development Test
+Room connects directly to the reserved WSS relay unless proxy mode is
+explicitly enabled. Independent verifiers always query the WSS relay directly.
+
+The bridge also terminates NIP-42 for kind-4 reads. It verifies the app's
+kind-22242 signature, exact challenge, local relay tag, timestamp, and
+viewer-scoped filter before forwarding the query to the real relay. This is a
+test-transport adapter, not an in-memory message store: events still come from
+the reserved WSS relay and all message writes and verifier reads target that
+relay directly. The adapter is presently necessary because the deployed
+reserved relay challenges protected reads but rejects valid AUTH with its
+routed `serviceUrl` unset. To pass the already-authenticated filter upstream,
+the bridge adds a non-matching kind; remove this adapter once the deployed
+relay advertises NIP-42 and accepts a direct signed AUTH probe.
 
 Invite scenarios `qa-08-invite-preview.mjs` and
 `qa-08b-invite-accepted.mjs` mint through the real relay invite service. The
@@ -180,9 +213,9 @@ signed room fixture and the app's relay-derived projections after UI exercise.
 
 Join privacy uses separate identities. `qa-11-join-quiet.mjs` proves zero
 presence writes; `qa-11-join-visible.mjs` proves exactly one signed visible
-NIP-53 kind-10312 presence with selected intent, context, exact NIP-97 anchor
-link, and expiry, plus the exact kind-0 profile used by People and feed
-projections.
+NIP-53 kind-10312 presence with selected intent, context, the exact authorized
+kind-30312 room address, and expiry, plus the exact kind-0 profile used by
+People and feed projections.
 
 ## Development and TestFlight Test Room
 
@@ -197,10 +230,11 @@ TestFlight bundle. `npm run start:maestro` sources that file when present, and
 `qa-27-discover-handoff.mjs` refuses to run without it (the flow asserts the
 Developer/Test room section, which the bundle only renders with the token).
 
-The local proxy is an explicit relay-only compatibility mode
+The local proxy is an explicit compatibility mode
 (`CRAYS_TEST_ROOM_PROXY=1`) for development devices that cannot reach hosted
-WSS. It has no invite, community-info, or redemption routes. TestFlight and the
-Test Room QA scenario call the hosted invite service directly.
+WSS directly. It fronts the hosted relay and invite-service routes without
+becoming protocol authority. TestFlight and the direct Test Room QA scenario
+call the hosted relay and invite service without this proxy.
 
 The checkout scenario keeps the app's payment default pointed at
 `https://payments.nuts.cash`. Its deterministic QA variant is an explicit
@@ -216,10 +250,14 @@ The executable lifecycle is `.qa/qa-test-room.mjs` with
 `maestro/flows/test-room.yaml`. It proves Discover card availability, direct
 invite input through the synthetic Nearby pointer, visible selection, exact
 membership-award read-back, fixture rendering,
-joining-account kind-0 projection, anchor-bound kind-10312 presence, legacy
-selector consumption, and exact fixture teardown while the reserved relay
+joining-account kind-0 projection, room-bound kind-10312 presence, authorized
+kind-30312 definition consumption, and exact fixture teardown while the reserved relay
 remains available. Bootstrap rejects any invite response shorter than the
 requested 90 days or smaller than the effectively unlimited redemption count.
-The Test Room's root-signed membership definition grants kind `10312`. The
-kind-30078 selector remains discovery compatibility, not a new protocol
-contract.
+The Test Room's root-signed membership definition grants kinds `0`, `1`, `4`,
+and `10312`, so a redeemed member can publish their profile, room feed,
+encrypted direct-message request, and visible presence. The Test Room Maestro
+flow sends a real request to Jonas and `verify-message-request.mjs`
+independently queries, validates, and decrypts it. Room
+identity is proven through NIP-11 root → root-signed kind-31727 anchor →
+root/admin-authored NIP-53 kind-30312 definition.

@@ -13,6 +13,38 @@ describe('ProfileSetupScreen', () => {
     expect(screen.getByTestId('profile-continue-button')).toBeEnabled();
   });
 
+  it('shows the persistent field label with a live character count', () => {
+    render(<ProfileSetupScreen onBack={jest.fn()} onContinue={jest.fn()} />);
+
+    expect(screen.getByText('Display name')).toBeOnTheScreen();
+    expect(screen.getByText('0/50')).toBeOnTheScreen();
+    fireEvent.changeText(screen.getByLabelText('Display name'), 'QA Alex');
+    expect(screen.getByText('7/50')).toBeOnTheScreen();
+  });
+
+  it('keeps intent chips local and reversible, out of the submitted payload', () => {
+    const onContinue = jest.fn();
+    render(<ProfileSetupScreen onBack={jest.fn()} onContinue={onContinue} />);
+
+    const music = screen.getByRole('button', { name: 'Music' });
+    expect(music).not.toBeSelected();
+    fireEvent.press(music);
+    expect(screen.getByRole('button', { name: 'Music' })).toBeSelected();
+    fireEvent.press(screen.getByRole('button', { name: 'Music' }));
+    expect(screen.getByRole('button', { name: 'Music' })).not.toBeSelected();
+
+    fireEvent.changeText(screen.getByLabelText('Display name'), 'QA Alex');
+    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    expect(onContinue).toHaveBeenCalledWith('QA Alex');
+  });
+
+  it('states that room sharing and visibility are chosen later', () => {
+    render(<ProfileSetupScreen onBack={jest.fn()} onContinue={jest.fn()} />);
+
+    expect(screen.getByRole('header', { name: 'How should the room call you?' })).toBeOnTheScreen();
+    expect(screen.getByText(/You decide what to share in each room/)).toBeOnTheScreen();
+  });
+
   it('submits the entered display name and renders signing errors', () => {
     const onContinue = jest.fn();
     render(
@@ -28,5 +60,15 @@ describe('ProfileSetupScreen', () => {
 
     expect(onContinue).toHaveBeenCalledWith('QA Alex');
     expect(screen.getByText('The profile signature could not be verified.')).toBeOnTheScreen();
+  });
+
+  it('normalizes surrounding and repeated whitespace before signing', () => {
+    const onContinue = jest.fn();
+    render(<ProfileSetupScreen onBack={jest.fn()} onContinue={onContinue} />);
+
+    fireEvent.changeText(screen.getByLabelText('Display name'), '  QA   Alex  ');
+    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(onContinue).toHaveBeenCalledWith('QA Alex');
   });
 });

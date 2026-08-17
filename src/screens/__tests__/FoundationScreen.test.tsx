@@ -7,7 +7,8 @@ describe('FoundationScreen', () => {
     render(<FoundationScreen engineStatus="ready" />);
 
     expect(screen.getByRole('header', { name: 'Crays' })).toBeOnTheScreen();
-    expect(screen.getByText('Meet the people in the room.')).toBeOnTheScreen();
+    expect(screen.getByText('C').props.className).toContain('text-attention');
+    expect(screen.getByText('Your night, in one place.')).toBeOnTheScreen();
     expect(screen.getByLabelText('Nostr engine ready')).toBeOnTheScreen();
   });
 

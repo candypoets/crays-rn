@@ -9,8 +9,7 @@ appId: life.crays
     visible:
       id: "profile-setup-screen"
     timeout: 30000
-- assertVisible: "ACCOUNT · 1 OF 2"
-- assertVisible: "What should people call you?"
+- assertVisible: "How should the room call you?"
 - assertVisible:
     id: "display-name-input"
 - tapOn:

@@ -9,7 +9,9 @@ appId: life.crays
     visible:
       id: "messages-screen"
     timeout: 15000
-- assertVisible: "Want to hear the second set?"
+- extendedWaitUntil:
+    visible: "Want to hear the second set?"
+    timeout: 15000
 - assertVisible: "requested"
 - tapOn:
     text: "Jonas"

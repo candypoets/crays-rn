@@ -1,0 +1,46 @@
+appId: life.crays
+---
+- runFlow: launch.yaml
+- openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
+- extendedWaitUntil:
+    visible:
+      id: "qa-seed-continue"
+    timeout: 30000
+- tapOn:
+    id: "qa-seed-continue"
+- openLink: "crays:///join-room?relay=${RELAY_URL}&room=${ROOM_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "join-privacy-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Joining · The Skyline Room"
+    timeout: 45000
+- tapOn:
+    id: "visibility-visible"
+- scrollUntilVisible:
+    element:
+      id: "join-room-button"
+    direction: DOWN
+- tapOn:
+    id: "join-room-button"
+- extendedWaitUntil:
+    visible:
+      id: "room-menu-screen"
+    timeout: 30000
+- tapOn:
+    id: "room-leave"
+- extendedWaitUntil:
+    visible:
+      id: "leave-room-screen"
+    timeout: 15000
+- assertVisible: "Leaving is private.*"
+- assertVisible: "Stop appearing in People"
+- assertVisible: "Lock this room’s live feed"
+- takeScreenshot: leave-room-confirmation
+- tapOn:
+    id: "leave-room-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "room-ended-screen"
+    timeout: 30000

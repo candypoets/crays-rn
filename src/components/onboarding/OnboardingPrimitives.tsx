@@ -1,9 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import type { PropsWithChildren, ReactNode } from 'react';
 import {
   ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,21 +9,26 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { EdgeTabs } from '@/components/night/NightPrimitives';
 import { colors } from '@/theme/colors';
 
 type OnboardingShellProps = PropsWithChildren<{
   keyboard?: boolean;
+  showEdgeTabs?: boolean;
   testID: string;
 }>;
 
-export function OnboardingShell({ children, keyboard = false, testID }: OnboardingShellProps) {
+export function OnboardingShell({ children, keyboard = false, showEdgeTabs = true, testID }: OnboardingShellProps) {
+  const insets = useSafeAreaInsets();
   const content = (
     <ScrollView
       automaticallyAdjustKeyboardInsets
-      contentContainerClassName="grow px-6 pb-8 pt-3"
+      contentContainerClassName="grow px-6"
+      contentContainerStyle={{ paddingTop: 12 + insets.top, paddingBottom: 32 + insets.bottom }}
       keyboardShouldPersistTaps="handled"
+      scrollIndicatorInsets={{ top: insets.top, bottom: insets.bottom }}
       showsVerticalScrollIndicator={false}
     >
       <View className="mx-auto w-full max-w-[560px] grow">{children}</View>
@@ -33,9 +36,8 @@ export function OnboardingShell({ children, keyboard = false, testID }: Onboardi
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-base-100" edges={['top', 'right', 'bottom', 'left']} testID={testID}>
-      <View className="absolute -right-28 top-28 h-72 w-72 rounded-full bg-primary/5" />
-      <View className="absolute -left-24 bottom-16 h-56 w-56 rounded-full bg-accent/5" />
+    <SafeAreaView className="flex-1 bg-base-100" edges={['right', 'left']} testID={testID}>
+      {showEdgeTabs ? <EdgeTabs /> : null}
       {keyboard ? (
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -52,13 +54,15 @@ export function OnboardingShell({ children, keyboard = false, testID }: Onboardi
 
 export function BrandMark({ size = 64 }: { size?: number }) {
   return (
-    <Image
-      accessibilityIgnoresInvertColors
+    <View
       accessible={false}
-      resizeMode="contain"
-      source={require('../../../assets/branding/crays-icon.png')}
+      className="items-center justify-center rounded-full bg-ink"
       style={{ height: size, width: size }}
-    />
+    >
+      <Text className="font-black text-attention" style={{ fontSize: Math.max(14, size * 0.52), lineHeight: size * 0.72 }}>
+        C
+      </Text>
+    </View>
   );
 }
 
@@ -72,7 +76,7 @@ export function BackButton({ onPress }: { onPress: () => void }) {
       onPress={onPress}
       testID="back-button"
     >
-      <Ionicons color={colors.paper} name="arrow-back" size={30} />
+      <Ionicons color={colors.ink} name="arrow-back" size={28} />
     </Pressable>
   );
 }
@@ -85,6 +89,7 @@ type PrimaryButtonProps = {
   loadingLabel?: string;
   onPress: () => void;
   testID?: string;
+  tone?: 'commitment' | 'primary';
 };
 
 export function PrimaryButton({
@@ -95,31 +100,33 @@ export function PrimaryButton({
   loadingLabel = 'Working…',
   onPress,
   testID,
+  tone = 'primary',
 }: PrimaryButtonProps) {
   const unavailable = disabled || loading;
+  const backgroundColor = unavailable
+    ? colors.mutedAction
+    : tone === 'commitment'
+      ? colors.commitment
+      : colors.primary;
+  const foregroundColor = tone === 'commitment' ? colors.ink : colors.surface;
 
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: unavailable, busy: loading }}
-      className="min-h-14 overflow-hidden rounded-full active:opacity-80"
+      className="min-h-14 overflow-hidden rounded-2xl active:opacity-80"
       disabled={unavailable}
       onPress={onPress}
       testID={testID}
     >
-      <LinearGradient
-        colors={unavailable ? [colors.mutedAction, colors.mutedAction] : [colors.primary, colors.accent]}
-        end={{ x: 1, y: 0.5 }}
-        start={{ x: 0, y: 0.5 }}
-        style={{ minHeight: 56, borderRadius: 999 }}
-      >
+      <View style={{ backgroundColor, minHeight: 56 }}>
         <View className="min-h-14 flex-row items-center justify-center gap-3 px-6 py-3">
-          {loading ? <ActivityIndicator color={colors.night} /> : icon}
-          <Text className="text-center text-lg font-bold text-base-content">
+          {loading ? <ActivityIndicator color={foregroundColor} /> : icon}
+          <Text className="text-center text-base font-extrabold" style={{ color: foregroundColor }}>
             {loading ? loadingLabel : label}
           </Text>
         </View>
-      </LinearGradient>
+      </View>
     </Pressable>
   );
 }
@@ -140,7 +147,7 @@ export function TextAction({
       onPress={onPress}
       testID={testID}
     >
-      <Text className="text-base font-semibold text-base-content underline">{label}</Text>
+      <Text className="text-base font-bold text-primary">{label}</Text>
     </Pressable>
   );
 }
@@ -154,8 +161,8 @@ export function StageLabel({ children }: PropsWithChildren) {
 export function PaperCard({ children, className = '' }: PropsWithChildren<{ className?: string }>) {
   return (
     <View
-      className={`rounded-2xl bg-base-content p-6 shadow-lg ${className}`}
-      style={{ elevation: 5, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 5 }, shadowOpacity: 0.28, shadowRadius: 10 }}
+      className={`rounded-2xl border border-edge bg-surface p-6 ${className}`}
+      style={{ elevation: 2, shadowColor: colors.shadow, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 8 }}
     >
       {children}
     </View>
@@ -167,11 +174,14 @@ export function ErrorBanner({ message }: { message?: string | null }) {
 
   return (
     <View
+      accessibilityLabel={message}
+      accessibilityRole="alert"
       accessibilityLiveRegion="polite"
+      accessible
       className="mb-4 flex-row items-start gap-3 rounded-2xl border border-error/50 bg-error/10 p-4"
       testID="error-banner"
     >
-      <Ionicons color={colors.accent} name="alert-circle" size={22} />
+      <Ionicons color={colors.error} name="alert-circle" size={22} />
       <Text className="flex-1 text-sm leading-5 text-base-content">{message}</Text>
     </View>
   );

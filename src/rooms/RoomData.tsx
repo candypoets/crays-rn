@@ -6,9 +6,8 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
 
-import { ensureLocalIdentity, getLocalPubkey } from '@/account/account';
+import { ensureActiveIdentity, getLocalPubkey } from '@/account/account';
 import {
-  communityAnchorAddress,
   CRAYS_PROTOCOL,
   PRESENCE_HEARTBEAT_INTERVAL_MS,
   presenceTemplate,
@@ -17,7 +16,7 @@ import { publishEvent } from '@/nostr/publish';
 import { isNewerAnchor, parseCommunityAnchor, type CommunityAnchor } from '@/access/nip97';
 import {
   awardIssuerValid,
-  fetchRelayRootPubkey,
+  fetchRelayRootPubkeyWithRetry,
   statusSignerValid,
   trustFromAnchor,
   type CommunityTrust,
@@ -49,7 +48,10 @@ import type {
 } from '@/rooms/types';
 import { useRoomSession } from '@/session/RoomSession';
 import { saveMessageRelays } from '@/messages/relays';
+import { subscribeNip04Messages } from '@/messages/subscription';
 import { useSafety } from '@/safety/Safety';
+import { canOpenRoomSubscriptions, type RoomRelayAuth } from '@/rooms/relayAuthGate';
+import { LatestWriteQueue } from '@/storage/latestWriteQueue';
 import {
   isNewerRoomPresence,
   projectRoomPresence,
@@ -57,6 +59,8 @@ import {
 } from '@/rooms/presence';
 
 export type RoomDataValue = {
+  archiveError: string | null;
+  archiveHydrated: boolean;
   loading: boolean;
   connected: boolean;
   people: RoomPerson[];
@@ -70,6 +74,8 @@ export type RoomDataValue = {
 };
 
 const EMPTY: RoomDataValue = {
+  archiveError: null,
+  archiveHydrated: false,
   loading: false,
   connected: false,
   people: [],
@@ -89,6 +95,7 @@ const ORDER_STATUSES = new Set<RoomOrderStatus>(['pending', 'accepted', 'process
 // (30009 type-tag) projections, so v1 caches are abandoned rather than read.
 const ORDER_ARCHIVE_KEY = 'crays.orders.archive.v2';
 const ENTITLEMENT_ARCHIVE_KEY = 'crays.entitlements.archive.v2';
+const ARCHIVE_WRITE_ERROR = 'Saved orders and access could not be updated while protected device storage was unavailable.';
 
 function upsertById<T extends { id: string }>(items: T[], value: T): T[] {
   const index = items.findIndex((item) => item.id === value.id);
@@ -101,7 +108,7 @@ function upsertById<T extends { id: string }>(items: T[], value: T): T[] {
 export function RoomDataProvider({ children }: PropsWithChildren) {
   const { activeRoom } = useRoomSession();
   const activeSessionKey = activeRoom
-    ? `${activeRoom.id}|${activeRoom.joinedAt}|${activeRoom.connectionRelayUrl || activeRoom.relayUrl}`
+    ? `${activeRoom.address}|${activeRoom.joinedAt}|${activeRoom.connectionRelayUrl || activeRoom.relayUrl}`
     : '';
   const { isBlocked } = useSafety();
   const [loading, setLoading] = useState(false);
@@ -120,6 +127,9 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   const [communityTrust, setCommunityTrust] = useState<CommunityTrust | null>(null);
   const [archivedOrders, setArchivedOrders] = useState<RoomOrder[]>([]);
   const [archivedEntitlements, setArchivedEntitlements] = useState<RoomEntitlement[]>([]);
+  const [archiveHydrated, setArchiveHydrated] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [relayAuth, setRelayAuth] = useState<RoomRelayAuth | null>(null);
   // Refs mirror the archive state so persistence effects can compute the next
   // snapshot without a read inside a state updater (updaters must stay pure).
   const archivedOrdersRef = useRef<RoomOrder[]>([]);
@@ -129,12 +139,30 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     sessionKey: string;
     rootPubkey: string;
   } | null>(null);
+  const archiveWriteQueue = useMemo(() => new LatestWriteQueue({
+    canWrite: () => AppState.currentState === 'active',
+    onError: () => setArchiveError(ARCHIVE_WRITE_ERROR),
+    onRecovered: () => setArchiveError((current) => current === ARCHIVE_WRITE_ERROR ? null : current),
+    write: (key, value) => SecureStore.setItemAsync(key, value),
+  }), []);
 
   useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') void archiveWriteQueue.flush();
+    });
+    return () => {
+      subscription.remove();
+      archiveWriteQueue.dispose();
+    };
+  }, [archiveWriteQueue]);
+
+  useEffect(() => {
+    let current = true;
     void Promise.all([
       SecureStore.getItemAsync(ORDER_ARCHIVE_KEY),
       SecureStore.getItemAsync(ENTITLEMENT_ARCHIVE_KEY),
     ]).then(([orderValue, entitlementValue]) => {
+      if (!current) return;
       try {
         const parsed = JSON.parse(orderValue || '[]') as RoomOrder[];
         const next = parsed.filter((item) => item?.id && item?.product?.address).slice(0, 200);
@@ -147,10 +175,57 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
         archivedEntitlementsRef.current = next;
         setArchivedEntitlements(next);
       } catch { /* Invalid cache is ignored; relay truth can rebuild it. */ }
+    }).catch(() => {
+      if (current) setArchiveError('Saved orders and access could not be read on this device.');
+    }).finally(() => {
+      if (current) setArchiveHydrated(true);
     });
+    return () => {
+      current = false;
+    };
   }, []);
 
   useEffect(() => { getLocalPubkey().then(setViewerPubkey).catch(() => setViewerPubkey(null)); }, [activeRoom]);
+
+  useEffect(() => {
+    if (!activeRoom || !viewerPubkey) {
+      // This state reflects an external connection lease, not a render-time derivation.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setRelayAuth(null);
+      return;
+    }
+    const relayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;
+    const key = `${viewerPubkey}:${relayUrl}`;
+    let stopped = false;
+    let unsubscribe: () => void = () => undefined;
+    // Joining updates the session immediately before replacing the preview
+    // route. Let its room-definition lookup lease release first so this private
+    // request is the first frame on the fresh venue connection.
+    const startTimer = setTimeout(() => {
+      if (stopped) return;
+      unsubscribe = subscribeNip04Messages({
+        onEvent: () => undefined,
+        onReady: () => {
+          if (!stopped) {
+            clearTimeout(timeout);
+            setRelayAuth({ key, status: 'ready' });
+          }
+        },
+        pubkey: viewerPubkey,
+        relays: [relayUrl],
+      });
+    }, 350);
+    const timeout = setTimeout(() => {
+      if (!stopped) setRelayAuth({ key, status: 'failed' });
+    }, 10_000);
+    setRelayAuth({ key, status: 'pending' });
+    return () => {
+      stopped = true;
+      clearTimeout(startTimer);
+      clearTimeout(timeout);
+      unsubscribe();
+    };
+  }, [activeRoom, viewerPubkey]);
 
   useEffect(() => {
     if (!activeRoom) return;
@@ -160,7 +235,8 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     if (!activeRoom || !viewerPubkey) return;
-    void saveMessageRelays(viewerPubkey, [activeRoom.connectionRelayUrl || activeRoom.relayUrl]);
+    void saveMessageRelays(viewerPubkey, [activeRoom.connectionRelayUrl || activeRoom.relayUrl])
+      .catch(() => setArchiveError(ARCHIVE_WRITE_ERROR));
   }, [activeRoom, viewerPubkey]);
 
   useEffect(() => {
@@ -183,13 +259,17 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       setLoading(false);
       return;
     }
-    setLoading(true);
     const relayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;
+    const relayAuthKey = viewerPubkey ? `${viewerPubkey}:${relayUrl}` : '';
+    if (!canOpenRoomSubscriptions(viewerPubkey, relayUrl, relayAuth)) {
+      setLoading(relayAuth?.key !== relayAuthKey || relayAuth?.status !== 'failed');
+      return;
+    }
+    setLoading(true);
     let cancelled = false;
     // The resolved NIP-97 trust for this room, held in a closure so the ingest
     // path reads the current anchor without re-running the effect.
     const trustHolder: { current: CommunityTrust | null } = { current: null };
-    const communityAddressHolder: { current: string } = { current: '' };
     const NO_ADMINS: ReadonlySet<string> = new Set();
     const currentAdmins = () => trustHolder.current?.admins ?? NO_ADMINS;
 
@@ -264,9 +344,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           return;
         }
 
-        const presence = communityAddressHolder.current
-          ? projectRoomPresence(event, communityAddressHolder.current)
-          : null;
+        const presence = projectRoomPresence(event, activeRoom.address);
         if (presence) {
           if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'presence', pubkey: presence.pubkey, visible: presence.visible })}`);
           setPresences((current) => {
@@ -345,6 +423,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     // Phase 1: member-authored and viewer-scoped families open immediately.
     const subscriptions: [string, RequestObject][] = [
       ['profiles', { kinds: [CRAYS_PROTOCOL.profileKind], relays: [relayUrl], limit: 200, noCache: true }],
+      ['presence', { kinds: [CRAYS_PROTOCOL.roomPresenceKind], tags: { '#a': [activeRoom.address] }, relays: [relayUrl], limit: 200, noCache: true }],
       ['feed', { kinds: [CRAYS_PROTOCOL.roomFeedKind], tags: { '#h': [activeRoom.id] }, relays: [relayUrl], limit: 100, noCache: true }],
     ];
     if (viewerPubkey) subscriptions.push(
@@ -360,17 +439,13 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
 
     // NIP-97 trust chain: the relay's NIP-11 pubkey is the community root key;
     // the root-signed anchor declares admins and the delegated badge issuer.
-    fetchRelayRootPubkey(relayUrl).then((rootPubkey) => {
+    fetchRelayRootPubkeyWithRetry(relayUrl).then((rootPubkey) => {
       if (cancelled) return;
-      const communityAddress = communityAnchorAddress(rootPubkey);
-      communityAddressHolder.current = communityAddress;
-      setResolvedCommunity({ sessionKey: activeSessionKey, rootPubkey });
-      unsubscribes.push(subscribeToNostr(
-        `room_presence_${activeRoom.id}`,
-        [{ kinds: [CRAYS_PROTOCOL.roomPresenceKind], tags: { '#a': [communityAddress] }, relays: [relayUrl], limit: 200, noCache: true }],
-        handleMessage,
-        { closeOnEose: false, bytesPerEvent: 12 * 1024 },
-      ));
+      if (rootPubkey !== activeRoom.rootPubkey) {
+        setLoading(false);
+        if (__DEV__) console.warn('[crays-room-data] relay root changed after room entry');
+        return;
+      }
       let currentAnchor: CommunityAnchor | null = null;
       unsubscribes.push(subscribeToNostr(
         `room_anchor_${activeRoom.id}`,
@@ -383,15 +458,23 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           if (currentAnchor && !isNewerAnchor(anchor, currentAnchor)) return;
           currentAnchor = anchor;
           const trust = trustFromAnchor(anchor);
+          if (activeRoom.operatorPubkey !== rootPubkey && !trust.admins.has(activeRoom.operatorPubkey)) {
+            trustHolder.current = null;
+            setCommunityTrust(null);
+            setResolvedCommunity(null);
+            if (__DEV__) console.warn('[crays-room-data] room definition author is no longer authorized by the community anchor');
+            return;
+          }
           trustHolder.current = trust;
           setCommunityTrust(trust);
+          setResolvedCommunity({ sessionKey: activeSessionKey, rootPubkey });
           if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'anchor', admins: anchor.admins.length })}`);
           openPhaseTwo(trust);
         },
         { closeOnEose: false, bytesPerEvent: 12 * 1024 },
       ));
     }).catch((error) => {
-      // Feed/profile reads can remain usable, but anchor-bound roster and
+      // Feed/profile reads can remain usable, but room-bound roster and
       // entitlement projections stay empty until the root resolves.
       if (__DEV__) console.warn(`[crays-room-data] NIP-11 root resolution failed for ${relayUrl}: ${error?.message ?? error}`);
     });
@@ -403,7 +486,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       unsubscribes.forEach((unsubscribe) => unsubscribe());
       phaseTwoUnsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-  }, [activeRoom, activeSessionKey, viewerPubkey]);
+  }, [activeRoom, activeSessionKey, relayAuth, viewerPubkey]);
 
   useEffect(() => {
     if (
@@ -420,11 +503,11 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       if (cancelled || publishing || Date.now() >= activeRoom.leaveAt) return;
       publishing = true;
       try {
-        await ensureLocalIdentity();
+        await ensureActiveIdentity();
         if (cancelled) return;
         await publishEvent(
           presenceTemplate({
-            communityRootPubkey: resolvedCommunity.rootPubkey,
+            roomAddress: activeRoom.address,
             relayUrl: activeRoom.relayUrl,
             intent: activeRoom.intent,
             context: activeRoom.context,
@@ -496,9 +579,9 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     // updaters must be pure because StrictMode double-invokes them.
     const next = [...liveOrders, ...archivedOrdersRef.current.filter((item) => !liveOrders.some((live) => live.id === item.id))].slice(0, 200);
     archivedOrdersRef.current = next;
-    void SecureStore.setItemAsync(ORDER_ARCHIVE_KEY, JSON.stringify(next));
+    archiveWriteQueue.queue(ORDER_ARCHIVE_KEY, JSON.stringify(next));
     setArchivedOrders(next);
-  }, [liveOrders]);
+  }, [archiveWriteQueue, liveOrders]);
 
   const orders = useMemo(() => [...liveOrders, ...archivedOrders.filter((item) => !liveOrders.some((live) => live.id === item.id))].sort((a, b) => b.updatedAt - a.updatedAt), [archivedOrders, liveOrders]);
 
@@ -509,7 +592,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     revocations,
     trust: communityTrust,
     // Presentation is portable to staff scanners, so it carries the signed
-    // manifest relay URL—not this device's QA/proxy transport override.
+    // definition relay URL—not this device's QA/proxy transport override.
     room: { id: activeRoom.id, name: activeRoom.name, relayUrl: activeRoom.relayUrl },
     now: projectionNow,
   }) : [], [activeRoom, awards, communityTrust, definitions, projectionNow, revocations, statuses]);
@@ -521,9 +604,9 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     // updaters must be pure because StrictMode double-invokes them.
     const next = [...liveEntitlements, ...archivedEntitlementsRef.current.filter((item) => !liveEntitlements.some((live) => live.awardId === item.awardId))].slice(0, 200);
     archivedEntitlementsRef.current = next;
-    void SecureStore.setItemAsync(ENTITLEMENT_ARCHIVE_KEY, JSON.stringify(next));
+    archiveWriteQueue.queue(ENTITLEMENT_ARCHIVE_KEY, JSON.stringify(next));
     setArchivedEntitlements(next);
-  }, [liveEntitlements]);
+  }, [archiveWriteQueue, liveEntitlements]);
 
   const entitlements = useMemo(
     () => [...liveEntitlements, ...archivedEntitlements.filter((item) => !liveEntitlements.some((live) => live.awardId === item.awardId))],
@@ -531,6 +614,8 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   );
 
   const value = useMemo<RoomDataValue>(() => ({
+    archiveError,
+    archiveHydrated,
     loading,
     connected,
     people,
@@ -541,7 +626,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     orders,
     entitlements,
     profiles,
-  }), [connected, entitlements, events, loading, memberships, orders, people, products, profiles, visiblePosts]);
+  }), [archiveError, archiveHydrated, connected, entitlements, events, loading, memberships, orders, people, products, profiles, visiblePosts]);
 
   return <RoomDataContext.Provider value={value}>{children}</RoomDataContext.Provider>;
 }

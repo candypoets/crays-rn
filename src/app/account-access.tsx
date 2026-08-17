@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
-import { ensureLocalIdentity } from '@/account/account';
+import { createLocalIdentity } from '@/account/account';
 import { AccountAccessScreen } from '@/screens/onboarding/AccountAccessScreen';
 
 export default function AccountAccessRoute() {
@@ -14,7 +14,7 @@ export default function AccountAccessRoute() {
     setError(null);
     setLoading(true);
     try {
-      await ensureLocalIdentity();
+      await createLocalIdentity();
       router.push({ pathname: '/profile', params: { resume: params.resume } });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Crays could not create the account.');

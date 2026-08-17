@@ -14,27 +14,33 @@ deep links keep their existing public paths (`/room`, `/discover`, `/messages`,
 and `/me`) because the `(tabs)` route group does not contribute a URL segment.
 
 Selecting an inactive tab changes the selected tab in place. It must not push
-or replace a screen on the root stack and must not show a stack transition.
+or replace a screen on the root stack. Night Playlist uses a 280 ms fade-through
+between tab scenes rather than a directional stack transition.
 Each visited tab retains its route parameters, scroll position, and local UI
 state while the tab navigator remains mounted. Selecting the current tab is
 idempotent. On Android, system Back from a noninitial tab returns to the initial
 Room tab; it does not replay every tab press as stack history.
 
-Hierarchical tasks such as Menu, a person, a conversation, Settings, Tickets,
-or Wallet remain root-stack destinations. They cover the tab navigator while
-open, do not render a second tab bar, and return to the originating tab using
-system Back or their visible Back action. This keeps the four destinations as
-sections rather than turning workflow steps into tabs.
+Room owns a second, explicitly local navbar for **Menu / People (x) / Feed**;
+Menu is its default. This control changes only the Room query-param view and
+does not compete with the four primary destinations. Hierarchical tasks such
+as an item, a person, a conversation, Settings, Tickets, or Wallet remain
+root-stack destinations. They cover the tab navigator while open, do not
+render a second primary tab bar, and return to the originating tab using
+system Back or their visible Back action.
 
 ## Visual and responsive behavior
 
 The navigator uses the platform bottom-tab component on compact devices with
-the Crays Night surface, Wine Edge divider, Crays Signal selected state, and a
-muted unselected state. Active icons use their filled Ionicons counterpart;
+a white surface over the lilac canvas, an Edge Lilac divider, Signal Blue
+selected state, and muted-plum unselected state. Active icons use their filled Ionicons counterpart;
 inactive icons use the outline counterpart. Labels remain visible. The
 navigator owns bottom safe-area handling, including gesture navigation and the
-iPhone home indicator, and hides while the keyboard is open so it cannot cover
-an input action.
+iPhone home indicator. The compact bar reserves a 64 dp content height plus the
+reported bottom inset, applies the full inset below its labels, and keeps labels
+below icons consistently so Android phone navigation bars and persistent tablet
+taskbars cannot cover the destinations. It remains mounted while a primary tab owns keyboard
+focus; hierarchical input workflows cover it as root-stack routes.
 
 The content shell stays within its existing readable width. Large screens must
 not stretch content merely because navigation ownership changed. A later
@@ -65,9 +71,9 @@ Each destination exposes a stable text label and a native tab role/state
 through the navigator. Icon color and fill are supplemental; selection is not
 communicated by color alone. The platform navigator supplies appropriately
 sized touch targets and safe-area spacing. Screen-reader order is Room,
-Discover, Messages, Me, matching visual order. The bar hides on keyboard open
-but returns when the keyboard closes, and system Back/predictive Back remains
-available for hierarchical screens.
+Discover, Messages, Me, matching visual order. The bar remains reachable on
+primary-tab surfaces across keyboard transitions, and system Back/predictive
+Back remains available for hierarchical screens.
 
 ## Nostr and relay behavior
 
@@ -83,9 +89,9 @@ never protocol proof and never changes presence.
 
 `maestro/flows/primary-tabs.yaml` enters a real isolated relay room, changes a
 Room-local view, visits all four destinations, returns to Room to prove the
-view survived, and opens Menu to prove hierarchical screens do not render a
-second tab bar. `.qa/qa-primary-tabs.mjs` owns relay bootstrap, the Maestro
-exercise, independent relay/manifest and room-projection verification, and
+view survived, and switches to the in-place Menu while proving the primary tab
+bar remains mounted. `.qa/qa-primary-tabs.mjs` owns relay bootstrap, the Maestro
+exercise, independent room-definition and room-projection verification, and
 teardown. Unit tests own destination order, stable automation IDs, selected
 icon state, unknown-route failure, and the absence of manual tabs in
 `AppShell`.

@@ -15,6 +15,21 @@ not a local transport proxy. Gift orders, Cashu wallet checkout, and carts with
 multiple lines or quantities are explicit disabled states until their payment
 contracts exist.
 
+Visual authority: the Night Playlist commerce/messages board `docs/design-explorations/night-playlist/mockups/03-commerce-and-messages-v1.png`, **panel 03**, with the treatment notes in `docs/design-explorations/night-playlist/screens/14-review-pay.md`. Night Playlist supersedes the older dark styling.
+
+## Content and hierarchy
+
+- App shell header: plum mark, venue eyebrow, **Review and pay** title, tempo rail; **Keep ordering** return link.
+- **Order** section: one white card per cart line with name, recipient (**For {name}** / **For me**), exact line total, a 48 dp quantity stepper, and Remove. Quantity edits and removals go straight to the cart callbacks with the line's product id and recipient; a quantity reduced below 1 is handed to the cart (removal semantics live there, not on screen). **Add another item** returns to the menu via the same Back callback.
+- Totals card: Subtotal, **Taxes and fees — Included**, then the bold **Total**.
+- **Payment method** row opens the child route and returns with the chosen method; it never charges.
+- The secure-browser banner explains that Stripe owns payment entry and that a
+  room order appears only after a signed product award reaches the relay.
+- The one commitment action reads **Continue to Stripe · {total}**. It is
+  enabled only for the supported one-line, quantity-one self order, disabled
+  during request/browser-open states, and accompanied by visible guard or
+  request errors when checkout cannot begin.
+
 ## Data and reconciliation
 
 Cart is local operational state; live kind-30402 listings remain price and
@@ -39,10 +54,19 @@ pending/refunded. The browser handoff and relay-confirming branches are the
 normal path; unsupported cart shapes remain actionable explanations rather
 than silently charging a different amount.
 
+## Accessibility
+
+- Line names, recipients, quantities, and totals are plain text; steppers carry per-line labels and 48 dp targets.
+- The method row and checkout control expose button roles and disabled states;
+  progress is announced without relying on color or icon alone.
+- Hosted-payment, unsupported-cart, request-error, and browser-open truth is
+  text in reading order.
+
 ## QA strategy
 
-Unit coverage asserts total, the one-line checkout guard, NIP-98 request
-construction, browser-open state, request errors, and award reconciliation.
+Unit coverage asserts totals, mixed-recipient line routing, quantity boundaries,
+empty-cart behavior, the one-line checkout guard, NIP-98 request construction,
+browser-open state, request errors, and award reconciliation.
 `maestro/flows/14-review-pay.yaml` builds a self cart from the live relay,
 opens the hosted checkout adapter, and waits for the signed award to appear.
 Run that scenario with Metro started using

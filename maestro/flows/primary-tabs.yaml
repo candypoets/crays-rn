@@ -35,15 +35,13 @@ appId: life.crays
     id: "room-menu"
 - extendedWaitUntil:
     visible:
-      id: "menu-screen"
+      id: "room-menu-screen"
     timeout: 15000
-- assertNotVisible:
+- assertVisible:
     id: "tab-room"
-- assertNotVisible:
+- assertVisible:
     id: "tab-me"
-- tapOn: "Back to room"
-- extendedWaitUntil:
-    visible:
-      id: "room-feed-screen"
-    timeout: 15000
+- assertVisible: "^Discover$"
+- assertVisible: "^Messages$"
+- assertVisible: "^Me$"
 - takeScreenshot: primary-tabs

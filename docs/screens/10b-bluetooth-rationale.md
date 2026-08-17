@@ -2,10 +2,12 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`, panel 02. The Night Playlist signal diagram and pale cue-sheet layout supersede the incumbent dark rationale treatment.
+
 Purpose: explain the concrete room-discovery benefit before the operating
-system permission. The screen explicitly says Nearby does not make the person
-visible, publish exact location, or choose a room. **Continue** is the only
-place allowed to trigger the OS request; **Use Map instead** must remain useful.
+system permission. The screen explicitly says Bluetooth finds participating rooms only, Crays does not publish presence or exact location, and the person still chooses entry and visibility. **Turn on Nearby** is the only place allowed to trigger the OS request; **Use Map / room link** must remain useful.
+
+Three static concentric rings surround the Bluetooth symbol but never rotate or pulse before consent, so the illustration cannot be mistaken for an active scan. Back and the secondary action return to the preserved Discover context without requesting permission.
 
 No Nostr connection, subscription, presence, location publication, notification
 request, or camera request occurs on this screen. If the platform grants,

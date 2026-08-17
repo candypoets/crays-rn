@@ -7,6 +7,9 @@ appId: life.crays
     visible:
       id: "my-night-screen"
     timeout: 15000
+- assertVisible: "My night"
+- assertVisible: "The Skyline Room"
+- assertNotVisible: "This room. Right now."
 - assertVisible: "Rooftop Jazz"
 - assertVisible: "Ready at the door"
 - assertVisible: ".*Live code ready.*"

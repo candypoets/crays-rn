@@ -2,17 +2,22 @@ import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { parseStoredRoom, RoomSessionProvider, useRoomSession } from '@/session/RoomSession';
+import type { RoomDescriptor } from '@/rooms/types';
 
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn(), deleteItemAsync: jest.fn() }));
 
-const descriptor = {
+const descriptor: RoomDescriptor & { joinedAt: number; visibility: 'visible' } = {
   id: 'skyline',
   name: 'The Skyline Room',
   about: 'Rooftop jazz',
   relayUrl: 'wss://room.test',
+  address: `30312:${'a'.repeat(64)}:skyline`,
+  communityAddress: `31727:${'b'.repeat(64)}:community`,
+  rootPubkey: 'b'.repeat(64),
   operatorPubkey: 'a'.repeat(64),
+  serviceUrl: 'https://room.test',
   capabilities: ['social'],
-  expiresAt: 2_000_000_000,
+  status: 'open',
   open: true,
   verified: true,
   joinedAt: 1_000,
@@ -20,7 +25,7 @@ const descriptor = {
 };
 
 describe('active room persistence boundary', () => {
-  it('migrates a valid legacy room to safe presence defaults', () => {
+  it('fills safe presence defaults for a valid NIP-53 room session', () => {
     const result = parseStoredRoom(JSON.stringify(descriptor), 2_000);
     expect(result.room).toEqual(expect.objectContaining({
       intent: 'curious',
@@ -42,6 +47,7 @@ describe('active room persistence boundary', () => {
 
 describe('automatic room expiry', () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     jest.useFakeTimers();
     jest.setSystemTime(new Date('2026-08-02T20:00:00Z'));
     jest.mocked(SecureStore.getItemAsync).mockResolvedValue(null);
@@ -64,6 +70,30 @@ describe('automatic room expiry', () => {
     await act(async () => { jest.advanceTimersByTime(60 * 60 * 1000); await Promise.resolve(); });
     await waitFor(() => expect(result.current.activeRoom).toBeNull());
     expect(result.current.endedRoom).toEqual({ name: 'The Skyline Room', reason: 'automatic' });
-    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('crays.room.active');
+    expect(SecureStore.deleteItemAsync).toHaveBeenCalledWith('crays.room.active.v2');
+  });
+
+  it('finishes hydration without deleting state when the Keychain is unavailable', async () => {
+    jest.mocked(SecureStore.getItemAsync).mockRejectedValueOnce(new Error('User interaction is not allowed.'));
+    const wrapper = ({ children }: PropsWithChildren) => createElement(RoomSessionProvider, null, children);
+    const { result } = renderHook(() => useRoomSession(), { wrapper });
+    await waitFor(() => expect(result.current.hydrated).toBe(true));
+    expect(SecureStore.deleteItemAsync).not.toHaveBeenCalled();
+  });
+
+  it('ends the in-memory session even when automatic durable cleanup is temporarily unavailable', async () => {
+    const wrapper = ({ children }: PropsWithChildren) => createElement(RoomSessionProvider, null, children);
+    const { result } = renderHook(() => useRoomSession(), { wrapper });
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      await result.current.enterRoom(
+        { ...descriptor, capabilities: ['social'] as const },
+        { visibility: 'quiet', intent: 'curious', context: '', leaveAfterMinutes: 60 },
+      );
+    });
+    jest.mocked(SecureStore.deleteItemAsync).mockRejectedValueOnce(new Error('User interaction is not allowed.'));
+    await act(async () => { jest.advanceTimersByTime(60 * 60 * 1000); await Promise.resolve(); });
+    await waitFor(() => expect(result.current.activeRoom).toBeNull());
+    expect(result.current.endedRoom).toEqual({ name: 'The Skyline Room', reason: 'automatic' });
   });
 });

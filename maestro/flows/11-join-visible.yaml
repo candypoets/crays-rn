@@ -16,6 +16,9 @@ appId: life.crays
     visible:
       id: "join-privacy-screen"
     timeout: 30000
+- extendedWaitUntil:
+    visible: "Joining · The Skyline Room"
+    timeout: 45000
 - tapOn:
     id: "visibility-visible"
 - tapOn:
@@ -23,7 +26,7 @@ appId: life.crays
 - tapOn:
     id: "join-context-input"
 - inputText: "${QA_JOIN_CONTEXT}"
-- pressKey: ENTER
+- hideKeyboard
 - scrollUntilVisible:
     element:
       id: "leave-after-60"
@@ -38,13 +41,24 @@ appId: life.crays
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-people-screen"
+      id: "room-menu-screen"
     timeout: 30000
+- tapOn:
+    id: "room-people-tab"
+- extendedWaitUntil:
+    visible:
+      id: "room-people-screen"
+    timeout: 15000
 - assertVisible: "Maya"
 - assertVisible: "Jonas"
 - extendedWaitUntil:
     visible: "Maya QA"
     timeout: 15000
 - assertVisible: "${QA_JOIN_INTENT}"
+- tapOn: "Maya QA"
+- extendedWaitUntil:
+    visible:
+      id: "first-contact-screen"
+    timeout: 15000
 - assertVisible: "${QA_JOIN_CONTEXT}"
 - takeScreenshot: 11-join-visible-presence

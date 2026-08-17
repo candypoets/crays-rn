@@ -30,7 +30,7 @@ export function nip11UrlForRelay(relayUrl: string): string {
 
 export function parseNip11RootPubkey(document: unknown): string | undefined {
   const pubkey = (document as { pubkey?: unknown })?.pubkey;
-  return typeof pubkey === 'string' && /^[0-9a-f]{64}$/i.test(pubkey) ? pubkey : undefined;
+  return typeof pubkey === 'string' && /^[0-9a-f]{64}$/i.test(pubkey) ? pubkey.toLowerCase() : undefined;
 }
 
 export async function fetchRelayRootPubkey(
@@ -44,6 +44,30 @@ export async function fetchRelayRootPubkey(
   const pubkey = parseNip11RootPubkey(await response.json().catch(() => ({})));
   if (!pubkey) throw new Error('The venue relay did not publish its community key.');
   return pubkey;
+}
+
+export async function fetchRelayRootPubkeyWithRetry(
+  relayUrl: string,
+  options: {
+    attempts?: number;
+    delayMs?: number;
+    fetchImpl?: typeof fetch;
+    sleepImpl?: (milliseconds: number) => Promise<void>;
+  } = {},
+): Promise<string> {
+  const attempts = Math.max(1, options.attempts ?? 4);
+  const delayMs = Math.max(0, options.delayMs ?? 500);
+  const sleepImpl = options.sleepImpl ?? ((milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)));
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      return await fetchRelayRootPubkey(relayUrl, options.fetchImpl);
+    } catch (error) {
+      lastError = error;
+      if (attempt + 1 < attempts) await sleepImpl(delayMs * (2 ** attempt));
+    }
+  }
+  throw lastError;
 }
 
 /**

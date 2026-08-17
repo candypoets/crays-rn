@@ -1,10 +1,9 @@
 import type { ParsedEvent } from '@candypoets/nipworker';
 
-import { communityAnchorAddress } from '@/nostr/protocol';
 import { isNewerRoomPresence, projectRoomPresence } from '@/rooms/presence';
 
 const ROOT = 'a'.repeat(64);
-const ADDRESS = communityAnchorAddress(ROOT);
+const ADDRESS = `30312:${ROOT}:skyline`;
 const PUBKEY = 'b'.repeat(64);
 
 function fakeEvent({
@@ -31,7 +30,7 @@ function fakeEvent({
 }
 
 describe('NIP-53 room presence projection', () => {
-  it('projects active presence only for the exact NIP-97 community anchor', () => {
+  it('projects active presence only for the exact NIP-53 room address', () => {
     expect(projectRoomPresence(fakeEvent({
       tags: [
         ['a', ADDRESS, 'wss://room.example', 'root'],
@@ -65,9 +64,9 @@ describe('NIP-53 room presence projection', () => {
     expect(left?.expiresAt).toBe(2_000);
   });
 
-  it('rejects another event kind, another anchor, and malformed expiration', () => {
+  it('rejects another event kind, another room, and malformed expiration', () => {
     expect(projectRoomPresence(fakeEvent({ kind: 1 }), ADDRESS)).toBeNull();
-    expect(projectRoomPresence(fakeEvent({ tags: [['a', communityAnchorAddress('c'.repeat(64))]] }), ADDRESS)).toBeNull();
+    expect(projectRoomPresence(fakeEvent({ tags: [['a', `30312:${'c'.repeat(64)}:other`]] }), ADDRESS)).toBeNull();
     expect(projectRoomPresence(fakeEvent({ tags: [['a', ADDRESS], ['expiration', 'later']] }), ADDRESS)).toBeNull();
   });
 

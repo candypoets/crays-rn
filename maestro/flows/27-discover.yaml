@@ -9,17 +9,17 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "The Skyline Room"
     timeout: 15000
-- assertVisible: "Verified room"
+- assertVisible: "Verified"
 - tapOn:
     id: "discover-nearby-tab"
 - assertVisible:
     id: "bluetooth-rationale-screen"
-- assertVisible: ".*does not make you visible.*"
+- assertVisible: ".*do not publish your presence or exact location.*"
 - tapOn:
     id: "use-map-button"
 - extendedWaitUntil:
     visible:
       id: "discover-screen"
     timeout: 15000
-- assertVisible: "Room result"
+- assertVisible: "Rooms around you"
 - takeScreenshot: 27-discover-relay

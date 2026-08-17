@@ -1,9 +1,9 @@
 appId: life.crays
 ---
 # Negative path for docs/screens/11-join-privacy.md: join-room against a dead
-# relay URL must surface the manifest error state (useRoomManifest times out
-# with "This room did not return a fresh, verified room card.") instead of
-# hanging. ${RELAY_URL} points at a port with no listener.
+# relay URL must surface the room-definition error state after the pinned
+# relay's NIP-11 root, kind-31727 anchor, and authorized kind-30312 lookup
+# cannot resolve. ${RELAY_URL} points at a port with no listener.
 - runFlow: launch.yaml
 - openLink: "crays:///qa-seed?nsec=${QA_NSEC}"
 - extendedWaitUntil:
@@ -18,14 +18,14 @@ appId: life.crays
       id: "join-privacy-screen"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "This room did not return a fresh, verified room card."
+    visible: "This room did not return a root-authorized NIP-53 room definition."
     timeout: 30000
-- assertVisible: "This room did not return a fresh, verified room card."
-# Entering is a no-op without a verified manifest; the app stays on the error
+- assertVisible: "This room did not return a root-authorized NIP-53 room definition."
+# Entering is a no-op without a root-authorized room definition; the app stays on the error
 # state instead of hanging or navigating.
 - tapOn:
     id: "join-room-button"
-- assertVisible: "This room did not return a fresh, verified room card."
+- assertVisible: "This room did not return a root-authorized NIP-53 room definition."
 - assertVisible:
     id: "join-privacy-screen"
 - takeScreenshot: 11c-join-relay-unavailable

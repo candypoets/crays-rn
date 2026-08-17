@@ -6,6 +6,9 @@ appId: life.crays
     visible:
       id: "join-privacy-screen"
     timeout: 30000
+- extendedWaitUntil:
+    visible: "Joining · The Skyline Room"
+    timeout: 45000
 - assertVisible: "Browse quietly"
 - assertVisible: ".*No presence event is published.*"
 - tapOn:

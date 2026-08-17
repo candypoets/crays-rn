@@ -1,6 +1,11 @@
 appId: life.crays
 ---
 - runFlow: 16-me.yaml
+- scrollUntilVisible:
+    element:
+      id: "me-profile"
+    direction: DOWN
+    timeout: 8000
 - tapOn:
     id: "me-profile"
 - extendedWaitUntil:
@@ -8,6 +13,7 @@ appId: life.crays
       id: "settings-screen"
     timeout: 15000
 - assertVisible: "Protected on this device"
-- assertVisible: "Apple and Google"
+- assertVisible: "Existing Nostr identity"
 - assertVisible: "Not configured"
+- assertVisible: "Presence defaults"
 - takeScreenshot: profile-settings

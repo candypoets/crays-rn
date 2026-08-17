@@ -5,21 +5,20 @@ import { assert, makePool, nowSeconds, queryUntil, readState } from './relay-lib
 
 const state = readState();
 const pool = makePool();
-const communityAddress = `31727:${state.community_root}:community`;
 const { events } = await queryUntil(
   pool, state.relay_url,
-  { kinds: [10312], authors: [state.qa_pubkey], '#a': [communityAddress], limit: 20 },
+  { kinds: [10312], authors: [state.qa_pubkey], '#a': [state.room_address], limit: 20 },
   (polled) => polled.length >= 1,
   'visible entry publishes app-authored NIP-53 room presence',
 );
 assert(events.length === 1, 'replaceable NIP-53 presence leaves exactly one current app-authored event');
 const event = events[0];
 const tag = (name) => event.tags.find((candidate) => candidate[0] === name)?.[1];
-const anchorTag = event.tags.find((candidate) => candidate[0] === 'a');
+const roomTag = event.tags.find((candidate) => candidate[0] === 'a');
 assert(verifyEvent(event), 'NIP-53 visible presence has a valid app identity signature');
 assert(
-  anchorTag?.[1] === communityAddress && anchorTag?.[2] === state.relay_url && anchorTag?.[3] === 'root',
-  'presence links the exact NIP-97 community anchor with its authoritative relay hint',
+  roomTag?.[1] === state.room_address && roomTag?.[2] === state.relay_url && roomTag?.[3] === 'root',
+  'presence links the exact NIP-53 room definition with its authoritative relay hint',
 );
 assert(!event.tags.some((candidate) => ['d', 'h', 'schema', 'type', 'visibility'].includes(candidate[0])), 'presence carries no deprecated custom namespace tags');
 assert(tag('intent') === JOIN_VISIBLE_INTENT, 'presence carries the selected intent');

@@ -7,7 +7,7 @@ import {
 const mockSignActiveEvent = jest.fn();
 
 jest.mock('@/account/account', () => ({
-  ensureLocalIdentity: jest.fn(async () => ({ nsec: 'nsec-test', pubkey: 'b'.repeat(64) })),
+  ensureActiveIdentity: jest.fn(async () => ({ nsec: 'nsec-test', pubkey: 'b'.repeat(64), signer: 'privkey' })),
   signActiveEvent: (...args: unknown[]) => mockSignActiveEvent(...args),
 }));
 

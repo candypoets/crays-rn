@@ -160,4 +160,12 @@ describe('projectCalendarEvent', () => {
     expect(projectCalendarEvent(jazz, ADMINS)?.address).toBe(`31923:${ADMIN}:jazz`);
     expect(projectCalendarEvent(fakeEvent({ kind: 31923, pubkey: OTHER, tags: [['d', 'j'], ['title', 'J'], ['start', '1']] }), ADMINS)).toBeNull();
   });
+
+  it('never projects event-shaped kind-30312 room metadata as a calendar event', () => {
+    const room = fakeEvent({
+      kind: 30312,
+      tags: [['d', 'skyline'], ['name', 'The Skyline Room'], ['summary', 'Rooftop jazz'], ['title', 'Not an event'], ['start', '200']],
+    });
+    expect(projectCalendarEvent(room, ADMINS)).toBeNull();
+  });
 });

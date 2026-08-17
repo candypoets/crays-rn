@@ -2,15 +2,17 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/01-room-and-feed-v1.png`, panel 03. This Night Playlist board supersedes the incumbent dark feed PNGs for visual treatment; relay truth and ordering below remain authoritative.
+
 This is Crays Mobile's only public feed. It reads and writes against exactly the active room relay and locks when the room credential expires. It is chronological, concise, and has no repost race, recommendation algorithm, popularity rank, or global-feed escape.
 
 ## UI and interaction
 
-- Fixed venue context and **Live from this room · locks when you leave** consequence.
-- One composer, maximum 500 characters for the pilot.
-- Venue announcements are text-labelled, not color-only.
+- Fixed venue context, the same room-session rail (**Joined / Leave at**) as People, and the explicit **Chronological · locks when you leave** consequence. The kind-30312 room description never occupies an event-like slot.
+- One keyboard-safe **Add a note** composer, maximum 500 characters for the pilot. It retains the draft and char count while publishing.
+- Notes follow a thin vertical tempo rail. Venue announcements use a strong labelled block and icon, never color alone; guest posts use white notes and portrait crops.
 - Posts offer Message and Report; reply can be added against the same room credential.
-- Menu, My night, Leave, and People use the same room chrome as screen 01.
+- Menu, People with the visible count, and Feed use the same room navbar as screen 01 inside the edge-to-edge Room scroll surface; Feed retains its selected state when revisiting the Room primary tab. My night and Leave remain in shared room chrome.
 
 ## Relay contract
 
@@ -23,7 +25,7 @@ not lose their name and avatar. A missing profile may fall back to **Room
 guest** in the feed, but it must never fabricate a name or make the author
 appear in People.
 
-Publish with `roomFeedTemplate`: kind 1, room `h`, `client=life.crays`, and expiration no later than the active room's expiry. The configured nipworker signer signs; success is shown only after one target relay explicitly returns OK. A false response or timeout preserves the draft and offers retry. The screen never provides a second send path while an outcome is uncertain.
+Publish with `roomFeedTemplate`: kind 1, room `h`, `client=life.crays`, and expiration at the local automatic-leave boundary. The configured nipworker signer signs; success is shown only after one target relay explicitly returns OK. A false response or timeout preserves the draft and offers retry. The screen never provides a second send path while an outcome is uncertain.
 
 ## Required states
 
@@ -40,6 +42,11 @@ Announcements have an explicit label. Author buttons announce names. Content fol
 
 ## QA strategy
 
-Unit tests verify announcements, composer, feed content, and publish failure. `maestro/flows/03-room-feed.yaml` joins through the real manifest, selects Room feed, and asserts both an operator announcement and guest post planted on the isolated relay.
+Unit tests verify announcements, composer, feed content, publish failure,
+empty-draft disabling, the 500-character boundary, retained publishing drafts,
+and report-action locking. `maestro/flows/03-room-feed.yaml` joins through the
+real root-authorized room definition, selects Room feed, proves the room
+description is absent from event-like UI, and asserts both an operator announcement and
+guest post planted on the isolated relay.
 
 `.qa/qa-03-room-feed.mjs` independently provisions, seeds, queries, verifies, and destroys a Nuts relay. It uses an authorized QA signer, publishes an exact post through UI, and independently proves kind, signature, room/client/expiry tags and content. It also reports a selected Jonas post and proves the report's exact `e`, `p`, and venue tags. Component QA owns retained-draft/rejection and disabled-publish behavior. Credential-timeout enforcement remains D-002/D-003.

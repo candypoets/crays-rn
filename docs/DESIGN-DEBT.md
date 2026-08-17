@@ -9,8 +9,9 @@ QA evidence; never replace it with a local success mock.
 
 **Blocked on:** signed listing kind/schema, geo index, viewport/category/text
 queries, pagination, deterministic non-popularity ranking, operator publishing
-authorization, freshness, moderation, retention, and federation. The client
-must verify signer, manifest hash, relay URL, and expiry before **Verified room**.
+authorization, freshness, moderation, retention, and federation. Search results
+must resolve to the same pinned relay and root-authorized kind-30312 address the
+client verifies before showing **Verified room**.
 
 **Evidence to close:** disposable search-relay tests for valid, expired, forged,
 mismatched, duplicate, paginated, empty, and unavailable results. BLE/QR direct
@@ -19,19 +20,19 @@ entry must survive outage without changing the active room.
 ## D-002 — BLE challenge and relay credential
 
 **Blocked on:** compact-ID versus direct-GATT layout, rotating nonce cadence,
-manifest-hash binding, NIP-42 authentication, challenge proof, renewal tolerance,
+kind-30312 address/event binding, NIP-42 authentication, challenge proof, renewal tolerance,
 replay controls, and **Signal weak → Reconnecting → Room locked** timing. Direct
-GATT manifest reading and foreground scanning exist; a credential is not mocked.
+GATT pointer reading and foreground scanning exist; a credential is not mocked.
 
 **Evidence to close:** physical Android/iOS gateway tests for multiple beacons,
-replay/relay attacks, stale nonce, changed manifest, denied permission, radio
+replay/relay attacks, stale nonce, changed room definition, denied permission, radio
 loss/recovery, expiry, QR fallback, and no scanning outside documented windows.
 
 ## D-003 — Presence and room-feed pilot protocol
 
-**Blocked on:** final kinds/tags, retention, replacement semantics, credential
-enforcement, pin/moderation roles, own-post retention, and pilot migration. The
-current versioned `life.crays/*/v1` events are explicit pilot contracts.
+**Blocked on:** retention, credential enforcement, pin/moderation roles,
+own-post retention, and migration of the remaining versioned feed payloads.
+Room identity and presence already use NIP-53 kinds 30312 and 10312.
 
 **Evidence to close:** relay policy/security tests for quiet zero-write, visible
 replacement/leave/expiry, read/write denial after lock, trusted moderation, and

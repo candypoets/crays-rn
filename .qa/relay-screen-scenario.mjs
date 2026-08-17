@@ -8,6 +8,7 @@ import {
   JOIN_VISIBLE_INTENT,
   MESSAGE_REQUEST_TEXT,
   ROOM_ABOUT,
+  TEST_ROOM_QA_PROFILE_NAME,
 } from './flow-fixtures.mjs';
 import { loadKeys, warnTeardownLeak } from './relay-lib.mjs';
 
@@ -43,7 +44,7 @@ function portIsListening(port) {
   return execFileSync('ss', ['-H', '-ltn', `sport = :${port}`], { encoding: 'utf8' }).trim().length > 0;
 }
 
-function selectProxyPort(preferred) {
+export function selectProxyPort(preferred) {
   for (let port = preferred; port < preferred + 20; port += 1) {
     if (!portIsListening(port)) {
       if (port !== preferred) console.log(`warn - proxy port ${preferred} is owned by another worktree; using ${port}`);
@@ -53,7 +54,7 @@ function selectProxyPort(preferred) {
   throw new Error(`no free Test Room proxy port in ${preferred}-${preferred + 19}`);
 }
 
-function waitForProxy(child, port, expectedRoomId, statePath) {
+export function waitForProxy(child, port, expectedRoomId, statePath) {
   const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     if (!processIsRunning(child.pid)) throw new Error(`Test Room proxy exited before readiness (pid ${child.pid})`);
@@ -69,7 +70,7 @@ function waitForProxy(child, port, expectedRoomId, statePath) {
   throw new Error('Test Room proxy did not become ready within 120 seconds');
 }
 
-function stopProxy(child) {
+export function stopProxy(child) {
   stopChild(child, 'Test Room proxy');
 }
 
@@ -109,10 +110,11 @@ const fixtureEnv = {
   QA_JOIN_CONTEXT: JOIN_VISIBLE_CONTEXT,
   QA_MESSAGE_REQUEST_TEXT: MESSAGE_REQUEST_TEXT,
   QA_CONVERSATION_REPLY_TEXT: CONVERSATION_REPLY_TEXT,
+  QA_PROFILE_NAME: TEST_ROOM_QA_PROFILE_NAME,
   QA_ROOM_ABOUT: ROOM_ABOUT,
 };
 
-export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyManifest = true, checkoutAdapter = false }) {
+export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyRoomDefinition = true, checkoutAdapter = false }) {
   const statePath = `/tmp/qa-crays-${scenario}.json`;
   const preferredProxyPort = Number(process.env.CRAYS_TEST_ROOM_PROXY_PORT || 8787);
   const proxyPort = selectProxyPort(preferredProxyPort);
@@ -163,7 +165,8 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
       });
       waitForHttp(checkoutAdapterProcess, checkoutPort, '/healthz', 'checkout adapter');
     }
-    const fixtureNsec = loadKeys().users[qaUserIndex].nsec;
+    const fixtureIdentity = loadKeys().users[qaUserIndex];
+    const fixtureNsec = fixtureIdentity.nsec;
     run(process.env.MAESTRO_CLI || 'maestro', [
       'test',
       ...deviceArgs(),
@@ -172,6 +175,7 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
       '-e', `SERVICE_URL=http://10.0.2.2:${proxyPort}`,
       '-e', `INVITE_TOKEN=${state.invite_token}`,
       '-e', `QA_NSEC=${fixtureNsec}`,
+      '-e', `QA_PROFILE_NPUB=${fixtureIdentity.npub}`,
       '-e', `JONAS_PUBKEY=${loadKeys().users[1].pub}`,
       '-e', `MEMBERSHIP_AWARD_ID=${state.membership_award_id || ''}`,
       '-e', `EVENT_ID=${state.event_id || ''}`,
@@ -182,9 +186,9 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
       flow,
     ], env);
     run(process.execPath, ['.qa/relay-verify.mjs'], env);
-    // Scenarios that never join the scenario room (e.g. returning login) must
-    // pass verifyManifest: false — the app consumes no scenario manifest there.
-    if (verifyManifest) run(process.execPath, ['.qa/verify-manifest-consumed.mjs'], env);
+    // Scenarios that never open the scenario room (e.g. returning login) must
+    // pass verifyRoomDefinition: false — the app consumes no room definition there.
+    if (verifyRoomDefinition) run(process.execPath, ['.qa/verify-room-definition-consumed.mjs'], env);
     for (const verifier of verifiers) run(process.execPath, [verifier], env);
     console.log(`QA PASS: ${scenario}`);
   } catch (error) {

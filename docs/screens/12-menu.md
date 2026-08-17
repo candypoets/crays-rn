@@ -2,7 +2,17 @@
 
 ## Product contract
 
-Menu is a catalog owned by the one active venue, never a global marketplace. It opens from Room, groups available definitions by staff-authored section, and keeps venue name, cart count, and return context visible. No active room redirects to Discover.
+Menu is a catalog owned by the one active venue, never a global marketplace. It is the default pane of Room after entry, groups available definitions by staff-authored section, and keeps venue identity, cart count, and the room navbar visible. No active room redirects to Discover.
+
+Visual authority: the Night Playlist commerce/messages board `docs/design-explorations/night-playlist/mockups/03-commerce-and-messages-v1.png`, **panel 01**, with the treatment notes in `docs/design-explorations/night-playlist/screens/12-menu.md`. Night Playlist supersedes the older dark styling.
+
+## Content and hierarchy
+
+- Shared room chrome: signed room name, connection truth, Leave, My night, and the **Menu / People (x) / Feed** navbar participate in the Room edge-to-edge scroll surface. Menu is textually selected by default and the bottom primary tabs remain visible.
+- **Tonight's setlist** leads the pane with the cart pill at right, followed by a compact tempo rail. Availability and prices come directly from the venue; payment methods appear at review. No duplicate Menu title, Back row, room identity, live-set, or kitchen-moment claim is rendered inside the pane.
+- Sections follow the actual `section` values of available definitions only (e.g. Drinks, Food, Events, Membership when the venue authors them); no fixed or empty categories are invented.
+- Each product is a bright card: shared drink imagery for drink kinds (deterministic atlas index from product position; honest icon block otherwise), name, reflowing summary, exact formatted price, and a small blue add cue. Rows use gap-aware equal columns instead of percentage widths, so narrow layouts do not wrap unpredictably. Tapping a card opens screen 13 — it never places an order or implies kitchen state. Unavailable products stay visible but disabled and dimmed, never purchasable.
+- Loading shows a quiet indicator with no list; empty catalog states the venue has not published an available menu.
 
 ## Relay and state contract
 
@@ -16,8 +26,8 @@ Loading, sectioned results, empty catalog, unavailable item, malformed price, du
 
 ## Accessibility
 
-Sections are headings. Product buttons include name, description, availability, and formatted price in text. Ordering follows section position and product position; color never carries availability alone.
+Sections are headings. Product buttons include name, description, availability, and formatted price in text; the cart action announces its item count. Ordering follows section position and product position; color never carries availability alone. Cards keep 48 dp targets and large text scrolls.
 
 ## QA strategy
 
-Unit coverage verifies grouping, selection, and empty state. `maestro/flows/12-menu.yaml` enters a real test room and asserts all three signed fixture products across their sections. `.qa/qa-12-menu.mjs` provisions its own Nuts relay, requires app projection of kind-30402 listings, independently verifies definitions/signatures, and tears down relay plus volume. Extend with unavailable/stale definitions, wrong signer, invalid currency/price, duplicate `d`, cart restore, room switch, offline, and expiry.
+Unit coverage verifies default selection, room-nav switching, grouping, selection, imagery, loading, and empty state. `maestro/flows/12-menu.yaml` enters a real test room, returns from People through the room navbar, and asserts all three signed fixture products across their sections; `01-people.yaml` proves Menu was the initial post-join pane. `.qa/qa-12-menu.mjs` provisions its own Nuts relay, requires app projection of kind-30402 listings, independently verifies definitions/signatures, and tears down relay plus volume. Extend with unavailable/stale definitions, wrong signer, invalid currency/price, duplicate `d`, cart restore, room switch, offline, and expiry.

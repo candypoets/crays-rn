@@ -8,4 +8,8 @@ Future states must include visible/hidden balance, setup, incoming/outgoing pend
 
 ## Complete QA strategy
 
-`.qa/qa-25-wallet.mjs` enters from Me with real room/account context and asserts unavailable/setup/sync language and zero payment side effects. Unit tests prohibit fabricated balance. Before enabling funding, add a disposable real mint harness with exact proof accounting, encrypted NIP-60 relay fixtures, conflict/duplicate/relaunch cases, backup recovery on a second isolated device, balance privacy checks, and one-spend-only verification.
+`.qa/qa-25-wallet.mjs` enters from Me with real room/account context and asserts unavailable/setup/sync language. Its independent negative verifier settles for relay lag before proving the app identity authored no NIP-60 wallet-configuration, proof, or spending-history events. Unit tests prohibit fabricated balance. Before enabling funding, add a disposable real mint harness with exact proof accounting, encrypted NIP-60 relay fixtures, conflict/duplicate/relaunch cases, backup recovery on a second isolated device, balance privacy checks, and one-spend-only verification.
+
+## Night Playlist implementation
+
+Board 04 panel 06 is adapted to the product’s current truthful state with compact child-route chrome: the balance block reads **Unavailable** rather than presenting a valid-looking zero, while Add funds opens only the configuration explainer. Receive and Activity are real, disabled, accessible 48dp controls whose visible **After wallet setup** copy matches their accessibility state. Recovery and Nostr sync are stated below the action row; no fiat, sats, proofs, transaction history, or recovery claim is synthesized.

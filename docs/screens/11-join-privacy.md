@@ -2,14 +2,17 @@
 
 ## Product contract
 
+Canonical visual reference: `docs/design-explorations/night-playlist/mockups/05-discovery-and-access-v1.png`, panel 04. The Night Playlist board's equal white choice cards and blue icon discs replace the incumbent selected-radio composition.
+
 Purpose: separate selecting the one room relay from volunteering social
-presence. Quiet is the safe default. Quiet users can read announcements, menu
-listings, and available room data but never appear in People. Writes and
-payment-dependent actions are separate and require whatever authorization and
-payment contract the action defines. Visible users explicitly choose
+presence. Quiet is the safe default; becoming visible always requires an
+explicit choice. Quiet users can read
+announcements, menu listings, and available room data but never appear in
+People. Writes and payment-dependent actions are separate and require whatever
+authorization and payment contract the action defines. Visible users explicitly choose
 Social, Business, Dating, or Just curious; may add an 80-character room-only
-context. Visible presence is NIP-53 kind `10312`, linked to the root-signed
-NIP-97 community anchor.
+context. Visible presence is NIP-53 kind `10312`, linked to the exact
+root-authorized kind-30312 room definition.
 
 Primary action wording follows the current selection: **Enter quietly** or
 **Enter and be visible**. Back leaves the current room selection unchanged.
@@ -26,10 +29,19 @@ root-delegated issuer, and live expiry rules before profile or presence is publi
 Missing, expired, exhausted, wrong-room, issuer-mismatched, delayed,
 and offline grants remain on this screen with a retryable error. Repeated entry
 reuses the locally persisted nonce/account redemption and confirms it again.
+The anchor read ignores nipworker's local cache-complete `EOCE`; only network
+`ConnectionStatus(EOSE)` from the exact normalized room relay may prove that an
+empty root-signed-anchor query is complete. The relay is part of the stable
+subscription identity so same-root requests to different relays cannot replace
+one another.
 
 The Test Room uses this same direct Nearby pointer in development and special
 TestFlight builds. Its public token lasts 90 days with an effectively unlimited
 safe-integer redemption count; redeemed test membership does not expire.
+If that explicitly reusable Test Room grant came from local cache but network
+EOSE proves its exact award is no longer on the pinned relay, the app redeems
+it once again and confirms the replacement before writing. Finite-use invites
+are never retried this way.
 
 ## Mutation and lifecycle
 
@@ -38,9 +50,10 @@ safe-integer redemption count; redeemed test membership does not expire.
 - Granted visible entry: redeem only inside the visible branch and confirm the
   exact award against the NIP-11 root and root-signed anchor. The badge is
   authorization for the room and never implies visible presence by itself.
-- Visible: resolve the pinned relay's NIP-11 root, publish the local kind-0
-  profile, then sign/publish NIP-53 kind `10312` with
-  `a=31727:<root>:community`, the pinned relay hint, selected intent, bounded
+- Visible: after the room resolver has verified the NIP-11 root, root-signed
+  anchor, and kind-30312 author, publish the local kind-0 profile, then
+  sign/publish NIP-53 kind `10312` with the exact
+  `a=30312:<authorized-author>:<room-d>`, the pinned relay hint, selected intent, bounded
   optional context, and automatic-leave expiry. Persist the room only
   after both writes receive a relay `OK`, so rejection cannot produce false
   local entry. Kind-0 remains the durable feed/persona projection; it is never
@@ -61,9 +74,9 @@ safe-integer redemption count; redeemed test membership does not expire.
 
 ## QA strategy
 
-Unit tests prove quiet default, intent/context selection, leave-time selection,
+Unit tests prove the quiet default, explicit visible opt-in, intent/context selection, leave-time selection,
 context bounding, and exact presence tags. Maestro loads the room from a real
-signed manifest and exercises the complete choice surface.
+signed kind-30312 room definition and exercises the complete choice surface.
 
 Two mutation scenarios use a fourth badge-authorized identity that has no
 fixture presence, avoiding the false proof created when the app identity is
@@ -73,7 +86,7 @@ also a seeded visible guest:
   the app authored zero kind-10312 room events.
 - `.qa/qa-11-join-visible.mjs` selects Business, exact context, and one hour;
   the independent verifier requires exactly one valid signature, exact
-  anchor address/relay/root marker, the chosen fields, and an expiry matching
+  room address/relay/root marker, the chosen fields, and an expiry matching
   that window. It also verifies the exact app-authored kind-0 profile that
   keeps People and feed projections resolvable.
 
@@ -82,9 +95,12 @@ and 28. `.qa/qa-11c-join-relay-unavailable.mjs` covers the dead-relay path:
 joining against an unreachable relay renders the unverified-room error state
 and the enter action stays inert. The Test Room scenario additionally proves
 the direct broadcast pointer, 90-day effectively unlimited credential,
-non-expiring redeemed membership, exact award confirmation, anchor-bound
-kind-10312 presence, and exact profile projection. Pure-logic
-coverage proves that quiet visibility removes the invite source before any
-network operation. Component/fake-clock coverage owns automatic local expiry; a future BLE
+non-expiring redeemed membership, exact award confirmation, room-bound
+kind-10312 presence, and exact profile projection. Pure-logic coverage proves
+that quiet visibility removes the invite source before any network operation
+and that only a cached, effectively unlimited Test Room grant may be refreshed
+after a proven missing award. Invite unit coverage delivers cache `EOCE`, a foreign-relay
+network `EOSE`, the valid anchor, and the pinned-relay `EOSE` under a fake clock
+to prevent the slow-network early-rejection regression. Component/fake-clock coverage owns automatic local expiry; a future BLE
 gateway harness must additionally force credential-renewal loss and verify the
 Signal weak → Reconnecting → Room locked sequence.

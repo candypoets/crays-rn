@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
-import { ensureLocalIdentity } from '@/account/account';
+import { ensureActiveIdentity } from '@/account/account';
 import { parseCraysDirectMessage } from '@/messages/nip04';
 import { loadMessageRelays, saveMessageRelays } from '@/messages/relays';
 import { latestConversationMessages, loadLocalMessages, saveLocalMessage, type LocalMessage } from '@/messages/store';
@@ -27,7 +27,7 @@ export default function MessagesRoute() {
     let stopped = false;
     let unsubscribe: () => void = () => undefined;
     void (async () => {
-      const identity = await ensureLocalIdentity();
+      const identity = await ensureActiveIdentity();
       const stored = await loadLocalMessages();
       if (stopped) return;
       setMessages(stored);
@@ -68,7 +68,9 @@ export default function MessagesRoute() {
             };
             await saveLocalMessage(next);
             if (!stopped) setMessages(await loadLocalMessages());
-          })();
+          })().catch((cause) => {
+            if (!stopped) setError(cause instanceof Error ? cause.message : 'This message could not be saved on the device.');
+          });
         },
       });
     })().catch((cause) => { if (!stopped) setError(cause instanceof Error ? cause.message : 'The direct-message relay is unavailable. Saved conversations remain readable.'); });

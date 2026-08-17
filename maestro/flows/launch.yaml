@@ -1,37 +1,20 @@
 appId: life.crays
 ---
-# Shared setup: launch the development client, connect it to Metro on 8085,
-# and wait for the Crays bundle. Keep Metro out of CI mode so discovery and
-# fresh-bundle behavior match the known-good nuts-rn setup.
+# Shared setup: launch the development client, connect it directly to Metro on
+# 8085, and wait for the Crays bundle. Expo 57 may show only discovered-server
+# rows and no editable URL field, so use the app's development-client link
+# instead of depending on launcher layout. Keep Metro out of CI mode so bundle
+# freshness matches the known-good nuts-rn setup.
 - launchApp:
     clearState: true
 - extendedWaitUntil:
     visible: "Development Build"
     timeout: 30000
-- runFlow:
-    when:
-      visible: "New development server"
-    commands:
-      - tapOn: "New development server"
+- openLink: "exp+crays://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8085"
+# This development client is built with skipOnboarding/showMenuAtLaunch off;
+# waiting for optional launcher overlays adds tens of seconds to every screen
+# scenario and can accidentally target Android system UI.
 - extendedWaitUntil:
-    visible: "(exp|http)://"
-    timeout: 20000
-- tapOn: "(exp|http)://"
-- inputText: "exp://localhost:8085"
-# The tablet IME covers the launcher action row; dismiss it before selecting
-# Connect so the shared startup does not race an off-screen control.
-- hideKeyboard
-- tapOn: "Connect"
-- extendedWaitUntil:
-    visible: "Continue"
-    timeout: 30000
-    optional: true
-- tapOn:
-    text: "Continue"
-    optional: true
-- tapOn:
-    text: "Close"
-    optional: true
-- extendedWaitUntil:
-    visible: "Crays"
+    visible:
+      id: "cold-welcome-screen"
     timeout: 180000

@@ -20,7 +20,7 @@ describe('MessageRequestScreen', () => {
 
   it('shows relay failure and disables an empty request', () => {
     render(<MessageRequestScreen error="Rejected" message="" onBack={jest.fn()} onChangeMessage={jest.fn()} onSend={jest.fn()} person={person} />);
-    expect(screen.getByRole('alert')).toHaveTextContent('Rejected');
+    expect(screen.getByRole('alert')).toHaveAccessibleName('Rejected');
     expect(screen.getByTestId('send-message-request')).toBeDisabled();
   });
 
@@ -28,5 +28,27 @@ describe('MessageRequestScreen', () => {
     render(<MessageRequestScreen message="Hello" onBack={jest.fn()} onChangeMessage={jest.fn()} onSend={jest.fn()} person={person} sent />);
     expect(screen.getByText('Request sent')).toBeOnTheScreen();
     expect(screen.queryByTestId('send-message-request')).not.toBeOnTheScreen();
+  });
+
+  it('retains the draft, count, and busy lock while the relay result is pending', () => {
+    const onSend = jest.fn();
+    render(<MessageRequestScreen message="Hello" onBack={jest.fn()} onChangeMessage={jest.fn()} onSend={onSend} person={person} sending />);
+
+    expect(screen.getByTestId('message-request-input')).toHaveProp('value', 'Hello');
+    expect(screen.getByTestId('message-request-input')).toHaveProp('maxLength', 240);
+    expect(screen.getByText('5/240')).toBeOnTheScreen();
+    expect(screen.getByText('Sending request…')).toBeOnTheScreen();
+    expect(screen.getByTestId('send-message-request')).toBeDisabled();
+    fireEvent.press(screen.getByTestId('send-message-request'));
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it('supports both explicit ways to leave without publishing', () => {
+    const onBack = jest.fn();
+    render(<MessageRequestScreen message="Hello" onBack={onBack} onChangeMessage={jest.fn()} onSend={jest.fn()} person={person} />);
+
+    fireEvent.press(screen.getByTestId('message-request-not-now'));
+    fireEvent.press(screen.getByTestId('message-request-close'));
+    expect(onBack).toHaveBeenCalledTimes(2);
   });
 });

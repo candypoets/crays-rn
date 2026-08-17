@@ -1,11 +1,9 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 
-import { ensureLocalIdentity } from '@/account/account';
 import { leaveTemplate } from '@/nostr/protocol';
 import { publishEvent } from '@/nostr/publish';
 import { relayUrlFor } from '@/rooms/relayUrl';
-import { fetchRelayRootPubkey } from '@/rooms/trust';
 import { LeaveRoomScreen } from '@/screens/room/LeaveAndSwitchScreens';
 import { useRoomSession } from '@/session/RoomSession';
 
@@ -23,13 +21,9 @@ export default function LeaveRoomRoute() {
     try {
       if (activeRoom.visibility === 'visible') {
         const transportRelayUrl = relayUrlFor(activeRoom);
-        const [, communityRootPubkey] = await Promise.all([
-          ensureLocalIdentity(),
-          fetchRelayRootPubkey(transportRelayUrl),
-        ]);
         await publishEvent(
           leaveTemplate({
-            communityRootPubkey,
+            roomAddress: activeRoom.address,
             relayUrl: activeRoom.relayUrl,
             expiresAt: Math.max(Math.floor(activeRoom.leaveAt / 1000), Math.floor(Date.now() / 1000) + 60),
           }),
