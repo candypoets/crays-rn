@@ -2,7 +2,7 @@ import { normalizeNip46Relays } from '@/account/nostrConnect';
 
 const configured = process.env.EXPO_PUBLIC_CRAYS_NIP46_RELAYS
   ?.split(',')
-  .map((relay) => relay.trim())
+  .map((relay: string) => relay.trim())
   .filter(Boolean) ?? [];
 
 /**
