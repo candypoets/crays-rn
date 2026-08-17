@@ -19,14 +19,14 @@ const maya: RoomPerson = {
   expiresAt: 2_000_000_000, createdAt: 1,
 };
 const profile: RoomProfile = { pubkey: maya.pubkey, name: 'Maya', about: '', picture: 'https://profiles.example/maya.jpg', createdAt: 1 };
-const post: RoomPost = { id: 'post-1', pubkey: maya.pubkey, content: 'Jazz starts at 20:30.', createdAt: 1, announcement: true, expiresAt: 2_000_000_000 };
+const post: RoomPost = { id: 'post-1', pubkey: maya.pubkey, content: 'Jazz starts at 20:30.', createdAt: 1, announcement: true, expiresAt: 2_000_000_000, images: [], participantPubkeys: [] };
 const product: RoomProduct = { id: 'drink-1', address: `30402:${'a'.repeat(64)}:drink`, name: 'Mezcal Negroni', description: 'Smoky and bitter', price: 12, currency: 'EUR', section: 'Cocktails', productKind: 'drink', available: true, position: 0 };
 
 function props(overrides: Partial<Parameters<typeof RoomScreen>[0]> = {}): Parameters<typeof RoomScreen>[0] {
   return {
-    activeRoom, cartCount: 0, connected: true, loading: false, people: [{ ...maya, picture: profile.picture }], posts: [post], products: [product], profiles: new Map([[maya.pubkey, profile]]),
-    view: 'menu', composer: '', onCart: jest.fn(), onChangeComposer: jest.fn(), onChangeView: jest.fn(), onLeave: jest.fn(),
-    onMyNight: jest.fn(), onOpenPerson: jest.fn(), onOpenProduct: jest.fn(), onPublish: jest.fn(), onReportPost: jest.fn(), ...overrides,
+    activeRoom, cartCount: 0, connected: true, loading: false, people: [{ ...maya, picture: profile.picture }], posts: [post], products: [product], profiles: new Map([[maya.pubkey, profile]]), reactions: [],
+    view: 'menu', onCart: jest.fn(), onChangeView: jest.fn(), onComposePost: jest.fn(), onLeave: jest.fn(), onLikePost: jest.fn(),
+    onMyNight: jest.fn(), onOpenPerson: jest.fn(), onOpenProduct: jest.fn(), onOpenThread: jest.fn(), onReplyPost: jest.fn(), onReportPost: jest.fn(), ...overrides,
   };
 }
 
@@ -90,11 +90,12 @@ describe('RoomScreen', () => {
     expect(screen.getByText(/Only people who chose to be visible/)).toBeOnTheScreen();
   });
 
-  it('renders room-only feed, announcement, composer, and publish error', () => {
-    render(<RoomScreen {...props({ view: 'feed', composer: 'Hello', composerError: 'Relay rejected it.' })} />);
+  it('renders the room-only feed, announcement, and dedicated composer action', () => {
+    render(<RoomScreen {...props({ view: 'feed', reportNotice: 'Relay rejected it.' })} />);
     expect(screen.getByText('Room feed')).toBeOnTheScreen();
     expect(screen.getByText('Chronological · locks when you leave')).toBeOnTheScreen();
-    expect(screen.getByText('Add a note')).toBeOnTheScreen();
+    expect(screen.getByText('Post to this room')).toBeOnTheScreen();
+    expect(screen.getByText('Write a note or share a photo')).toBeOnTheScreen();
     expect(screen.getByText('Announcement')).toBeOnTheScreen();
     expect(screen.getByText('Jazz starts at 20:30.')).toBeOnTheScreen();
     expect(screen.getByTestId(`post-${post.id}`)).toHaveProp('className', expect.stringContaining('rounded-2xl'));
@@ -112,20 +113,36 @@ describe('RoomScreen', () => {
     expect(screen.getByLabelText('Report post by Room guest')).toBeOnTheScreen();
   });
 
-  it('keeps publish disabled for an empty draft and exposes the 500-character boundary', () => {
-    render(<RoomScreen {...props({ view: 'feed', composer: '   ' })} />);
+  it('opens dedicated compose, reply, like, and thread actions with engagement counts', () => {
+    const onComposePost = jest.fn();
+    const onLikePost = jest.fn();
+    const onOpenThread = jest.fn();
+    const onReplyPost = jest.fn();
+    const reply = { ...post, id: 'reply-1', announcement: false, replyToId: post.id, rootId: post.id, content: 'See you there.' };
+    const reaction = { id: 'like-1', pubkey: 'd'.repeat(64), targetId: post.id, createdAt: 2, expiresAt: 2_000_000_000 };
+    render(<RoomScreen {...props({ onComposePost, onLikePost, onOpenThread, onReplyPost, posts: [post, reply], reactions: [reaction], view: 'feed' })} />);
 
-    expect(screen.getByTestId('publish-room-post')).toBeDisabled();
-    expect(screen.getByTestId('room-post-input')).toHaveProp('maxLength', 500);
-    expect(screen.getByText('3/500')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('open-room-post-composer'));
+    fireEvent.press(screen.getByTestId(`reply-post-${post.id}`));
+    fireEvent.press(screen.getByTestId(`like-post-${post.id}`));
+    fireEvent.press(screen.getByTestId(`open-thread-${post.id}`));
+    expect(onComposePost).toHaveBeenCalledTimes(1);
+    expect(onReplyPost).toHaveBeenCalledWith(post);
+    expect(onLikePost).toHaveBeenCalledWith(post);
+    expect(onOpenThread).toHaveBeenCalledWith(post);
+    expect(screen.getByLabelText('Reply to Maya, 1 replies')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Like post by Maya, 1 likes')).toBeOnTheScreen();
+    expect(screen.queryByText('See you there.')).toBeNull();
   });
 
-  it('retains the draft and locks the composer action while publish is pending', () => {
-    render(<RoomScreen {...props({ view: 'feed', composer: 'Hello', composerLoading: true })} />);
+  it('shows image notes and disables an already-liked post', () => {
+    const imagePost = { ...post, announcement: false, images: [{ url: 'https://cdn.example/room.jpg', alt: 'Dance floor' }] };
+    const reaction = { id: 'mine', pubkey: maya.pubkey, targetId: post.id, createdAt: 2, expiresAt: 2_000_000_000 };
+    render(<RoomScreen {...props({ posts: [imagePost], reactions: [reaction], viewerPubkey: maya.pubkey, view: 'feed' })} />);
 
-    expect(screen.getByTestId('room-post-input')).toHaveProp('value', 'Hello');
-    expect(screen.getByText('5/500')).toBeOnTheScreen();
-    expect(screen.getByTestId('publish-room-post')).toBeDisabled();
+    expect(screen.getByLabelText('Dance floor')).toHaveProp('source', { uri: 'https://cdn.example/room.jpg' });
+    expect(screen.getByTestId(`like-post-${post.id}`)).toBeDisabled();
+    expect(screen.getByLabelText('Liked post by Maya, 1 likes')).toBeOnTheScreen();
   });
 
   it('sends the exact selected post to the report owner', () => {
@@ -139,6 +156,6 @@ describe('RoomScreen', () => {
     render(<RoomScreen {...props({ view: 'feed', reportingPostId: post.id })} />);
 
     expect(screen.getByTestId(`report-post-${post.id}`)).toBeDisabled();
-    expect(screen.getByText('Reporting…')).toBeOnTheScreen();
+    expect(screen.getByLabelText('Report post by Maya')).toBeDisabled();
   });
 });

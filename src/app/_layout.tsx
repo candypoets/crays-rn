@@ -77,6 +77,8 @@ export default function RootLayout() {
                 <StatusBar style="dark" />
                 <Stack screenOptions={{ headerShown: false }}>
                   <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
+                  <Stack.Screen name="room-thread" options={{ animation: 'slide_from_right' }} />
+                  <Stack.Screen name="room-post" options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
                 </Stack>
               </CartProvider>
             </RoomDataProvider>

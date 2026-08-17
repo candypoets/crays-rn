@@ -1,9 +1,10 @@
 import { execFileSync, spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   CONVERSATION_REPLY_TEXT,
   FEED_POST_TEXT,
+  FEED_REPLY_TEXT,
   JOIN_VISIBLE_CONTEXT,
   JOIN_VISIBLE_INTENT,
   MESSAGE_REQUEST_TEXT,
@@ -106,6 +107,7 @@ function waitForHttp(child, port, path, label) {
 // with explicit `maestro test -e KEY=value` overrides.
 const fixtureEnv = {
   QA_FEED_POST_TEXT: FEED_POST_TEXT,
+  QA_FEED_REPLY_TEXT: FEED_REPLY_TEXT,
   QA_JOIN_INTENT: JOIN_VISIBLE_INTENT,
   QA_JOIN_CONTEXT: JOIN_VISIBLE_CONTEXT,
   QA_MESSAGE_REQUEST_TEXT: MESSAGE_REQUEST_TEXT,
@@ -114,7 +116,7 @@ const fixtureEnv = {
   QA_ROOM_ABOUT: ROOM_ABOUT,
 };
 
-export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyRoomDefinition = true, checkoutAdapter = false }) {
+export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserIndex = 0, bootstrapEnv = {}, verifyRoomDefinition = true, checkoutAdapter = false, blossomAdapter = false }) {
   const statePath = `/tmp/qa-crays-${scenario}.json`;
   const preferredProxyPort = Number(process.env.CRAYS_TEST_ROOM_PROXY_PORT || 8787);
   const proxyPort = selectProxyPort(preferredProxyPort);
@@ -133,6 +135,8 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     // invite redemption is the only grant for the joining identity.
     CRAYS_QA_PREAUTHORIZE: '1',
     CRAYS_QA_USER_INDEX: String(qaUserIndex),
+    CRAYS_BLOSSOM_PORT: '8791',
+    CRAYS_BLOSSOM_STATE: `/tmp/qa-crays-${scenario}-blossom.json`,
     ...bootstrapEnv,
   };
   run('adb', ['get-state'], env);
@@ -145,6 +149,7 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     stdio: 'inherit',
   });
   let checkoutAdapterProcess;
+  let blossomAdapterProcess;
   try {
     waitForProxy(testRoom, proxyPort, roomId, statePath);
     if (!existsSync(statePath)) throw new Error(`bootstrap did not write ${statePath}`);
@@ -165,6 +170,15 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
       });
       waitForHttp(checkoutAdapterProcess, checkoutPort, '/healthz', 'checkout adapter');
     }
+    if (blossomAdapter) {
+      const blossomPort = Number(env.CRAYS_BLOSSOM_PORT);
+      if (portIsListening(blossomPort)) throw new Error(`Blossom adapter port ${blossomPort} is already in use`);
+      rmSync(env.CRAYS_BLOSSOM_STATE, { force: true });
+      blossomAdapterProcess = spawn(process.execPath, ['.qa/blossom-adapter.mjs'], { cwd: root, env: { ...process.env, ...env }, stdio: 'inherit' });
+      waitForHttp(blossomAdapterProcess, blossomPort, '/healthz', 'Blossom adapter');
+      run('adb', ['push', 'assets/branding/app-icon.png', '/sdcard/Pictures/crays-qa-feed.png'], env);
+      run('adb', ['shell', 'am', 'broadcast', '-a', 'android.intent.action.MEDIA_SCANNER_SCAN_FILE', '-d', 'file:///sdcard/Pictures/crays-qa-feed.png'], env);
+    }
     const fixtureIdentity = loadKeys().users[qaUserIndex];
     const fixtureNsec = fixtureIdentity.nsec;
     run(process.env.MAESTRO_CLI || 'maestro', [
@@ -177,6 +191,7 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
       '-e', `QA_NSEC=${fixtureNsec}`,
       '-e', `QA_PROFILE_NPUB=${fixtureIdentity.npub}`,
       '-e', `JONAS_PUBKEY=${loadKeys().users[1].pub}`,
+      '-e', `JONAS_FEED_POST_ID=${state.feed_ids?.[2] || ''}`,
       '-e', `MEMBERSHIP_AWARD_ID=${state.membership_award_id || ''}`,
       '-e', `EVENT_ID=${state.event_id || ''}`,
       '-e', `MEMBERSHIP_DEFINITION_ID=${state.membership_definition_id || ''}`,
@@ -196,6 +211,10 @@ export function runRelayScreenScenario({ flow, scenario, verifiers = [], qaUserI
     throw error;
   } finally {
     stopChild(checkoutAdapterProcess, 'checkout adapter');
+    stopChild(blossomAdapterProcess, 'Blossom adapter');
+    if (blossomAdapter) {
+      try { run('adb', ['shell', 'rm', '-f', '/sdcard/Pictures/crays-qa-feed.png'], env); } catch { /* Emulator cleanup is best effort. */ }
+    }
     stopProxy(testRoom);
     try {
       // The proxy owns normal teardown. A second idempotent sweep independently

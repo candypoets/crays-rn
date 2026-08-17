@@ -19,6 +19,10 @@ export const TEST_ROOM_QA_PROFILE_NAME = 'Maya QA';
 // Typed and asserted by maestro/flows/03-room-feed.yaml (${QA_FEED_POST_TEXT}).
 export const FEED_POST_TEXT = 'Meet by the east stairs.';
 
+// Typed and asserted by maestro/flows/03-room-feed.yaml
+// (${QA_FEED_REPLY_TEXT}); independently verified as a marked NIP-10 reply.
+export const FEED_REPLY_TEXT = 'I will meet you by the late set.';
+
 // Selected via testID intent-<value> and asserted by
 // maestro/flows/11-join-visible.yaml (${QA_JOIN_INTENT}).
 export const JOIN_VISIBLE_INTENT = 'business';

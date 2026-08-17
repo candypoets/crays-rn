@@ -26,7 +26,7 @@ export const PUBLISHED_TEST_ROOM_STATE_PATH = process.env.CRAYS_PUBLISHED_TEST_R
 export const DEFAULT_KEYS_JSON = '/root/code/strfry-badge-node/test/env/keys.json';
 export const RESERVED_RELAY_DOMAIN = process.env.CRAYS_QA_RELAY_DOMAIN || 'crays-test.relays.nuts.cash';
 export const FIXTURE_CAPABILITY_D = 'crays-qa-write-capabilities';
-export const FIXTURE_WRITE_KINDS = [0, 1, 4, 5, 10312, 1984, 27236, 31925];
+export const FIXTURE_WRITE_KINDS = [0, 1, 4, 5, 7, 10312, 1984, 27236, 31925];
 
 export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export const nowSeconds = () => Math.floor(Date.now() / 1000);

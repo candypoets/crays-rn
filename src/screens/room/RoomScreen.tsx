@@ -5,12 +5,14 @@
 // FORM: Relay, quiet, empty, publish-failure, report, and expiry truth remain explicit.
 import { Ionicons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PortraitImage } from '@/components/night/NightPrimitives';
 import { MenuCatalog, MenuCartButton } from '@/screens/commerce/MenuScreen';
-import type { ActiveRoom, RoomPerson, RoomPost, RoomProduct, RoomProfile } from '@/rooms/types';
+import { roomFeedRoots, roomPostEngagement } from '@/rooms/feed';
+import type { ActiveRoom, RoomPerson, RoomPost, RoomProduct, RoomProfile, RoomReaction } from '@/rooms/types';
+import { RoomNoteCard } from '@/screens/room/RoomNoteCard';
 import { colors } from '@/theme/colors';
 
 export type RoomView = 'menu' | 'people' | 'feed';
@@ -24,19 +26,22 @@ type RoomScreenProps = {
   posts: RoomPost[];
   products: RoomProduct[];
   profiles: ReadonlyMap<string, RoomProfile>;
+  reactions: RoomReaction[];
+  viewerPubkey?: string | null;
   view: RoomView;
-  composer: string;
-  composerError?: string | null;
-  composerLoading?: boolean;
-  onChangeComposer: (value: string) => void;
   onChangeView: (view: RoomView) => void;
   onCart: () => void;
   onLeave: () => void;
   onMyNight: () => void;
   onOpenProduct: (product: RoomProduct) => void;
   onOpenPerson: (pubkey: string) => void;
-  onPublish: () => void;
+  onComposePost: () => void;
+  onLikePost: (post: RoomPost) => void;
+  onOpenThread: (post: RoomPost) => void;
+  onReplyPost: (post: RoomPost) => void;
   onReportPost: (post: RoomPost) => void;
+  likedPostIds?: ReadonlySet<string>;
+  likingPostId?: string | null;
   reportingPostId?: string | null;
   reportNotice?: string | null;
 };
@@ -241,86 +246,8 @@ function PeopleView({ activeRoom, loading, onOpenPerson, people }: Pick<RoomScre
   );
 }
 
-function FeedPost({
-  onOpenPerson,
-  onReportPost,
-  post,
-  profile,
-  reporting,
-}: {
-  onOpenPerson: () => void;
-  onReportPost: () => void;
-  post: RoomPost;
-  profile?: RoomProfile;
-  reporting: boolean;
-}) {
-  const authorName = profile?.name || (post.announcement ? 'The room' : 'Room guest');
-  return (
-    <View
-      className={`mb-3 rounded-2xl border p-4 ${post.announcement ? 'border-primary/25 bg-surface-soft' : 'border-edge bg-surface'}`}
-      testID={`post-${post.id}`}
-    >
-      <View className="flex-row items-start">
-        {post.announcement ? (
-          <View className="h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary">
-            <Ionicons color={colors.surface} name="megaphone" size={20} />
-          </View>
-        ) : (
-          <PortraitImage
-            className="h-11 w-11 shrink-0 rounded-full"
-            identity={post.pubkey}
-            label={`Profile image for ${authorName}`}
-            picture={profile?.picture}
-          />
-        )}
-        <View className="ml-3 min-w-0 flex-1">
-          <Pressable
-            accessibilityLabel={`Open profile of ${authorName}`}
-            accessibilityRole="button"
-            className="min-h-12 justify-center"
-            onPress={onOpenPerson}
-            testID={`post-author-${post.id}`}
-          >
-            <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
-              <Text className="text-[15px] font-black text-ink">{authorName}</Text>
-              <Text className="text-xs text-muted">{formatMoment(post.createdAt)}</Text>
-              {post.announcement ? (
-                <Text className="rounded-full bg-surface px-2 py-1 text-[9px] font-black uppercase text-primary">Announcement</Text>
-              ) : null}
-            </View>
-          </Pressable>
-          <Text className="mt-1 text-base leading-6 text-ink">{post.content}</Text>
-          <View className="mt-2 flex-row items-center gap-5">
-            <Pressable
-              accessibilityLabel={`Message ${authorName}`}
-              accessibilityRole="button"
-              className="min-h-12 flex-row items-center gap-1.5 pr-2"
-              onPress={onOpenPerson}
-              testID={`message-post-${post.id}`}
-            >
-              <Ionicons color={colors.primary} name="chatbubble-outline" size={17} />
-              <Text className="text-xs font-black text-primary">Message</Text>
-            </Pressable>
-            <Pressable
-              accessibilityLabel={`Report post by ${authorName}`}
-              accessibilityRole="button"
-              accessibilityState={{ disabled: reporting }}
-              className="min-h-12 flex-row items-center gap-1.5 px-2"
-              disabled={reporting}
-              onPress={onReportPost}
-              testID={`report-post-${post.id}`}
-            >
-              <Ionicons color={colors.inkMuted} name="flag-outline" size={17} />
-              <Text className="text-xs font-bold text-muted">{reporting ? 'Reporting…' : 'Report'}</Text>
-            </Pressable>
-          </View>
-        </View>
-      </View>
-    </View>
-  );
-}
-
-function FeedView(props: Pick<RoomScreenProps, 'composer' | 'composerError' | 'composerLoading' | 'loading' | 'onChangeComposer' | 'onOpenPerson' | 'onPublish' | 'onReportPost' | 'posts' | 'profiles' | 'reportingPostId' | 'reportNotice'>) {
+function FeedView(props: Pick<RoomScreenProps, 'likedPostIds' | 'likingPostId' | 'loading' | 'onComposePost' | 'onLikePost' | 'onOpenPerson' | 'onOpenThread' | 'onReplyPost' | 'onReportPost' | 'posts' | 'profiles' | 'reactions' | 'reportingPostId' | 'reportNotice' | 'viewerPubkey'>) {
+  const roots = roomFeedRoots(props.posts);
   return (
     <View className="mx-auto w-full max-w-[620px] px-5 pb-8 pt-5">
       <View className="flex-row items-end justify-between">
@@ -330,53 +257,51 @@ function FeedView(props: Pick<RoomScreenProps, 'composer' | 'composerError' | 'c
         </View>
       </View>
 
-      {props.composerError ? <Text accessibilityRole="alert" className="mt-3 text-sm font-semibold text-error">{props.composerError}</Text> : null}
       {props.reportNotice ? <Text accessibilityRole="alert" className="mt-3 text-sm font-semibold text-muted">{props.reportNotice}</Text> : null}
+      <Pressable
+        accessibilityLabel="Create a room post"
+        accessibilityRole="button"
+        className="mt-5 min-h-14 flex-row items-center justify-between rounded-2xl border-2 border-primary bg-surface px-4 active:bg-surface-soft"
+        onPress={props.onComposePost}
+        testID="open-room-post-composer"
+      >
+        <View className="flex-row items-center gap-3">
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-primary">
+            <Ionicons color={colors.surface} name="create-outline" size={21} />
+          </View>
+          <View>
+            <Text className="text-base font-black text-ink">Post to this room</Text>
+            <Text className="text-xs text-muted">Write a note or share a photo</Text>
+          </View>
+        </View>
+        <Ionicons color={colors.primary} name="arrow-forward" size={20} />
+      </Pressable>
       {props.loading ? <ActivityIndicator className="mt-10" color={colors.primary} /> : null}
-      {!props.loading && !props.posts.length ? <EmptyRoom icon="chatbubble-ellipses-outline">No room posts yet. Venue announcements and guest posts will appear here.</EmptyRoom> : null}
+      {!props.loading && !roots.length ? <EmptyRoom icon="chatbubble-ellipses-outline">No room posts yet. Start the conversation or share the room.</EmptyRoom> : null}
 
       <View className="mt-5">
-        {props.posts.map((post) => (
-          <FeedPost
-            key={post.id}
-            onOpenPerson={() => props.onOpenPerson(post.pubkey)}
-            onReportPost={() => props.onReportPost(post)}
-            post={post}
-            profile={props.profiles.get(post.pubkey)}
-            reporting={props.reportingPostId === post.id}
-          />
-        ))}
-      </View>
-
-      <View className="mt-2 overflow-hidden rounded-2xl border-2 border-primary bg-surface">
-        <View className="flex-row items-end gap-2 p-2 pl-4">
-          <TextInput
-            accessibilityLabel="Write a room post"
-            className="min-h-12 flex-1 py-3 text-base leading-6 text-ink"
-            maxLength={500}
-            multiline
-            onChangeText={props.onChangeComposer}
-            placeholder="Add a note to this room"
-            placeholderTextColor={colors.placeholder}
-            testID="room-post-input"
-            value={props.composer}
-          />
-          <Pressable
-            accessibilityLabel="Post to this room"
-            accessibilityRole="button"
-            accessibilityState={{ disabled: Boolean(props.composerLoading) || !props.composer.trim() }}
-            className="h-12 min-w-12 items-center justify-center rounded-xl bg-primary px-3 disabled:opacity-40"
-            disabled={props.composerLoading || !props.composer.trim()}
-            onPress={props.onPublish}
-            testID="publish-room-post"
-          >
-            {props.composerLoading ? <ActivityIndicator color={colors.surface} /> : <Ionicons color={colors.surface} name="add" size={25} />}
-          </Pressable>
-        </View>
-        <View className="flex-row justify-between border-t border-edge px-4 py-2">
-          <Text className="text-[11px] font-black uppercase text-primary">Add a note</Text>
-          <Text className="text-[11px] text-muted">{props.composer.length}/500</Text>
-        </View>
+        {roots.map((post) => {
+          const engagement = roomPostEngagement(post, props.posts, props.reactions, props.viewerPubkey);
+          const optimisticLiked = props.likedPostIds?.has(post.id) && !engagement.likedByViewer;
+          return (
+            <RoomNoteCard
+              key={post.id}
+              liked={engagement.likedByViewer || Boolean(optimisticLiked)}
+              likeCount={engagement.likeCount + (optimisticLiked ? 1 : 0)}
+              liking={props.likingPostId === post.id}
+              onLike={() => props.onLikePost(post)}
+              onMessage={() => props.onOpenPerson(post.pubkey)}
+              onOpenPerson={() => props.onOpenPerson(post.pubkey)}
+              onOpenThread={() => props.onOpenThread(post)}
+              onReply={() => props.onReplyPost(post)}
+              onReport={() => props.onReportPost(post)}
+              post={post}
+              profile={props.profiles.get(post.pubkey)}
+              replyCount={engagement.replyCount}
+              reporting={props.reportingPostId === post.id}
+            />
+          );
+        })}
       </View>
     </View>
   );

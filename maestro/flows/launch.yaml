@@ -11,9 +11,15 @@ appId: life.crays
     visible: "Development Build"
     timeout: 30000
 - openLink: "exp+crays://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8085"
-# This development client is built with skipOnboarding/showMenuAtLaunch off;
-# waiting for optional launcher overlays adds tens of seconds to every screen
-# scenario and can accidentally target Android system UI.
+# A newly rebuilt Expo 57 development client can show a one-time explanation
+# sheet after the link opens. It is absent on warm clients, so keep this tap
+# optional and scoped to the sheet's exact action label.
+- runFlow:
+    when:
+      visible: "Continue"
+    commands:
+      - tapOn: "Continue"
+      - pressKey: Back
 - extendedWaitUntil:
     visible:
       id: "cold-welcome-screen"

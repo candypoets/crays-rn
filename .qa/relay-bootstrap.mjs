@@ -80,7 +80,7 @@ if (process.env.CRAYS_TEST_ROOM_PRESENCE === '1') {
   const rootSecret = secrets.community_root_secret_key;
   if (!/^[0-9a-f]{64}$/i.test(rootSecret || '')) throw new Error('Test Room presence setup requires its community root secret');
   const definitionD = requiredBadge.split(':').slice(2).join(':');
-  const requiredKinds = ['0', '1', '4', '10312'];
+  const requiredKinds = ['0', '1', '4', '7', '10312'];
   const hasExactPermissions = (event) => {
     const permissions = event?.tags.filter((tag) => tag[0] === 'permission') || [];
     return permissions.length === requiredKinds.length && requiredKinds.every((kind) => permissions.some(

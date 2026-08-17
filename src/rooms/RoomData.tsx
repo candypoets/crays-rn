@@ -32,6 +32,7 @@ import {
   projectCalendarEvent,
   projectMembershipOffer,
   projectRoomPost,
+  projectRoomReaction,
   projectRoomProduct,
   projectRoomProfile,
 } from '@/rooms/projections';
@@ -40,6 +41,7 @@ import type {
   RoomMembershipOffer,
   RoomPerson,
   RoomPost,
+  RoomReaction,
   RoomProduct,
   RoomProfile,
   RoomOrder,
@@ -69,12 +71,14 @@ export type RoomDataValue = {
   connected: boolean;
   people: RoomPerson[];
   posts: RoomPost[];
+  reactions: RoomReaction[];
   products: RoomProduct[];
   events: RoomCalendarEvent[];
   memberships: RoomMembershipOffer[];
   orders: RoomOrder[];
   entitlements: RoomEntitlement[];
   profiles: ReadonlyMap<string, RoomProfile>;
+  viewerPubkey: string | null | undefined;
 };
 
 const EMPTY: RoomDataValue = {
@@ -84,12 +88,14 @@ const EMPTY: RoomDataValue = {
   connected: false,
   people: [],
   posts: [],
+  reactions: [],
   products: [],
   events: [],
   memberships: [],
   orders: [],
   entitlements: [],
   profiles: new Map(),
+  viewerPubkey: undefined,
 };
 
 const RoomDataContext = createContext<RoomDataValue>(EMPTY);
@@ -120,6 +126,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   const [profiles, setProfiles] = useState<Map<string, RoomProfile>>(new Map());
   const [presences, setPresences] = useState<Map<string, RoomPresenceProjection>>(new Map());
   const [posts, setPosts] = useState<RoomPost[]>([]);
+  const [reactions, setReactions] = useState<RoomReaction[]>([]);
   const [products, setProducts] = useState<RoomProduct[]>([]);
   const [events, setEvents] = useState<RoomCalendarEvent[]>([]);
   const [memberships, setMemberships] = useState<RoomMembershipOffer[]>([]);
@@ -277,6 +284,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     setProfiles(new Map());
     setPresences(new Map());
     setPosts([]);
+    setReactions([]);
     setProducts([]);
     setEvents([]);
     setMemberships([]);
@@ -400,6 +408,13 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
           return;
         }
 
+        const reaction = projectRoomReaction(event, activeRoom.id);
+        if (reaction) {
+          if (__DEV__) console.info(`[crays-room-data]${JSON.stringify({ type: 'reaction', id: reaction.id, targetId: reaction.targetId })}`);
+          setReactions((current) => upsertById(current, reaction));
+          return;
+        }
+
         const entitlementDefinition = projectEntitlementDefinition(event, currentAdmins());
         if (entitlementDefinition) {
           setDefinitions((current) => {
@@ -461,6 +476,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       ['profiles', { kinds: [CRAYS_PROTOCOL.profileKind], relays: [relayUrl], limit: 200, noCache: true }],
       ['presence', { kinds: [CRAYS_PROTOCOL.roomPresenceKind], tags: { '#a': [activeRoom.address] }, relays: [relayUrl], limit: 200, noCache: true }],
       ['feed', { kinds: [CRAYS_PROTOCOL.roomFeedKind], tags: { '#h': [activeRoom.id] }, relays: [relayUrl], limit: 100, noCache: true }],
+      ['reactions', { kinds: [CRAYS_PROTOCOL.reactionKind], tags: { '#h': [activeRoom.id] }, relays: [relayUrl], limit: 300, noCache: true }],
     ];
     if (viewerPubkey) subscriptions.push(
       ['awards', { kinds: [CRAYS_PROTOCOL.badgeAwardKind], tags: { '#p': [viewerPubkey] }, relays: [relayUrl], limit: 200, noCache: true }],
@@ -684,13 +700,15 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     connected,
     people,
     posts: visiblePosts,
+    reactions,
     products,
     events,
     memberships,
     orders,
     entitlements,
     profiles,
-  }), [archiveError, archiveHydrated, connected, entitlements, events, loading, memberships, orders, people, products, profiles, visiblePosts]);
+    viewerPubkey,
+  }), [archiveError, archiveHydrated, connected, entitlements, events, loading, memberships, orders, people, products, profiles, reactions, viewerPubkey, visiblePosts]);
 
   return <RoomDataContext.Provider value={value}>{children}</RoomDataContext.Provider>;
 }

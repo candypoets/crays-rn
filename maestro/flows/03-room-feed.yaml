@@ -1,6 +1,6 @@
 appId: life.crays
 ---
-# ${QA_FEED_POST_TEXT} and ${QA_ROOM_ABOUT} are supplied by
+# ${QA_FEED_POST_TEXT}, ${QA_FEED_REPLY_TEXT}, and ${QA_ROOM_ABOUT} are supplied by
 # .qa/relay-screen-scenario.mjs from .qa/flow-fixtures.mjs; standalone runs
 # need explicit `-e` values for both.
 - runFlow: seed-and-join.yaml
@@ -23,14 +23,17 @@ appId: life.crays
 - assertVisible: "Announcement"
 - scrollUntilVisible:
     element:
-      id: "room-post-input"
+      id: "open-room-post-composer"
     direction: UP
-- assertVisible:
-    id: "room-post-input"
+- tapOn:
+    id: "open-room-post-composer"
+- extendedWaitUntil:
+    visible:
+      id: "room-post-screen"
+    timeout: 5000
 - tapOn:
     id: "room-post-input"
 - inputText: "${QA_FEED_POST_TEXT}"
-- pressKey: BACK
 - tapOn:
     id: "publish-room-post"
 - extendedWaitUntil:
@@ -38,10 +41,85 @@ appId: life.crays
     timeout: 15000
 - scrollUntilVisible:
     element:
+      id: "open-room-post-composer"
+    direction: UP
+- tapOn:
+    id: "open-room-post-composer"
+- tapOn:
+    id: "add-room-post-images"
+- tapOn:
+    text: "Allow all"
+    optional: true
+- tapOn:
+    text: "Allow"
+    optional: true
+# Android's system photo picker owns this screen. The harness-seeded app icon
+# is the rightmost visible recent tile on the shared tablet image.
+- tapOn:
+    point: "90%,30%"
+- tapOn:
+    text: "Add.*"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "room-post-attachments"
+    timeout: 10000
+- tapOn:
+    id: "publish-room-post"
+- extendedWaitUntil:
+    visible:
+      id: "room-feed-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: "room-post-image"
+    timeout: 15000
+- scrollUntilVisible:
+    element:
       text: "Anyone heading downstairs for the late set?"
     direction: DOWN
-- tapOn: "Report post by Jonas"
+- tapOn:
+    id: "like-post-${JONAS_FEED_POST_ID}"
+- tapOn:
+    id: "reply-post-${JONAS_FEED_POST_ID}"
 - extendedWaitUntil:
-    visible: "Report sent to this venue.*"
+    visible:
+      id: "room-post-screen"
+    timeout: 5000
+- tapOn:
+    id: "room-post-input"
+- inputText: "${QA_FEED_REPLY_TEXT}"
+- tapOn:
+    id: "publish-room-post"
+- extendedWaitUntil:
+    visible:
+      id: "room-feed-screen"
     timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: "open-thread-${JONAS_FEED_POST_ID}"
+    direction: DOWN
+- tapOn:
+    id: "open-thread-${JONAS_FEED_POST_ID}"
+- extendedWaitUntil:
+    visible:
+      id: "room-thread-screen"
+    timeout: 5000
+- extendedWaitUntil:
+    visible: "${QA_FEED_REPLY_TEXT}"
+    timeout: 15000
+- tapOn:
+    id: "close-room-thread"
+- scrollUntilVisible:
+    element:
+      id: "report-post-${JONAS_FEED_POST_ID}"
+    direction: DOWN
+- tapOn:
+    id: "report-post-${JONAS_FEED_POST_ID}"
+- scrollUntilVisible:
+    element:
+      text: "Report sent to this venue.*"
+    direction: UP
+    timeout: 15000
+- assertVisible: "Report sent to this venue.*"
 - takeScreenshot: 03-room-feed-relay

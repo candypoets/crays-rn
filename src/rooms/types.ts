@@ -65,6 +65,28 @@ export type RoomPost = {
   createdAt: number;
   announcement: boolean;
   expiresAt: number;
+  images: RoomPostImage[];
+  participantPubkeys: string[];
+  replyToId?: string;
+  rootId?: string;
+  rootPubkey?: string;
+};
+
+export type RoomPostImage = {
+  url: string;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+  sha256?: string;
+  alt?: string;
+};
+
+export type RoomReaction = {
+  id: string;
+  pubkey: string;
+  targetId: string;
+  createdAt: number;
+  expiresAt: number;
 };
 
 export type RoomProduct = {

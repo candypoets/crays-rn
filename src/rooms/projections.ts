@@ -1,5 +1,5 @@
-import { extractTagValue, extractTagValues, type ParsedEvent } from '@candypoets/nipworker';
-import { asKind0, asKind1, fbIterable } from '@candypoets/nipworker/utils';
+import { extractTag, extractTagValue, extractTagValues, readStringVec, type ParsedEvent } from '@candypoets/nipworker';
+import { asKind0, asKind1, asKind7, fbIterable } from '@candypoets/nipworker/utils';
 
 import { CRAYS_PROTOCOL } from '@/nostr/protocol';
 import {
@@ -10,6 +10,8 @@ import type {
   RoomCalendarEvent,
   RoomMembershipOffer,
   RoomPost,
+  RoomPostImage,
+  RoomReaction,
   RoomProduct,
   RoomProfile,
   RoomEntitlementType,
@@ -46,8 +48,19 @@ export function projectRoomPost(event: ParsedEvent, roomId: string): RoomPost | 
   const pubkey = event.pubkey() ?? '';
   const parsed = asKind1(event);
   if (!parsed) return null;
-  const content = Array.from(fbIterable(parsed, 'parsedContent'), (block) => block.text() ?? '').join('').trim();
-  if (!id || !pubkey || !content || (expiration > 0 && expiration <= now)) return null;
+  const rawContent = Array.from(fbIterable(parsed, 'parsedContent'), (block) => block.text() ?? '').join('').trim();
+  const images = Array.from(fbIterable(event, 'tags'), readStringVec)
+    .filter((tag) => tag[0] === 'imeta')
+    .map(parseRoomPostImage)
+    .filter((image): image is RoomPostImage => image !== null);
+  const content = stripRoomPostMediaUrls(rawContent, images);
+  if (!id || !pubkey || (!content && !images.length) || (expiration > 0 && expiration <= now)) return null;
+  const rootTag = extractTag(event, 'e', { where: (tag) => tag[3] === 'root' });
+  const replyTag = extractTag(event, 'e', { where: (tag) => tag[3] === 'reply' });
+  const legacyReplyId = parsed.reply()?.id() || '';
+  const legacyRootId = parsed.root()?.id() || '';
+  const rootId = rootTag?.[1] || legacyRootId || legacyReplyId || '';
+  const replyToId = replyTag?.[1] || (rootTag ? rootTag[1] : legacyReplyId) || '';
   return {
     id,
     pubkey,
@@ -55,7 +68,50 @@ export function projectRoomPost(event: ParsedEvent, roomId: string): RoomPost | 
     createdAt: event.createdAt(),
     announcement: extractTagValue(event, 'type') === 'announcement',
     expiresAt: expiration,
+    images,
+    participantPubkeys: extractTagValues(event, 'p'),
+    ...(replyToId ? { replyToId } : {}),
+    ...(rootId ? { rootId } : {}),
+    ...(rootId ? { rootPubkey: rootTag?.[4] || undefined } : {}),
   };
+}
+
+export function parseRoomPostImage(tag: readonly string[]): RoomPostImage | null {
+  if (tag[0] !== 'imeta') return null;
+  const fields = new Map<string, string>();
+  for (const value of tag.slice(1)) {
+    const separator = value.indexOf(' ');
+    if (separator <= 0) continue;
+    fields.set(value.slice(0, separator), value.slice(separator + 1).trim());
+  }
+  const url = fields.get('url') || '';
+  if (!/^https?:\/\//i.test(url)) return null;
+  const dimensions = /^(\d+)x(\d+)$/.exec(fields.get('dim') || '');
+  return {
+    url,
+    ...(fields.get('m') ? { mimeType: fields.get('m') } : {}),
+    ...(dimensions ? { width: Number(dimensions[1]), height: Number(dimensions[2]) } : {}),
+    ...(fields.get('x') ? { sha256: fields.get('x') } : {}),
+    ...(fields.get('alt') ? { alt: fields.get('alt') } : {}),
+  };
+}
+
+export function stripRoomPostMediaUrls(content: string, images: RoomPostImage[]): string {
+  if (!images.length) return content.trim();
+  const mediaUrls = new Set(images.map((image) => image.url));
+  return content.split('\n').filter((line) => !mediaUrls.has(line.trim())).join('\n').trim();
+}
+
+export function projectRoomReaction(event: ParsedEvent, roomId: string): RoomReaction | null {
+  if (event.kind() !== CRAYS_PROTOCOL.reactionKind || extractTagValue(event, 'h') !== roomId) return null;
+  const expiration = finiteNumber(extractTagValue(event, 'expiration'));
+  const now = Math.floor(Date.now() / 1000);
+  const id = event.id() ?? '';
+  const pubkey = event.pubkey() ?? '';
+  const reaction = asKind7(event);
+  const targetId = reaction?.eventId() || extractTagValue(event, 'e') || '';
+  if (!id || !pubkey || !targetId || reaction?.reactionType() !== 0 || (expiration > 0 && expiration <= now)) return null;
+  return { id, pubkey, targetId, createdAt: event.createdAt(), expiresAt: expiration };
 }
 
 /** Store menu items are single-use NIP-99 listings; passes and tickets stay in access. */

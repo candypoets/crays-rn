@@ -32,6 +32,12 @@
       ],
       "expo-secure-store",
       "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Crays lets you choose photos to share in the active room feed. Selected photos are uploaded only when you post."
+        }
+      ],
       "expo-splash-screen"
     ],
     "experiments": {

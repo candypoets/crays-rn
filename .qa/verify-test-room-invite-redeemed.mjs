@@ -36,7 +36,7 @@ const permissions = membershipDefinition.tags
   .map((tag) => tag.slice(1))
   .sort((left, right) => left[0].localeCompare(right[0]));
 assert(
-  JSON.stringify(permissions) === JSON.stringify([['0', 'write'], ['1', 'write'], ['10312', 'write'], ['4', 'write']]),
+  JSON.stringify(permissions) === JSON.stringify([['0', 'write'], ['1', 'write'], ['4', 'write'], ['7', 'write'], ['10312', 'write']]),
   'Test Room membership grants exactly profile, feed, direct-message, and NIP-53 presence writes',
 );
 const { result: award } = await queryUntil(

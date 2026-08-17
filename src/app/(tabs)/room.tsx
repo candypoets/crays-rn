@@ -5,40 +5,39 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 
 import { useCart } from '@/commerce/Cart';
-import { roomFeedTemplate, venueReportTemplate } from '@/nostr/protocol';
+import { roomReactionTemplate, venueReportTemplate } from '@/nostr/protocol';
 import { relayUrlFor } from '@/rooms/relayUrl';
 import { useRoomData } from '@/rooms/RoomData';
 import { RoomScreen, type RoomView } from '@/screens/room/RoomScreen';
 import { useRoomSession } from '@/session/RoomSession';
 
 export default function RoomRoute() {
-  const params = useLocalSearchParams<{ view?: string }>();
+  const params = useLocalSearchParams<{ liked?: string; view?: string }>();
   const { activeRoom, endedRoom, hydrated } = useRoomSession();
   const data = useRoomData();
   const { count: cartCount } = useCart();
-  const [composer, setComposer] = useState('');
-  const [composerLoading, setComposerLoading] = useState(false);
-  const [composerError, setComposerError] = useState<string | null>(null);
+  const [likingPostId, setLikingPostId] = useState<string | null>(null);
+  const [likedPostIds, setLikedPostIds] = useState<Set<string>>(new Set());
   const [reportingPostId, setReportingPostId] = useState<string | null>(null);
   const [reportNotice, setReportNotice] = useState<string | null>(null);
-  const stopPostPublishRef = useRef<(() => void) | null>(null);
+  const stopLikePublishRef = useRef<(() => void) | null>(null);
   const stopReportPublishRef = useRef<(() => void) | null>(null);
   const view: RoomView = params.view === 'people' || params.view === 'feed' ? params.view : 'menu';
+  const effectiveLikedPostIds = new Set([...likedPostIds, ...(params.liked || '').split(',').filter(Boolean)]);
   useEffect(() => () => {
-    stopPostPublishRef.current?.();
+    stopLikePublishRef.current?.();
     stopReportPublishRef.current?.();
   }, []);
-
   if (!hydrated) return null;
   if (!activeRoom) return endedRoom?.reason === 'automatic'
     ? <Redirect href={{ pathname: '/room-ended', params: { name: endedRoom.name, reason: 'automatic' } } as never} />
     : <Redirect href="/discover" />;
 
-  const publish = () => {
-    const content = composer.trim();
-    if (!content || composerLoading) return;
-    setComposerLoading(true);
-    setComposerError(null);
+  const likePost = (post: (typeof data.posts)[number]) => {
+    const relayAlreadyHasLike = data.reactions.some((reaction) => reaction.targetId === post.id && reaction.pubkey === data.viewerPubkey);
+    if (likingPostId || effectiveLikedPostIds.has(post.id) || relayAlreadyHasLike) return;
+    setLikingPostId(post.id);
+    setReportNotice(null);
     let settled = false;
     let stop: () => void = () => undefined;
     const cancel = () => {
@@ -46,40 +45,42 @@ export default function RoomRoute() {
       settled = true;
       clearTimeout(timeout);
       stop();
-      stopPostPublishRef.current = null;
+      stopLikePublishRef.current = null;
     };
     const finish = (failure?: string) => {
       if (settled) return;
       cancel();
-      if (failure) setComposerError(failure);
-      else setComposer('');
-      setComposerLoading(false);
+      if (failure) setReportNotice(failure);
+      else setLikedPostIds((current) => new Set(current).add(post.id));
+      setLikingPostId(null);
     };
-    const timeout = setTimeout(() => finish('The room did not confirm this post. Check the connection and try again.'), 12_000);
+    const timeout = setTimeout(() => finish('The room did not confirm this like. Check the connection and try again.'), 12_000);
     try {
       stop = publishToNostr(
-        `room_post_${Date.now().toString(36)}`,
-        roomFeedTemplate(
-          activeRoom.id,
-          content,
-          Math.floor(activeRoom.leaveAt / 1000),
-        ),
+        `room_like_${post.id}_${Date.now().toString(36)}`,
+        roomReactionTemplate({
+          roomId: activeRoom.id,
+          relayUrl: relayUrlFor(activeRoom),
+          targetId: post.id,
+          targetPubkey: post.pubkey,
+          expiresAt: Math.floor(activeRoom.leaveAt / 1000),
+        }),
         (message: WorkerMessage) => {
           const status = isConnectionStatus(message);
           const value = status?.status()?.toString().toLowerCase() ?? '';
           if (value === 'ok' || value === 'true' || value.startsWith('true ')) finish();
           else if (value === 'failed' || value.startsWith('false') || value.startsWith('error')) {
-            finish(status?.message()?.trim() || 'The room rejected this post.');
+            finish(status?.message()?.trim() || 'The room rejected this like.');
           }
         },
         { trackStatus: true, defaultRelays: [relayUrlFor(activeRoom)] },
       );
-      stopPostPublishRef.current = cancel;
+      stopLikePublishRef.current = cancel;
     } catch (cause) {
       clearTimeout(timeout);
       stop();
-      setComposerError(cause instanceof Error ? cause.message : 'The post could not be sent.');
-      setComposerLoading(false);
+      setReportNotice(cause instanceof Error ? cause.message : 'The like could not be sent.');
+      setLikingPostId(null);
     }
   };
 
@@ -129,24 +130,33 @@ export default function RoomRoute() {
     <RoomScreen
       activeRoom={activeRoom}
       cartCount={cartCount}
-      composer={composer}
-      composerError={composerError}
-      composerLoading={composerLoading}
       connected={data.connected}
       loading={data.loading}
       onCart={() => router.push('/review-pay' as never)}
-      onChangeComposer={setComposer}
       onChangeView={(next) => router.setParams({ view: next === 'menu' ? undefined : next })}
+      onComposePost={() => router.push('/room-post' as never)}
+      onLikePost={likePost}
       onLeave={() => router.push('/leave-room' as never)}
       onMyNight={() => router.push('/my-night' as never)}
       onOpenPerson={(pubkey) => router.push({ pathname: '/person' as never, params: { pubkey } })}
       onOpenProduct={(product) => router.push({ pathname: '/item' as never, params: { id: product.id } })}
-      onPublish={publish}
+      onOpenThread={(post) => router.push({
+        pathname: '/room-thread' as never,
+        params: {
+          id: post.rootId || post.id,
+          liked: Array.from(new Set([...effectiveLikedPostIds, ...(likingPostId ? [likingPostId] : [])])).join(',') || undefined,
+        },
+      })}
+      onReplyPost={(post) => router.push({ pathname: '/room-post' as never, params: { replyTo: post.id } })}
       onReportPost={reportPost}
       people={data.people}
       posts={data.posts}
       products={data.products}
       profiles={data.profiles}
+      reactions={data.reactions}
+      viewerPubkey={data.viewerPubkey}
+      likedPostIds={effectiveLikedPostIds}
+      likingPostId={likingPostId}
       reportingPostId={reportingPostId}
       reportNotice={reportNotice}
       view={view}
