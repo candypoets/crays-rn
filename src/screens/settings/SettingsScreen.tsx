@@ -75,10 +75,10 @@ export function SettingsScreen({ blocks, blocksError, custody = 'unknown', error
           detail={custody === 'remote-signer'
             ? 'Crays asks your connected signer to approve signed actions.'
             : custody === 'device-only'
-              ? 'Your private key stays in device-only protected storage.'
+              ? 'nipworker keeps this signer with Crays on this device. Removing the app removes local access.'
               : 'Crays could not read the configured signing method.'}
           icon={custody === 'remote-signer' ? 'phone-portrait-outline' : 'key-outline'}
-          title={custody === 'remote-signer' ? 'Connected signer' : 'Protected on this device'}
+          title={custody === 'remote-signer' ? 'Connected signer' : 'Saved in Crays'}
         />
         <SettingsInfoRow badge="Available at login" detail="Connect a Nostr signer or use advanced secret-key import before account setup." icon="link-outline" title="Existing Nostr identity" />
       </View>

@@ -20,12 +20,12 @@ Visual authority: the Night Playlist entry/account board `docs/design-exploratio
 - Display name is trimmed, repeated whitespace is collapsed, and length after trimming must be 2–50 characters.
 - The signed kind-0 content is JSON with both `name` and `display_name` set to the normalized value for compatibility.
 - The event uses no tags in this slice and a current Unix timestamp.
-- The signed event pubkey must equal the protected draft pubkey and `verifyEvent` must pass before storage.
+- The signed event pubkey must equal the validated nipworker account pubkey and `verifyEvent` must pass before storage.
 - The signed event is stored locally for later publication to a justified identity or venue relay; this screen does not choose an arbitrary public backend.
 
 ## Interaction
 
-- Back returns to Account access without deleting the protected draft key.
+- Back returns to Account access without deleting nipworker's saved draft signer.
 - Continue is disabled for invalid input and while signing.
 - Intent chips toggle border/fill on press; selecting an intent never navigates or submits.
 - Return/keyboard behavior must not hide the field or primary action permanently.
@@ -49,7 +49,7 @@ Visual authority: the Night Playlist entry/account board `docs/design-exploratio
 
 ## Nostr and relay behavior
 
-For local custody, the durable `nsec` stays in SecureStore and only its decoded hex scalar reaches nipworker's React Native signer boundary. For NIP-46 custody, Crays restores the saved bunker session and the external signer handles the approval; an `auth_url` challenge opens only when it is a valid HTTPS URL. Both modes sign through the one shared manager, allow up to 90 seconds for human approval, require the returned event pubkey to match the saved identity, and independently verify the signature before storage. No profile publish or data subscription occurs here.
+For local custody, Crays does not keep an app-owned `nsec` in SecureStore. The generated or imported scalar is installed with the one shared nipworker manager, whose persisted account is restored on an ordinary relaunch and removed with the app container on uninstall. For NIP-46 custody, nipworker restores the saved bunker session and the external signer handles approval; an `auth_url` challenge opens only when it is a valid HTTPS URL. Both modes sign through the shared manager, allow up to 90 seconds for human approval, require the returned event pubkey to match the saved account, and independently verify the signature before profile storage. No profile publish or data subscription occurs here.
 
 ## QA strategy
 

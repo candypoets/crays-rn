@@ -2,18 +2,18 @@
 
 ## Outcome
 
-A clean install creates one device-protected Nostr identity, signs a minimal profile, acknowledges that cross-device recovery is not configured, and lands at Discover without requesting permissions or contacting an arbitrary relay.
+A clean install creates one app-local nipworker Nostr identity, signs a minimal profile, acknowledges that removing Crays removes local access unless the key is recoverable elsewhere, and lands at Discover without requesting permissions or contacting an arbitrary relay.
 
 ## Sequence and invariants
 
 1. Entry router resolves empty state to Screen 06.
 2. Screen 06 chooses Create account.
-3. Screen 06B generates and securely persists exactly one identity.
-4. Screen 07 signs and verifies exactly one kind-0 for the normalized display name at the protected local custody boundary.
+3. Screen 06B generates exactly one identity and nipworker persists its signer account in the native app container; Crays writes no credential copy to SecureStore.
+4. Screen 07 signs and verifies exactly one kind-0 for the normalized display name through nipworker.
 5. Screen 07B records device-only completion after explicit acknowledgement.
 6. Discover handoff renders.
 
-At every interruption boundary, relaunch resumes at the first incomplete step. Back never deletes a key or signed draft. The secret is never logged. The flow opens no relay, subscription, Bluetooth scan, location request, camera request, contact request, or notification request.
+At every interruption boundary, an ordinary relaunch resumes at the first incomplete step. A cleared package or true uninstall removes the nipworker account and returns to Welcome even if legacy Keychain items survive. Back never deletes a key or signed draft. The secret is never logged. The flow opens no relay, subscription, Bluetooth scan, location request, camera request, contact request, or notification request.
 
 ## Automated QA stack
 

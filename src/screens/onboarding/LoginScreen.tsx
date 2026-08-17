@@ -71,7 +71,7 @@ export function LoginScreen({
         {preservingInvite
           ? 'Your invitation is saved while you unlock this account.'
           : hasDeviceIdentity
-            ? 'Unlock the Crays identity protected on this device.'
+            ? 'Unlock the Crays identity saved in this app on this device.'
             : 'Connect a signer app, or import a secret key as an advanced option.'}
       </Text>
 

@@ -15,8 +15,8 @@ describe('AccountAccessScreen', () => {
     render(<AccountAccessScreen {...baseProps} />);
 
     expect(screen.getByRole('header', { name: 'Make a Crays identity' })).toBeOnTheScreen();
-    expect(screen.getByText('Local and private')).toBeOnTheScreen();
-    expect(screen.getByText(/identity lives on this device/)).toBeOnTheScreen();
+    expect(screen.getByText('Saved in Crays')).toBeOnTheScreen();
+    expect(screen.getByText(/Removing Crays removes local access/)).toBeOnTheScreen();
     expect(screen.getByText('Built for real places')).toBeOnTheScreen();
     expect(screen.getByText(/Join verified rooms/)).toBeOnTheScreen();
     expect(screen.getByText('Already use Nostr?')).toBeOnTheScreen();

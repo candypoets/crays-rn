@@ -130,7 +130,7 @@ export function AccountRecoveryScreen({
               testID="nostr-connect-method"
             />
             <MethodRow
-              body="Store an existing nsec key in this device’s protected storage."
+              body="Import an existing nsec into nipworker for this Crays installation."
               icon="download-outline"
               label="Import a secret key"
               onPress={() => setMethod('import')}
@@ -206,7 +206,7 @@ export function AccountRecoveryScreen({
             Import a secret key
           </Text>
           <Text className="mt-3 text-lg leading-7 text-muted">
-            Use this only when you cannot connect a signer. Your nsec will be protected on this device and used to sign here.
+            Use this only when you cannot connect a signer. nipworker saves the signer with this Crays installation and uses it to sign here. Removing Crays removes local access.
           </Text>
           <View className="mt-6"><ErrorBanner message={error} /></View>
           <Text className="mt-2 text-xs font-bold uppercase tracking-[2px] text-muted">Nostr secret key</Text>

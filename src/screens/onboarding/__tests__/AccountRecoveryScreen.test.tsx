@@ -22,7 +22,7 @@ describe('AccountRecoveryScreen', () => {
     expect(screen.getByRole('header', { name: 'Use your Nostr identity' })).toBeOnTheScreen();
     expect(screen.getByText('Recommended')).toBeOnTheScreen();
     expect(screen.getByText(/signer keeps the secret key/)).toBeOnTheScreen();
-    expect(screen.getByText(/protected storage/)).toBeOnTheScreen();
+    expect(screen.getByText(/Import an existing nsec into nipworker/)).toBeOnTheScreen();
     expect(screen.queryByText('Continue with Apple')).not.toBeOnTheScreen();
     expect(screen.queryByText('Continue with Google')).not.toBeOnTheScreen();
   });

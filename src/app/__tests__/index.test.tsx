@@ -33,7 +33,7 @@ describe('EntryRoute', () => {
     getDestination.mockRejectedValueOnce(new Error('storage unavailable')).mockResolvedValueOnce('/welcome');
     const view = render(<EntryRoute />);
     await waitFor(() => expect(view.getByRole('alert')).toBeTruthy());
-    expect(view.getByText('Crays could not read the protected account state.')).toBeTruthy();
+    expect(view.getByText('Crays could not read the saved account state.')).toBeTruthy();
     expect(getDestination).toHaveBeenCalledTimes(1);
     await act(async () => fireEvent.press(view.getByTestId('entry-retry')));
     await waitFor(() => expect(view.getByTestId('entry-redirect')).toHaveTextContent('/welcome'));

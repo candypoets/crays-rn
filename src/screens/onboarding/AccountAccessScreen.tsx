@@ -36,8 +36,8 @@ type ChecklistRow = {
 const checklist: ChecklistRow[] = [
   {
     icon: 'lock-closed-outline',
-    title: 'Local and private',
-    body: 'Your identity lives on this device. It’s not published anywhere.',
+    title: 'Saved in Crays',
+    body: 'Your identity lives in this app on this device. Removing Crays removes local access. It’s not published anywhere.',
   },
   {
     icon: 'person-outline',

@@ -2,7 +2,7 @@
 
 ## Product and implementation contract
 
-Settings reports the validated signing method instead of assuming every identity owns a local key. A device-held or imported key shows **Protected on this device · Local** and its device-only storage consequence. A NIP-46 identity shows **Connected signer · NIP-46**, explains that Crays asks that signer to approve actions, and never implies that the user's secret key is stored here. **Existing Nostr identity** truthfully points out that signer connection and advanced import are available during login; Apple/Google/provider rows are absent.
+Settings reports the validated nipworker signing method instead of assuming every identity owns a local key. A device-held or imported key shows **Saved in Crays · Local** and states that removing the app removes local access. A NIP-46 identity shows **Connected signer · NIP-46**, explains that Crays asks that signer to approve actions, and never implies that the user's secret key is stored here. **Existing Nostr identity** truthfully points out that signer connection and advanced import are available during login; Apple/Google/provider rows are absent.
 
 The rest of Settings remains the operational privacy surface: persisted venue/global blocks with exact-scope unblock, per-room presence, request limits, notification state, custody-specific recovery copy, and room controls. This route reads only the public account summary and never exposes nsec or signer client credentials.
 
@@ -14,4 +14,4 @@ The rest of Settings remains the operational privacy surface: persisted venue/gl
 
 ## QA
 
-`scenario:settings` uses a deterministic device signer and asserts **Protected on this device**, **Existing Nostr identity**, notifications, privacy, and empty-block truth. `scenario:safety-blocks` covers exact-scope unblock and persistence. `SettingsScreen.test.tsx` additionally injects remote custody and requires **Connected signer · NIP-46** while forbidding device-key copy. Account-layer tests prove that the public summary never contains an nsec or NIP-46 client secret.
+`scenario:settings` uses a deterministic device signer and asserts local custody, **Existing Nostr identity**, notifications, privacy, and empty-block truth. `scenario:safety-blocks` covers exact-scope unblock and persistence. `SettingsScreen.test.tsx` requires **Saved in Crays** plus the uninstall consequence for local custody, and injects remote custody to require **Connected signer · NIP-46** while forbidding device-key copy. Account-layer tests prove that the public summary never contains an nsec, private scalar, or NIP-46 client secret.

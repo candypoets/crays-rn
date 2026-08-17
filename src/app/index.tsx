@@ -21,7 +21,7 @@ export default function EntryRoute() {
         if (active) setDestination(resolveResumeDestination(next, Boolean(room)));
       })
       .catch(() => {
-        if (active) setError('Crays could not read the protected account state.');
+        if (active) setError('Crays could not read the saved account state.');
       });
     return () => {
       active = false;

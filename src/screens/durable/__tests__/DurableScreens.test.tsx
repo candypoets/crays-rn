@@ -75,7 +75,7 @@ describe('durable screens', () => {
     const memberships = jest.fn(); const messages = jest.fn(); const orders = jest.fn(); const profile = jest.fn(); const room = jest.fn(); const tickets = jest.fn(); const wallet = jest.fn();
     const view = render(<MeScreen accountState={{ status: 'ready', account }} activeOrder={order} hasMembership onMemberships={memberships} onMessages={messages} onOrders={orders} onProfile={profile} onRoom={room} onTickets={tickets} onWallet={wallet} roomName="Skyline" ticketCount={1} />);
     expect(view.getByText('Ready for pickup')).toBeTruthy(); expect(view.getByText('1 saved ticket')).toBeTruthy(); expect(view.queryByText(order.orderRef, { exact: false })).toBeNull(); expect(view.queryByText(/relay-confirmed/i)).toBeNull();
-    expect(view.getByText(account.displayName)).toBeTruthy(); expect(view.getByText('Protected on this device')).toBeTruthy(); expect(view.getByText('Settings & privacy')).toBeTruthy();
+    expect(view.getByText(account.displayName)).toBeTruthy(); expect(view.getByText('Saved in Crays')).toBeTruthy(); expect(view.getByText('Settings & privacy')).toBeTruthy();
     expect(view.getByLabelText('Skyline. You’re inside. Return to room')).toBeTruthy();
     ['me-current-room', 'me-orders', 'me-memberships', 'me-tickets', 'me-wallet', 'me-messages', 'me-profile'].forEach((id) => fireEvent.press(view.getByTestId(id)));
     expect(room).toHaveBeenCalledTimes(1); expect(orders).toHaveBeenCalled(); expect(memberships).toHaveBeenCalled(); expect(tickets).toHaveBeenCalled(); expect(wallet).toHaveBeenCalled(); expect(messages).toHaveBeenCalled(); expect(profile).toHaveBeenCalled();

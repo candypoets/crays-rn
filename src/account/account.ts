@@ -15,12 +15,15 @@ import {
 import { getNostrRuntime } from '@/nostr/manager';
 
 const STORAGE = {
-  nsec: 'crays.identity.nsec',
-  pubkey: 'crays.identity.pubkey',
-  signer: 'crays.identity.signer',
   profile: 'crays.identity.profile',
   complete: 'crays.onboarding.complete',
 } as const;
+
+const LEGACY_CREDENTIAL_STORAGE = [
+  'crays.identity.nsec',
+  'crays.identity.pubkey',
+  'crays.identity.signer',
+] as const;
 
 export type { EntryDestination } from '@/account/state';
 
@@ -39,6 +42,11 @@ type StoredSigner =
   | { type: 'nip46'; payload: Nip46SignerPayload }
   | { type: 'privkey' };
 
+type PersistedIdentity = {
+  pubkey: string;
+  signer: StoredSigner;
+};
+
 export type LocalAccountSummary = {
   custody: 'device-only' | 'remote-signer';
   displayName: string;
@@ -55,40 +63,26 @@ export type LocalAccountRead =
   | { status: 'missing' };
 
 let identityRequest: Promise<LocalIdentity> | null = null;
+let legacyCredentialPurge: Promise<void> | null = null;
 
 const secureOptions: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
 };
 
 export async function getEntryDestination(): Promise<EntryDestination> {
-  const [nsec, pubkey, signer, profile, complete] = await Promise.all([
-    SecureStore.getItemAsync(STORAGE.nsec),
-    SecureStore.getItemAsync(STORAGE.pubkey),
-    SecureStore.getItemAsync(STORAGE.signer),
+  await purgeLegacyCredentialStorage();
+  const identity = readPersistedIdentity(getNostrRuntime().manager);
+  const [profile, complete] = await Promise.all([
     SecureStore.getItemAsync(STORAGE.profile),
     SecureStore.getItemAsync(STORAGE.complete),
   ]);
 
-  const hasIdentity = Boolean(readStoredSigner(nsec, pubkey, signer));
+  const hasIdentity = Boolean(identity);
   return resolveEntryDestination({
     complete: complete === '1',
     hasIdentity,
-    hasProfile: hasIdentity && isStoredProfileValid(profile, pubkey),
+    hasProfile: hasIdentity && isStoredProfileValid(profile, identity?.pubkey ?? null),
   });
-}
-
-function isStoredPrivateKeyValid(nsec: string | null, pubkey: string | null): boolean {
-  if (!nsec || !pubkey) return false;
-  try {
-    const decoded = nip19.decode(nsec);
-    return (
-      decoded.type === 'nsec' &&
-      decoded.data instanceof Uint8Array &&
-      getPublicKey(decoded.data) === pubkey
-    );
-  } catch {
-    return false;
-  }
 }
 
 function isNip46Payload(value: unknown): value is Nip46SignerPayload {
@@ -102,30 +96,47 @@ function isNip46Payload(value: unknown): value is Nip46SignerPayload {
   );
 }
 
-function readStoredSigner(
-  nsec: string | null,
-  pubkey: string | null,
-  stored: string | null,
-): StoredSigner | null {
-  if (!pubkey || !/^[0-9a-f]{64}$/i.test(pubkey)) return null;
 
-  // Identities created before signer metadata was introduced are local-key
-  // identities. This preserves upgrades without weakening validation.
-  if (!stored) return isStoredPrivateKeyValid(nsec, pubkey) ? { type: 'privkey' } : null;
-
+function isPrivateSignerPayload(value: unknown, pubkey: string): value is string {
+  if (typeof value !== 'string' || !/^[0-9a-f]{64}$/i.test(value)) return false;
   try {
-    const descriptor = JSON.parse(stored) as { type?: unknown; payload?: unknown };
-    if (descriptor.type === 'privkey') {
-      return isStoredPrivateKeyValid(nsec, pubkey) ? { type: 'privkey' } : null;
-    }
-    if (descriptor.type === 'nip46' && !nsec && isNip46Payload(descriptor.payload)) {
-      return { type: 'nip46', payload: descriptor.payload };
-    }
+    const bytes = Uint8Array.from(value.match(/../g)!.map((byte) => Number.parseInt(byte, 16)));
+    return getPublicKey(bytes) === pubkey;
   } catch {
-    // Invalid signer metadata is an inconsistent account, never a cue to
-    // generate a replacement identity.
+    return false;
+  }
+}
+
+export function readPersistedIdentity(manager: NostrManagerLike | null): PersistedIdentity | null {
+  if (!manager) return null;
+  const accounts = manager.getAccounts();
+  const activePubkey = manager.getActivePubkey();
+  const candidates = activePubkey && accounts[activePubkey]
+    ? [[activePubkey, accounts[activePubkey]] as const]
+    : Object.entries(accounts);
+
+  for (const [pubkey, account] of candidates) {
+    if (!/^[0-9a-f]{64}$/i.test(pubkey)) continue;
+    if (account.type === 'privkey' && isPrivateSignerPayload(account.payload, pubkey)) {
+      return { pubkey, signer: { type: 'privkey' } };
+    }
+    if (account.type === 'nip46' && isNip46Payload(account.payload)) {
+      return { pubkey, signer: { type: 'nip46', payload: account.payload } };
+    }
   }
   return null;
+}
+
+async function purgeLegacyCredentialStorage(): Promise<void> {
+  if (!legacyCredentialPurge) {
+    legacyCredentialPurge = Promise.all(
+      LEGACY_CREDENTIAL_STORAGE.map((key) => SecureStore.deleteItemAsync(key)),
+    ).then(() => undefined).catch((error) => {
+      legacyCredentialPurge = null;
+      throw error;
+    });
+  }
+  return legacyCredentialPurge;
 }
 
 function isStoredProfileValid(profile: string | null, pubkey: string | null): boolean {
@@ -144,24 +155,21 @@ export function abbreviateNpub(npub: string): string {
 }
 
 /**
- * Returns one validated, public-only view of the local account. Reads that
- * fail are allowed to reject: an unavailable Keychain is never evidence that
- * the account is missing and must not redirect or create a replacement key.
+ * Returns one validated, public-only view of nipworker's saved account plus
+ * the signed local profile. Profile reads may reject; storage failure is never
+ * evidence that a replacement identity should be generated.
  */
 export async function readLocalAccountSummary(): Promise<LocalAccountRead> {
-  const [nsec, pubkey, signerValue, profile, complete] = await Promise.all([
-    SecureStore.getItemAsync(STORAGE.nsec),
-    SecureStore.getItemAsync(STORAGE.pubkey),
-    SecureStore.getItemAsync(STORAGE.signer),
+  await purgeLegacyCredentialStorage();
+  const identity = readPersistedIdentity(getNostrRuntime().manager);
+  const [profile, complete] = await Promise.all([
     SecureStore.getItemAsync(STORAGE.profile),
     SecureStore.getItemAsync(STORAGE.complete),
   ]);
-  const hasAnyAccountMaterial = Boolean(nsec || pubkey || signerValue || profile || complete);
-  if (!hasAnyAccountMaterial) return { status: 'missing' };
-  const signer = readStoredSigner(nsec, pubkey, signerValue);
-  if (!signer) return { status: 'invalid' };
+  if (!identity) return { status: 'missing' };
+  const { pubkey, signer } = identity;
 
-  const publicIdentity = { npub: nip19.npubEncode(pubkey!), pubkey: pubkey! };
+  const publicIdentity = { npub: nip19.npubEncode(pubkey), pubkey };
   if (!profile) {
     return complete === '1'
       ? { status: 'invalid' }
@@ -201,7 +209,7 @@ export async function readLocalAccountSummary(): Promise<LocalAccountRead> {
 function nsecToSignerHex(nsec: string): string {
   const decoded = nip19.decode(nsec);
   if (decoded.type !== 'nsec' || !(decoded.data instanceof Uint8Array)) {
-    throw new Error('The protected account key is not a valid Nostr secret.');
+    throw new Error('The Nostr account key is not a valid secret.');
   }
   return Array.from(decoded.data, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
@@ -278,65 +286,46 @@ function waitForSigner(
   });
 }
 
-async function readIdentityMaterial() {
-  const [nsec, pubkey, signer, profile, complete] = await Promise.all([
-    SecureStore.getItemAsync(STORAGE.nsec),
-    SecureStore.getItemAsync(STORAGE.pubkey),
-    SecureStore.getItemAsync(STORAGE.signer),
-    SecureStore.getItemAsync(STORAGE.profile),
-    SecureStore.getItemAsync(STORAGE.complete),
-  ]);
-  return { complete, nsec, profile, pubkey, signer };
-}
-
 async function assertNoStoredIdentity(): Promise<void> {
-  const material = await readIdentityMaterial();
-  if (Object.values(material).some(Boolean)) {
+  await purgeLegacyCredentialStorage();
+  const manager = getNostrRuntime().manager;
+  if (manager && (manager.getActivePubkey() || Object.keys(manager.getAccounts()).length > 0)) {
     throw new Error('An identity already exists on this device. Remove it from Settings before adding another.');
   }
+  await Promise.all([
+    SecureStore.deleteItemAsync(STORAGE.profile),
+    SecureStore.deleteItemAsync(STORAGE.complete),
+  ]);
 }
 
-async function persistIdentity(identity: LocalIdentity, signer: StoredSigner): Promise<void> {
-  try {
-    await Promise.all([
-      identity.nsec
-        ? SecureStore.setItemAsync(STORAGE.nsec, identity.nsec, secureOptions)
-        : SecureStore.deleteItemAsync(STORAGE.nsec),
-      SecureStore.setItemAsync(STORAGE.pubkey, identity.pubkey, secureOptions),
-      SecureStore.setItemAsync(STORAGE.signer, JSON.stringify(signer), secureOptions),
-      SecureStore.deleteItemAsync(STORAGE.profile),
-      SecureStore.deleteItemAsync(STORAGE.complete),
-    ]);
-  } catch (error) {
-    await Promise.allSettled(Object.values(STORAGE).map((key) => SecureStore.deleteItemAsync(key)));
-    throw error;
-  }
+async function resetOnboardingProjection(): Promise<void> {
+  await Promise.all([
+    SecureStore.deleteItemAsync(STORAGE.profile),
+    SecureStore.deleteItemAsync(STORAGE.complete),
+  ]);
 }
 
 async function activateStoredIdentity(): Promise<LocalIdentity> {
+  await purgeLegacyCredentialStorage();
   const runtime = getNostrRuntime();
   if (!runtime.manager) {
     throw new Error('The secure Nostr engine is unavailable. Use a Crays development build.');
   }
 
-  const { nsec, pubkey, signer: signerValue } = await readIdentityMaterial();
-  const signer = readStoredSigner(nsec, pubkey, signerValue);
-  if (!signer || !pubkey) {
+  const identity = readPersistedIdentity(runtime.manager);
+  if (!identity) {
     throw new Error('No valid Nostr identity is available on this device. Log in or create one first.');
   }
-  if (runtime.manager.getActivePubkey() === pubkey) {
-    return { ...(nsec ? { nsec } : {}), pubkey, signer: signer.type };
+  if (runtime.manager.getActivePubkey() === identity.pubkey) {
+    return { pubkey: identity.pubkey, signer: identity.signer.type };
   }
 
   await waitForSigner(
     runtime.manager,
-    () => {
-      if (signer.type === 'privkey') runtime.manager!.setSigner('privkey', nsecToSignerHex(nsec!));
-      else runtime.manager!.setSigner('nip46', signer.payload);
-    },
-    { expectedPubkey: pubkey, timeoutMs: signer.type === 'nip46' ? 60_000 : 15_000 },
+    () => runtime.manager!.switchAccount(identity.pubkey),
+    { expectedPubkey: identity.pubkey, timeoutMs: identity.signer.type === 'nip46' ? 60_000 : 15_000 },
   );
-  return { ...(nsec ? { nsec } : {}), pubkey, signer: signer.type };
+  return { pubkey: identity.pubkey, signer: identity.signer.type };
 }
 
 export function ensureActiveIdentity(): Promise<LocalIdentity> {
@@ -358,7 +347,7 @@ export async function createLocalIdentity(): Promise<LocalIdentity> {
     () => runtime.manager!.setSigner('privkey', nsecToSignerHex(identity.nsec!)),
     { expectedPubkey: identity.pubkey, timeoutMs: 15_000 },
   );
-  await persistIdentity(identity, { type: 'privkey' });
+  await resetOnboardingProjection();
   if (__DEV__) console.info(`[onboarding-identity]${JSON.stringify({ pubkey: identity.pubkey, signer: 'privkey' })}`);
   return identity;
 }
@@ -382,7 +371,7 @@ export async function importNostrSecret(secretInput: string): Promise<LocalIdent
     { expectedPubkey: pubkey, timeoutMs: 15_000 },
   );
   const identity: LocalIdentity = { nsec, pubkey, signer: 'privkey' };
-  await persistIdentity(identity, { type: 'privkey' });
+  await resetOnboardingProjection();
   if (__DEV__) console.info(`[onboarding-identity]${JSON.stringify({ pubkey, signer: 'imported-privkey' })}`);
   return identity;
 }
@@ -411,7 +400,7 @@ export async function connectNip46Signer({
       throw new Error('The signer connected without a reusable bunker session. Please try again.');
     }
     const identity: LocalIdentity = { pubkey, signer: 'nip46' };
-    await persistIdentity(identity, { type: 'nip46', payload });
+    await resetOnboardingProjection();
     if (__DEV__) console.info(`[onboarding-identity]${JSON.stringify({ pubkey, signer: 'nip46' })}`);
     return identity;
   } catch (error) {
@@ -487,35 +476,26 @@ export async function createLocalProfile(displayNameInput: string): Promise<Nost
 }
 
 export async function completeLocalOnboarding(): Promise<void> {
-  const [profile, pubkey, nsec, signerValue] = await Promise.all([
-    SecureStore.getItemAsync(STORAGE.profile),
-    SecureStore.getItemAsync(STORAGE.pubkey),
-    SecureStore.getItemAsync(STORAGE.nsec),
-    SecureStore.getItemAsync(STORAGE.signer),
-  ]);
-  const signer = readStoredSigner(nsec, pubkey, signerValue);
-  if (!signer || !isStoredProfileValid(profile, pubkey)) {
+  await purgeLegacyCredentialStorage();
+  const identity = readPersistedIdentity(getNostrRuntime().manager);
+  const profile = await SecureStore.getItemAsync(STORAGE.profile);
+  if (!identity || !isStoredProfileValid(profile, identity.pubkey)) {
     throw new Error('Your saved profile is missing or invalid. Return and save it again.');
   }
   await SecureStore.setItemAsync(STORAGE.complete, '1', secureOptions);
-  if (__DEV__) console.info(`[onboarding-complete]${JSON.stringify({ recovery: signer.type === 'nip46' ? 'remote-signer' : 'device-only' })}`);
+  if (__DEV__) console.info(`[onboarding-complete]${JSON.stringify({ recovery: identity.signer.type === 'nip46' ? 'remote-signer' : 'device-only' })}`);
 }
 
 export async function getLocalPubkey(): Promise<string | null> {
-  const [nsec, pubkey, signer] = await Promise.all([
-    SecureStore.getItemAsync(STORAGE.nsec),
-    SecureStore.getItemAsync(STORAGE.pubkey),
-    SecureStore.getItemAsync(STORAGE.signer),
-  ]);
-  return readStoredSigner(nsec, pubkey, signer) ? pubkey : null;
+  await purgeLegacyCredentialStorage();
+  return readPersistedIdentity(getNostrRuntime().manager)?.pubkey ?? null;
 }
 
 export async function getLocalProfileTemplate(): Promise<EventTemplate | null> {
-  const [profile, pubkey] = await Promise.all([
-    SecureStore.getItemAsync(STORAGE.profile),
-    SecureStore.getItemAsync(STORAGE.pubkey),
-  ]);
-  if (!isStoredProfileValid(profile, pubkey)) return null;
+  await purgeLegacyCredentialStorage();
+  const identity = readPersistedIdentity(getNostrRuntime().manager);
+  const profile = await SecureStore.getItemAsync(STORAGE.profile);
+  if (!identity || !isStoredProfileValid(profile, identity.pubkey)) return null;
   const event = JSON.parse(profile!) as NostrEvent;
   return {
     kind: 0,
@@ -526,7 +506,13 @@ export async function getLocalProfileTemplate(): Promise<EventTemplate | null> {
 }
 
 export async function resetLocalOnboarding(): Promise<void> {
-  await Promise.all(Object.values(STORAGE).map((key) => SecureStore.deleteItemAsync(key)));
+  await Promise.all([
+    purgeLegacyCredentialStorage(),
+    ...Object.values(STORAGE).map((key) => SecureStore.deleteItemAsync(key)),
+  ]);
+  const manager = getNostrRuntime().manager;
+  manager?.removeAccount();
+  manager?.logout();
 }
 
 /**
@@ -543,7 +529,12 @@ export async function seedQaIdentity(nsec: string, displayName = 'Maya QA'): Pro
   const identity: LocalIdentity = { nsec, pubkey: getPublicKey(decoded.data), signer: 'privkey' };
   const runtime = getNostrRuntime();
   if (!runtime.manager) throw new Error('The secure Nostr engine is unavailable.');
-  runtime.manager.setSigner('privkey', nsecToSignerHex(nsec));
+  await purgeLegacyCredentialStorage();
+  await waitForSigner(
+    runtime.manager,
+    () => runtime.manager!.setSigner('privkey', nsecToSignerHex(nsec)),
+    { expectedPubkey: identity.pubkey, timeoutMs: 15_000 },
+  );
   const template: EventTemplate = {
     kind: 0,
     created_at: Math.floor(Date.now() / 1000),
@@ -555,9 +546,6 @@ export async function seedQaIdentity(nsec: string, displayName = 'Maya QA'): Pro
     throw new Error('The QA profile signature could not be verified.');
   }
   await Promise.all([
-    SecureStore.setItemAsync(STORAGE.nsec, nsec, secureOptions),
-    SecureStore.setItemAsync(STORAGE.pubkey, identity.pubkey, secureOptions),
-    SecureStore.setItemAsync(STORAGE.signer, JSON.stringify({ type: 'privkey' }), secureOptions),
     SecureStore.setItemAsync(STORAGE.profile, JSON.stringify(profile), secureOptions),
     SecureStore.setItemAsync(STORAGE.complete, '1', secureOptions),
   ]);

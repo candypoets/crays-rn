@@ -18,7 +18,7 @@ export default function RecoveryRoute() {
       if (result.status === 'ready') setCustody(result.account.custody);
       else setError('Crays could not verify the identity setup on this device.');
     }).catch(() => {
-      if (active) setError('Crays could not read the protected identity on this device.');
+      if (active) setError('Crays could not read the saved signing account on this device.');
     });
     return () => { active = false; };
   }, []);

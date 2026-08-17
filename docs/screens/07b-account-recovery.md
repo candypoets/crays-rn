@@ -12,7 +12,7 @@ Visual authority: the Night Playlist entry/account board `docs/design-exploratio
   follows panel 08 and does not invent a progress-step indicator.
 - Blue lock medallion: soft lilac outer ring, white ring, blue core with a white lock. Decorative; no biometric or unlock affordance is attached to it.
 - **Keep your account with you** — centered headline.
-- **This device, for now** — caption, then the custody truth: your private key stays protected on this device and cross-device recovery is not enabled yet.
+- **This device, for now** — caption, then the custody truth: nipworker saves this signer with the Crays installation, removing Crays removes local access, and cross-device recovery is not enabled yet.
 - Guard row: before you add money or buy a durable item, Crays will ask you to add recovery.
 - **Continue to Discover** — the one committed action.
 - Assurance that raw key material is never revealed unless explicitly requested.
@@ -26,7 +26,7 @@ Visual authority: the Night Playlist entry/account board `docs/design-exploratio
 
 ## States and failures
 
-- Loading: no custody claim or finish action until the protected descriptor is validated.
+- Loading: no custody claim or finish action until the nipworker account and signed profile are validated.
 - Device-only consequence.
 - Connected NIP-46 signer consequence and signer-owned recovery copy.
 - Saving with disabled repeat action.

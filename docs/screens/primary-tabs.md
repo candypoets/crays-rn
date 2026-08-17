@@ -50,7 +50,7 @@ identity or route paths.
 ## Deterministic states and failures
 
 - **Cold authenticated entry:** entry routing selects Room or Discover from
-  protected account and active-room state before the tab surface appears.
+  saved nipworker account and active-room state before the tab surface appears.
 - **First visit:** a tab may mount lazily and shows the destination's existing
   loading, empty, or cached state.
 - **Return visit:** the destination remains mounted; state is not reset just

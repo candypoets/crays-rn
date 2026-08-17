@@ -8,7 +8,7 @@ describe('RecoveryScreen', () => {
 
     expect(screen.getByRole('header', { name: 'Keep your account with you' })).toBeOnTheScreen();
     expect(screen.getByText('This device, for now')).toBeOnTheScreen();
-    expect(screen.getByText(/private key stays protected on this device/)).toBeOnTheScreen();
+    expect(screen.getByText(/Removing Crays removes local access/)).toBeOnTheScreen();
     expect(screen.getByText(/Cross-device recovery is not enabled yet/)).toBeOnTheScreen();
     expect(screen.getByText(/Before you add money or buy a durable item/)).toBeOnTheScreen();
   });
@@ -34,12 +34,12 @@ describe('RecoveryScreen', () => {
     expect(screen.queryByText('This device, for now')).not.toBeOnTheScreen();
   });
 
-  it('does not invent custody while the protected account is loading', () => {
+  it('does not invent custody while the saved account is loading', () => {
     render(<RecoveryScreen custody={null} onBack={jest.fn()} onFinish={jest.fn()} />);
     expect(screen.getByRole('header', { name: 'Checking your signing setup' })).toBeOnTheScreen();
     expect(screen.getByRole('progressbar')).toBeOnTheScreen();
     expect(screen.queryByTestId('finish-account-button')).not.toBeOnTheScreen();
-    expect(screen.queryByText(/private key stays protected/)).not.toBeOnTheScreen();
+    expect(screen.queryByText(/Removing Crays removes local access/)).not.toBeOnTheScreen();
   });
 
   it('surfaces completion errors and keeps Back with the router owner', () => {

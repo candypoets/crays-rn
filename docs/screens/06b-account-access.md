@@ -11,7 +11,7 @@ Visual authority: the Night Playlist entry/account board `docs/design-exploratio
 - Back (upper left) and the plum Crays mark (upper right).
 - **Make a Crays identity**.
 - A three-row pre-show checklist; each row is a soft lilac icon disc with a bold title and one consequence line:
-  1. **Local and private** — Your identity lives on this device. It's not published anywhere.
+  1. **Saved in Crays** — Your identity lives in this app on this device; removing Crays removes local access; it is not published anywhere.
   2. **Built for real places** — Join verified rooms. Your presence isn't shown before you enter.
   3. **Already use Nostr?** — Connect your signer instead. Crays never needs its secret key.
 - One bottom blue **Create on this device** primary action.
@@ -25,7 +25,7 @@ Pressing the primary action starts the same idempotent operation:
 2. Generate 32 bytes from the platform cryptographic RNG.
 3. Derive the Nostr public key and encode the secret as `nsec`.
 4. Require and configure the existing nipworker manager's `privkey` signer, then confirm that it returns the derived public key.
-5. Persist secret, public key, and `{type: privkey}` signer descriptor using device-only secure-storage accessibility, rolling back all account records on a storage failure.
+5. Let nipworker persist its validated `{type: privkey, payload: <hex scalar>}` account in the native app container. Crays writes no nsec, scalar, public key, or signer descriptor to SecureStore.
 6. Navigate to `/profile`.
 
 The route disables the action while work is active. It must never create two identities from repeat taps.
@@ -34,7 +34,7 @@ The route disables the action while work is active. It must never create two ide
 
 - Default.
 - Creating: the primary action is disabled, announces busy, and its label becomes a stable progress state.
-- Secure RNG, storage, or native signer unavailable: the same form stays; an error banner above the action shows specific recovery copy and there is no navigation.
+- Secure RNG, native account storage, or signer unavailable: the same form stays; an error banner above the action shows specific recovery copy and there is no navigation.
 - Existing-account action: pushes `/login` (screen 09, implemented); no protected state changes.
 - Relaunch after identity persistence: entry router resumes at Profile rather than returning here.
 
@@ -57,6 +57,6 @@ This screen creates Nostr signing identity but deliberately publishes nothing. T
 
 ## Exit criteria
 
-- One secure local identity survives relaunch.
+- One local nipworker identity survives an ordinary relaunch and is removed by app uninstall/package-state clearing.
 - No secret appears in logs, UI, screenshots, or QA state files.
 - No relay, subscription, provider SDK, or permission prompt is used.

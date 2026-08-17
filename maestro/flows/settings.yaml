@@ -12,7 +12,7 @@ appId: life.crays
     visible:
       id: "settings-screen"
     timeout: 15000
-- assertVisible: "Protected on this device"
+- assertVisible: "Saved in Crays"
 - assertVisible: "Existing Nostr identity"
 - assertVisible: "Not configured"
 - assertVisible: "Presence defaults"

@@ -13,8 +13,8 @@ Visual authority: Night Playlist board 02 panel 08. The blue lock medallion rema
 - Back and Crays mark; decorative medallion hidden from accessibility.
 - Existing identity: **Welcome back**, preserved-invitation truth when applicable, **Unlock on this device**, no-password explanation, and **Create a new account**.
 - No identity: **Log in with Nostr**, signer/import summary, **Use an existing Nostr identity**, no-password explanation, quiet **Choose a login method**, and **Create a new account**.
-- Protected-store loading/error, missing identity, invalid descriptor, native signer unavailable, local unlock, remote signer reconnect/timeout/rejection, and success all remain distinct.
-- A remote identity restores its persisted bunker session and waits for the signer; a local identity decodes the protected nsec only at the manager boundary. The returned public key must match storage.
+- Signer-account/profile loading error, missing identity, invalid nipworker account, native signer unavailable, local unlock, remote signer reconnect/timeout/rejection, and success all remain distinct.
+- A remote identity restores nipworker's persisted bunker session and waits for the signer; a local identity uses nipworker's persisted private-key account. Crays does not read an nsec from Keychain. The returned public key must match the selected nipworker account.
 
 ## Accessibility
 

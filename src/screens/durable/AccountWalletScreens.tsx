@@ -127,7 +127,7 @@ function MeIdentityCard({
               ? 'Create an account before entering a room.'
               : state.status === 'incomplete'
                 ? 'Choose the name rooms will see when you enter visibly.'
-                : 'Your protected account data is incomplete or inconsistent.'}
+                : 'Your saved account data is incomplete or inconsistent.'}
           </Text>
         </View>
       </View>
@@ -139,7 +139,7 @@ function MeIdentityCard({
     ? 'Account setup not finished'
     : account.custody === 'remote-signer'
       ? 'Connected signer'
-      : 'Protected on this device';
+      : 'Saved in Crays';
   return (
     <View className="mt-5 overflow-hidden rounded-2xl border border-edge bg-surface" testID="me-account-card">
       <Pressable
@@ -178,7 +178,7 @@ function MeIdentityCard({
             This is the name rooms see when you choose to be visible. Your secret key is never shown here.
           </Text>
           <Text className="mt-2 text-sm font-semibold text-ink">
-            {account.custody === 'remote-signer' ? 'Signing stays with your connected signer' : 'Saved on this device'}
+            {account.custody === 'remote-signer' ? 'Signing stays with your connected signer' : 'Saved with Crays on this device'}
           </Text>
         </View>
       ) : null}

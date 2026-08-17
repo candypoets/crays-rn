@@ -21,14 +21,14 @@ Visual authority remains Night Playlist entry/account board 02 panel 08, reframe
 - QR login creates an ephemeral client key and random challenge with the platform cryptographic RNG, builds `nostrconnect://<client-pubkey>?relay=…&secret=…&name=Crays&perms=…`, requests only the NIP-04 and exact event-kind permissions currently used by Crays, and passes the URL plus client secret to the one app-wide nipworker manager.
 - Discovery relays come from comma-separated `EXPO_PUBLIC_CRAYS_NIP46_RELAYS`; the release fallback is `wss://relay.nsec.app`. A pasted bunker link uses only its declared `ws(s)` relay parameters.
 - The screen listens for nipworker's narrowed `auth` result, requires a 64-character public key and `hasSigner=true`, and waits up to 120 seconds. Rejection, timeout, malformed response, or cancel removes listeners and locks the pending signer.
-- Successful QR discovery must return a reusable `bunker://` session. Crays stores only `{type: nip46, url, clientSecret}` and the public key in device-only SecureStore; it never receives or stores the user's Nostr secret key. The profile/signing layer restores that signer on relaunch and opens a valid NIP-46 `auth_url` challenge when required.
-- Advanced import accepts only a valid NIP-19 `nsec`, derives and confirms its public key through nipworker, then stores the nsec with `WHEN_UNLOCKED_THIS_DEVICE_ONLY`. The input is cleared immediately on submit and is never logged, echoed, or displayed again.
+- Successful QR discovery must return a reusable `bunker://` session. nipworker owns the saved NIP-46 account and restores it on relaunch; Crays does not duplicate the bunker descriptor or client secret into SecureStore. The signing layer opens a valid NIP-46 `auth_url` challenge when required.
+- Advanced import accepts only a valid NIP-19 `nsec`, derives and confirms its public key through nipworker, and installs the scalar as nipworker's private-key account. Crays never writes the nsec, scalar, public key, or signer descriptor to SecureStore. The input is cleared immediately on submit and is never logged, echoed, or displayed again. Removing the app removes this local nipworker account; recovery requires the original Nostr key.
 - nipworker remains the only signer/relay engine. No screen creates a manager, mirrors subscription buffers, or introduces an API backend.
 
 ## States and failures
 
 - Method selection; QR preparing; QR ready/waiting; same-device signer app unavailable; bunker entry; signer rejected; timeout; cancellation; and successful remote connection.
-- Secret empty; malformed/non-nsec; protected storage unavailable; native engine unavailable; signer/public-key mismatch; importing; and success.
+- Secret empty; malformed/non-nsec; native account storage unavailable; native engine unavailable; signer/public-key mismatch; importing; and success.
 - Existing or inconsistent stored account material is blocking. The recovery copy directs the user to remove the current identity from Settings when that authenticated workflow exists; no replacement key is generated.
 - Background/keychain failures remain errors. They are never interpreted as an absent identity.
 
@@ -42,7 +42,7 @@ Visual authority remains Night Playlist entry/account board 02 panel 08, reframe
 ## Complete QA strategy
 
 - Pure logic: `nostrConnect.test.ts` verifies cryptographic request shape, relay validation/dedupe, bunker validation, and absence of nsec fields.
-- Account logic: `identityAccess.test.ts` proves public-key confirmation before persistence, reusable NIP-46 descriptor storage without nsec, protected nsec import, and invalid-input rejection. `account.test.ts` verifies remote-signer account projection.
+- Account logic: `identityAccess.test.ts` proves public-key confirmation before nipworker persistence, zero Crays SecureStore credential writes for private-key and NIP-46 login, and invalid-input rejection. `account.test.ts` verifies private payload/pubkey binding, remote-signer projection, and that legacy Keychain residue cannot restore a removed app identity.
 - Component: `AccountRecoveryScreen.test.tsx` covers hierarchy, recommended custody, QR/waiting state, same-device action, bunker input, cancellation, secure import, and absent provider UI.
 - Device: `maestro/flows/account-recovery.yaml` enters from a clean install, exercises and cancels the NIP-46 waiting surface, imports a deterministic nsec, reaches Profile, and relaunches there.
 - Scenario: `scenario:account-recovery` owns clean bootstrap/teardown; its independent verifier requires exactly one expected public identity with `imported-privkey` custody, zero early profile/completion markers, and no nsec in logcat.

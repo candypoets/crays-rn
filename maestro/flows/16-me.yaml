@@ -9,7 +9,7 @@ appId: life.crays
     timeout: 15000
 - assertVisible: "${QA_PROFILE_NAME}"
 - assertVisible: "Your Crays identity"
-- assertVisible: "Protected on this device"
+- assertVisible: "Saved in Crays"
 - tapOn:
     id: "me-account-profile"
 - assertVisible: "Public identity"

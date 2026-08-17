@@ -59,7 +59,7 @@ export function RecoveryScreen({ custody = 'device-only', error, loading = false
         <>
           <View accessibilityLabel="Checking identity custody" accessibilityRole="progressbar" accessible className="mt-6 items-center">
             <ActivityIndicator color={colors.primary} />
-            <Text className="mt-3 text-center text-base leading-6 text-muted">Reading the protected identity on this device…</Text>
+            <Text className="mt-3 text-center text-base leading-6 text-muted">Reading the saved signing account on this device…</Text>
           </View>
           {error ? <View className="mt-5 w-full"><ErrorBanner message={error} /></View> : null}
         </>
@@ -69,7 +69,7 @@ export function RecoveryScreen({ custody = 'device-only', error, loading = false
           <Text className="mt-2 text-center text-base leading-6 text-muted">
             {remote
               ? 'Crays sends signing requests to your connected signer. Your secret key stays there.'
-              : 'Your private key stays protected on this device. Cross-device recovery is not enabled yet.'}
+              : 'Crays keeps this signer with the app on this device. Removing Crays removes local access. Cross-device recovery is not enabled yet.'}
           </Text>
         </>
       )}

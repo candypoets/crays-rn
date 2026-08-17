@@ -25,7 +25,13 @@ describe('SettingsScreen', () => {
     expect(view.getByText('Connected signer')).toBeTruthy();
     expect(view.getByText('NIP-46')).toBeTruthy();
     expect(view.getByText(/asks your connected signer/)).toBeTruthy();
-    expect(view.queryByText(/private key stays in device-only/)).toBeNull();
+    expect(view.queryByText(/nipworker keeps this signer/)).toBeNull();
+  });
+
+  it('states the uninstall consequence for a local nipworker signer', () => {
+    const view = render(<SettingsScreen blocks={[]} custody="device-only" onBack={jest.fn()} onUnblock={jest.fn()} />);
+    expect(view.getByText('Saved in Crays')).toBeTruthy();
+    expect(view.getByText(/Removing the app removes local access/)).toBeTruthy();
   });
 
   it('names block scope and exposes an explicit unblock action', () => {
