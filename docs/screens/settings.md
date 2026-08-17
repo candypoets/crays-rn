@@ -14,4 +14,4 @@ The rest of Settings remains the operational privacy surface: persisted venue/gl
 
 ## QA
 
-`.qa/qa-settings.mjs` uses a deterministic device signer and asserts **Protected on this device**, **Existing Nostr identity**, notifications, privacy, and empty-block truth. `qa-safety-blocks.mjs` covers exact-scope unblock and persistence. `SettingsScreen.test.tsx` additionally injects remote custody and requires **Connected signer · NIP-46** while forbidding device-key copy. Account-layer tests prove that the public summary never contains an nsec or NIP-46 client secret.
+`scenario:settings` uses a deterministic device signer and asserts **Protected on this device**, **Existing Nostr identity**, notifications, privacy, and empty-block truth. `scenario:safety-blocks` covers exact-scope unblock and persistence. `SettingsScreen.test.tsx` additionally injects remote custody and requires **Connected signer · NIP-46** while forbidding device-key copy. Account-layer tests prove that the public summary never contains an nsec or NIP-46 client secret.

@@ -47,4 +47,4 @@ boundary, pending draft/count retention, failure, both exits, and post-success
 suppression. `maestro/flows/22-message-request.yaml` reaches the screen from
 real signed profile/presence data and exercises editable text and count.
 
-`.qa/qa-22-message-request.mjs` owns a complete isolated relay lifecycle and verifies all source fixtures. The publication extension must seed an authorized deterministic QA identity, send through the UI, query by sender and `#p`, verify the Nostr signature, decrypt with the fixture recipient key, assert exact plaintext and expiry, assert only one stored request after repeat input, then test relay false/timeout while confirming the draft remains.
+`scenario:22-message-request` owns a complete isolated relay lifecycle and verifies all source fixtures. The publication extension must seed an authorized deterministic QA identity, send through the UI, query by sender and `#p`, verify the Nostr signature, decrypt with the fixture recipient key, assert exact plaintext and expiry, assert only one stored request after repeat input, then test relay false/timeout while confirming the draft remains.

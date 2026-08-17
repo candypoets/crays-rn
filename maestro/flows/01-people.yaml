@@ -41,3 +41,26 @@ appId: life.crays
 - assertVisible: "^Messages$"
 - assertVisible: "^Me$"
 - takeScreenshot: 01-people-edge-to-edge
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "room-menu-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Mezcal Negroni"
+    timeout: 15000
+- tapOn:
+    id: "room-people-tab"
+- extendedWaitUntil:
+    visible: "People here · 3 visible"
+    timeout: 15000
+- assertVisible: "Maya"
+- assertVisible: "Jonas"
+- tapOn:
+    id: "room-feed-tab"
+- extendedWaitUntil:
+    visible: "The mezcal negroni is excellent."
+    timeout: 15000
+- assertVisible: "Connected in the room"
+- takeScreenshot: 01-people-cold-resume

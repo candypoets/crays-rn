@@ -35,7 +35,7 @@ No room-scoped feed, people, menu or presence subscription starts here.
 
 Unit tests cover fresh/open, closed/disabled, and unverified failure. Native
 Maestro opens the preview from a direct URL against a fresh real relay and
-asserts identity, verification, utility and CTA. `.qa/qa-10-room-preview.mjs`
+asserts identity, verification, utility and CTA. `scenario:10-room-preview`
 independently proves the app consumed the operator/relay/id/address from the same
 valid signed kind-30312 definition, then removes its fixture events.
 

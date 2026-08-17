@@ -47,8 +47,8 @@ No relay action occurs. Completion records local product state only. The `.qa` v
 
 - Component: `RecoveryScreen.test.tsx` checks explicit device-only and durable-item consequences, the finish action, repeat-tap locking, error display, and Back routing.
 - Device: `maestro/flows/07b-account-recovery.yaml` creates/signs a fresh QA identity, asserts and captures the consequence state, proves Back reaches Profile, relaunches back into Recovery, finishes it, then relaunches and proves routing resumes at Discover.
-- Scenario: `.qa/qa-07b-account-recovery.mjs` requires exactly one valid identity, profile, and device-only completion marker with zero relay/subscription activity before teardown.
-- Workflow: `.qa/qa-cold-signup.mjs` additionally verifies the completion marker and Discover destination.
+- Scenario: `scenario:07b-account-recovery` requires exactly one valid identity, profile, and device-only completion marker with zero relay/subscription activity before teardown.
+- Workflow: `scenario:cold-signup` additionally verifies the completion marker and Discover destination.
 
 ## Exit criteria
 

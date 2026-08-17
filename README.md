@@ -111,9 +111,10 @@ npm test
 npm run doctor
 ```
 
-Screen requirements and their QA strategy live together in `docs/screens/`;
-cross-screen contracts live in `docs/workflows/`. Every screen has a named
-`.qa` scenario, including local-only screens.
+Screen requirements and deterministic Jest/RNTL coverage live together in
+`docs/screens/`; cross-screen contracts live in `docs/workflows/`. Native and
+relay proof is organized as shared journeys in `.qa/scenario-registry.mjs`, not
+as one E2E scenario per screen.
 
 Run the complete local cold-signup scenario after Metro and the emulator are
 ready:

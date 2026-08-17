@@ -2,11 +2,12 @@ import { extractTagValue, extractTagValues, type RequestObject, type WorkerMessa
 import { useSubscription as subscribeToNostr } from '@candypoets/nipworker/hooks';
 import { isEoce, isParsedEvent } from '@candypoets/nipworker/utils';
 import type { PropsWithChildren } from 'react';
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import * as SecureStore from 'expo-secure-store';
 import { AppState } from 'react-native';
 
 import { ensureActiveIdentity, getLocalPubkey } from '@/account/account';
+import { nostrAuthStore } from '@/nostr/auth';
 import {
   CRAYS_PROTOCOL,
   PRESENCE_HEARTBEAT_INTERVAL_MS,
@@ -50,7 +51,11 @@ import { useRoomSession } from '@/session/RoomSession';
 import { saveMessageRelays } from '@/messages/relays';
 import { subscribeNip04Messages } from '@/messages/subscription';
 import { useSafety } from '@/safety/Safety';
-import { canOpenRoomSubscriptions, type RoomRelayAuth } from '@/rooms/relayAuthGate';
+import {
+  canOpenRoomSubscriptions,
+  roomSignerAvailable,
+  type RoomRelayAuth,
+} from '@/rooms/relayAuthGate';
 import { LatestWriteQueue } from '@/storage/latestWriteQueue';
 import {
   isNewerRoomPresence,
@@ -119,7 +124,18 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   const [products, setProducts] = useState<RoomProduct[]>([]);
   const [events, setEvents] = useState<RoomCalendarEvent[]>([]);
   const [memberships, setMemberships] = useState<RoomMembershipOffer[]>([]);
-  const [viewerPubkey, setViewerPubkey] = useState<string | null>(null);
+  const [viewerIdentity, setViewerIdentity] = useState<{
+    pubkey: string | null;
+    sessionKey: string;
+  } | null>(null);
+  const viewerPubkey = viewerIdentity?.sessionKey === activeSessionKey
+    ? viewerIdentity.pubkey
+    : undefined;
+  const signerAuth = useSyncExternalStore(
+    nostrAuthStore.subscribe,
+    nostrAuthStore.getSnapshot,
+    nostrAuthStore.getSnapshot,
+  );
   const [awards, setAwards] = useState<EntitlementAwardProjection[]>([]);
   const [statuses, setStatuses] = useState<EntitlementStatusProjection[]>([]);
   const [definitions, setDefinitions] = useState<Map<string, EntitlementDefinitionProjection>>(new Map());
@@ -185,10 +201,20 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     };
   }, []);
 
-  useEffect(() => { getLocalPubkey().then(setViewerPubkey).catch(() => setViewerPubkey(null)); }, [activeRoom]);
+  useEffect(() => {
+    let current = true;
+    void getLocalPubkey()
+      .then((pubkey) => {
+        if (current) setViewerIdentity({ pubkey, sessionKey: activeSessionKey });
+      })
+      .catch(() => {
+        if (current) setViewerIdentity({ pubkey: null, sessionKey: activeSessionKey });
+      });
+    return () => { current = false; };
+  }, [activeSessionKey]);
 
   useEffect(() => {
-    if (!activeRoom || !viewerPubkey) {
+    if (!activeRoom || viewerPubkey === null || viewerPubkey === undefined) {
       // This state reflects an external connection lease, not a render-time derivation.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setRelayAuth(null);
@@ -196,6 +222,13 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     }
     const relayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;
     const key = `${viewerPubkey}:${relayUrl}`;
+    if (!roomSignerAvailable(viewerPubkey, signerAuth)) {
+      setRelayAuth({
+        key,
+        status: signerAuth.resolved ? 'failed' : 'pending',
+      });
+      return;
+    }
     let stopped = false;
     let unsubscribe: () => void = () => undefined;
     // Joining updates the session immediately before replacing the preview
@@ -225,7 +258,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       clearTimeout(timeout);
       unsubscribe();
     };
-  }, [activeRoom, viewerPubkey]);
+  }, [activeRoom, signerAuth, viewerPubkey]);
 
   useEffect(() => {
     if (!activeRoom) return;
@@ -257,6 +290,10 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     setConnected(false);
     if (!activeRoom) {
       setLoading(false);
+      return;
+    }
+    if (viewerPubkey === undefined) {
+      setLoading(true);
       return;
     }
     const relayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;

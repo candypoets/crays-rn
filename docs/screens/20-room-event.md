@@ -32,7 +32,7 @@ States include free/paid, going/interested/declined, full/waitlist, member-gated
 
 ## Complete QA strategy
 
-`.qa/qa-20-room-event.mjs` reads a real signed calendar event, publishes RSVP
+`scenario:20-room-event` reads a real signed calendar event, publishes RSVP
 through the native nipworker signer, then independently queries exact
 author/address/status and verifies the signature. Unit tests cover free
 publish, pending lock, paid disabling, saved non-scannable state, errors, Back,

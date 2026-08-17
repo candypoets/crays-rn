@@ -50,19 +50,28 @@ Every screen change must include all of the following in the same change:
 
 1. A detailed product/interaction spec under `docs/screens/` covering entry,
    states, navigation, accessibility, failures, and Nostr/relay behavior.
-2. Component or pure-logic tests for deterministic states and edge cases.
-3. A screen-specific Maestro flow under `maestro/flows/`.
-4. A named `.qa/` scenario that owns bootstrap, the Maestro exercise, any
-   independent verification, and teardown. This applies to every screen and
-   workflow, including local-only or deliberately no-relay states.
-5. For relay-backed behavior, provision the real relay/coordinator contract
-   from `nuts-cash` and query it independently after UI exercise; UI assertions
-   or an in-memory JavaScript store are never proof of protocol success.
+2. Deterministic Jest/RNTL coverage for every applicable ready, loading, empty,
+   error, retry, disabled, and interaction state. Prefer a table-driven state
+   matrix and semantic accessibility queries.
+3. Pure-logic tests for trust, projection, ordering, event construction, and
+   other protocol decisions outside the component.
+
+Do not add a Maestro flow or `.qa` entry point merely because a screen changed.
+Add or extend a registered device journey only when the behavior crosses a
+boundary Jest cannot prove: native navigation/deep links, OS permissions,
+SecureStore/process persistence, native nipworker integration, or actual relay
+reads/writes. One journey may cover several screens.
+
+Device journeys live in `.qa/scenario-registry.mjs` and run through
+`.qa/run-scenario.mjs`. Relay-backed journeys must provision the real
+relay/coordinator contract from `nuts-cash` and query it independently after UI
+exercise; UI assertions or an in-memory JavaScript store are never proof of
+protocol success.
 
 Shared Maestro startup lives in `maestro/flows/launch.yaml`. Start Metro with
 `npm run start:maestro` (it sources `.env.test-room-build` when present, so the
 Test Room token reaches the bundle), run `adb reverse tcp:8085 tcp:8085`, and
-then run the screen flow. Port 8085 intentionally avoids the `nuts-rn` Metro
+then run the selected journey. Port 8085 intentionally avoids the `nuts-rn` Metro
 process on 8084. Do not set `CI=1` for Metro; the dev-client launcher discovery
 and bundle freshness are unreliable in that mode on this host.
 
@@ -78,9 +87,11 @@ and bundle freshness are unreliable in that mode on this host.
   their source of truth. Never hard-code these strings in a verifier.
 - Logcat `__DEV__` markers are a complement to independent relay queries,
   never a replacement for them.
-- `npm run qa:contracts` also checks runner→flow references, transitive
-  `launch.yaml` inclusion, and mapped jest coverage; new scenarios that
-  harden an existing screen spec go in `additionalScenarios` there.
+- `npm run qa:contracts` checks every screen spec's mapped deterministic Jest
+  coverage plus every registered journey's ownership, flow, verifier/custom
+  executor, and transitive `launch.yaml` inclusion.
+- Run `npm run qa:list` to discover journeys and
+  `npm run qa:journey -- <name>` to execute exactly one isolated lifecycle.
 
 
 ## nipworker rules

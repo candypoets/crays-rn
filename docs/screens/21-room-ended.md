@@ -44,7 +44,7 @@ route crossfade and respects reduced motion.
 
 `LeaveAndSwitchScreens.test.tsx` covers explicit/automatic completion,
 retained-object labels, and both navigation callbacks.
-`.qa/qa-21-room-ended.mjs` visibly joins with a real fixture signer, confirms
+`scenario:21-room-ended` visibly joins with a real fixture signer, confirms
 leave, and independently queries/verifies the exact `left` replacement event
 before teardown. Maestro asserts the privacy statement and retained objects.
 Separate QA must prove quiet leave creates zero user presence events, rejected

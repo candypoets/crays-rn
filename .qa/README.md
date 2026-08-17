@@ -1,14 +1,17 @@
 # Crays QA harness
 
-Every screen and every workflow has a named scenario here. UI automation lives
-in `maestro/flows/`; orchestration, infrastructure setup, independent truth
-checks, and teardown live in `.qa/`.
+Deterministic screen states live in Jest/RNTL. Device automation is reserved
+for user journeys and protocol boundaries that Jest cannot prove. Journeys are
+declared once in `scenario-registry.mjs`, executed by `run-scenario.mjs`, and
+may cover several screens. UI automation lives in `maestro/flows/`;
+orchestration, infrastructure setup, independent truth checks, and teardown
+live in `.qa/`.
 
 Every scenario follows the same lifecycle:
 
 1. **Bootstrap** creates isolated device and infrastructure state and emits
    only non-secret fixture values.
-2. **Exercise** drives public app UI through a screen-specific Maestro flow.
+2. **Exercise** drives public app UI through a focused Maestro journey.
 3. **Verify** checks truth independently of rendered UI. For local identity
    this means cryptographic signature verification; for relay features it means
    querying the provisioned relay for exact kinds, authors, tags, replacement
@@ -16,16 +19,23 @@ Every scenario follows the same lifecycle:
 4. **Teardown** clears the exact app package and removes only services/data the
    scenario created.
 
-`npm run qa:contracts` is the fast structural gate: every file under
-`docs/screens/` must be registered with an existing Maestro flow and a named
-`.qa` lifecycle runner. It also fails when a runner does not reference its
-registered flow (or references a missing one), when a flow does not reach the
-shared `maestro/flows/launch.yaml` startup transitively, or when a screen has
-no mapped jest test (`screenTests` in `verify-screen-contracts.mjs`;
-`entry-router.md` is covered directly). Scenarios that harden an
-existing spec rather than add a screen are registered in
-`additionalScenarios`. This catches a newly added screen spec that has no
-executable QA scaffold before device tests begin.
+`npm run qa:contracts` is the fast structural gate. Every file under
+`docs/screens/` must map to an existing deterministic Jest test in
+`scenario-registry.mjs`. Registered device journeys must name their owning
+screen contracts and reference existing flows, verifiers, or custom executors;
+every flow must reach the shared `maestro/flows/launch.yaml` startup
+transitively. A new screen does not require a new device journey.
+
+List and run journeys without searching for wrapper files:
+
+```sh
+npm run qa:list
+npm run qa:journey -- 20-room-event
+```
+
+Screen and workflow docs refer to registry IDs as `scenario:<name>`.
+`npm run qa:list` shows the 12 normal cross-screen/native/protocol journeys;
+`npm run qa:list:all` also shows retained targeted regression scenarios.
 
 ## Verifier conventions
 
@@ -50,18 +60,18 @@ executable QA scaffold before device tests begin.
 
 ## Negative-path scenarios
 
-- `qa-08b-invite-redeemed-twice.mjs` redeems the same invite token twice
+- `scenario:08b-invite-redeemed-twice` redeems the same invite token twice
   through the public UI. Per `redeemInvite` in `src/invites/invites.ts` the
   correct behavior is idempotent reuse of the stored nonce/account
   redemption; the verifier requires exactly one relay award for the nonce and
   exactly one redemption marker.
-- `qa-20d-rsvp-rejected.mjs` runs the RSVP flow with an app identity that
+- `scenario:20d-rsvp-rejected` runs the RSVP flow with an app identity that
   holds no membership badge (`CRAYS_QA_PREAUTHORIZE=0`, user index 3), so the
   badge-gated relay rejects the write. The flow asserts the event error
   state and the empty Tickets archive; the verifier proves the relay stored
   no kind-31925 and no confirmed-RSVP marker was logged, so nothing entered
   the durable archive.
-- `qa-11c-join-relay-unavailable.mjs` points join-room at a dead relay URL
+- `scenario:11c-join-relay-unavailable` points join-room at a dead relay URL
   and asserts the room-definition error state renders instead of a hang. It
   provisions no relay, so it has nothing to tear down.
 
@@ -69,19 +79,19 @@ executable QA scaffold before device tests begin.
 
 The current entry scenarios are:
 
-- `qa-06-cold-welcome.mjs`
-- `qa-06b-account-access.mjs`
-- `qa-07-account-setup.mjs`
-- `qa-07b-account-recovery.mjs`
-- `qa-27-discover-handoff.mjs` — temporary destination plus account verifier
-- `qa-cold-signup.mjs` — complete workflow plus independent kind-0 verifier
+- `scenario:06-cold-welcome`
+- `scenario:06b-account-access`
+- `scenario:07-account-setup`
+- `scenario:07b-account-recovery`
+- `scenario:27-discover-handoff` — temporary destination plus account verifier
+- `scenario:cold-signup` — complete workflow plus independent kind-0 verifier
 
 They use `qa-entry-lib.mjs`, `qa-entry-bootstrap.mjs`,
 `qa-entry-verify.mjs`, and `qa-entry-teardown.mjs`. The verifier reads the
 public-safe signed event marker from Android logcat, verifies its Nostr
 signature and expected profile content with `nostr-tools`, and asserts that
 each expected identity/profile/completion side effect occurs exactly once and
-onboarding opened zero relay connections/subscriptions. Screen scenarios also
+onboarding opened zero relay connections/subscriptions. Entry journeys also
 relaunch at their persistence boundary and assert the entry router resumes at
 the correct next screen. The private key is never logged or written to QA
 state.
@@ -90,7 +100,7 @@ With Metro on port 8085, `adb reverse tcp:8085 tcp:8085`, one emulator, and the
 development client installed:
 
 ```sh
-MAESTRO_CLI=$HOME/.maestro/bin/maestro node .qa/qa-cold-signup.mjs
+MAESTRO_CLI=$HOME/.maestro/bin/maestro npm run qa:journey -- cold-signup
 ```
 
 On hosts with several emulators attached, export `ANDROID_SERIAL=<serial>` to
@@ -140,7 +150,7 @@ when no other Crays QA run is active.
 
 The switch-room scenario is the deliberate exception to the one-bootstrap
 cleanup rule: the deployed coordinator currently limits this QA owner to the
-reserved relay, so `.qa/qa-28-switch-room.mjs` seeds room A and then room B on
+reserved relay, so `scenario:28-switch-room` seeds room A and then room B on
 that same real relay with distinct room IDs and signed kind-30312 definitions. Its second
 bootstrap sets `CRAYS_QA_PRESERVE_FIXTURES=1` to retain A while adding B; the
 runner verifies A's left replacement before asserting that the app published
@@ -169,50 +179,50 @@ routed `serviceUrl` unset. To pass the already-authenticated filter upstream,
 the bridge adds a non-matching kind; remove this adapter once the deployed
 relay advertises NIP-42 and accepts a direct signed AUTH probe.
 
-Invite scenarios `qa-08-invite-preview.mjs` and
-`qa-08b-invite-accepted.mjs` mint through the real relay invite service. The
+Invite scenarios `scenario:08-invite-preview` and
+`scenario:08b-invite-accepted` mint through the real relay invite service. The
 accepted verifier queries the issued kind-8 award by exact invite nonce and
 recipient and verifies its signature; rendered success text is never treated
-as backend proof. `qa-09-returning-login.mjs` uses the development-only native
+as backend proof. `scenario:09-returning-login` uses the development-only native
 signer seed route. That route redirects in release builds and fixture secrets
 must never be logged by app code or persisted in relay state outside isolated
 QA.
 
-Event access uses three separate lifecycle checks: `qa-20-room-event.mjs`
-proves the live event and RSVP action, `qa-20b-tickets.mjs` proves that only a
+Event access uses three separate lifecycle checks: `scenario:20-room-event`
+proves the live event and RSVP action, `scenario:20b-tickets` proves that only a
 relay-confirmed RSVP enters the durable RSVP archive, and
-`qa-20c-ticket-detail.mjs` proves an issuer-signed kind-8 event entitlement can
+`scenario:20c-ticket-detail` proves an issuer-signed kind-8 event entitlement can
 produce a holder-signed 90-second kind-27236 presentation. The verifier decodes
 the device payload and independently checks its signature, exact award, venue
 relay, nonce, context, and window. An ordinary RSVP remains distinct from a
 scanner entitlement.
 
-`qa-19-membership-detail.mjs` and `qa-memberships.mjs` seed real membership and
+`scenario:19-membership-detail` and `scenario:memberships` seed real membership and
 three-use-pass definitions/awards plus one fulfilled use. They prove the list,
 remaining-use derivation, activity, and live presentation. Pixels are not
 backend proof; `verify-presentation.mjs` verifies the signed event.
 
 Private messaging uses NIP-04 kind-4 events on the scenario's exact
-badge-gated Nuts relay. `qa-messages-home.mjs` proves outbound encryption;
-`qa-conversation.mjs` seeds an incoming encrypted event and proves receive,
+badge-gated Nuts relay. `scenario:messages-home` proves outbound encryption;
+`scenario:conversation` seeds an incoming encrypted event and proves receive,
 acceptance, accepted reply, encrypted reply linkage, and venue report. Both
 decrypt independently with fixture recipient keys and verify exact signatures
 and minimal relay-visible tags. Production direct-message relays must protect
 kind-4 reads with authentication because NIP-04 exposes participant metadata.
 
-Safety paths use `qa-02-first-contact.mjs`, `qa-conversation-not-now.mjs`, and
-`qa-safety-blocks.mjs`. They prove exact venue reports, no report/message side
+Safety paths use `scenario:02-first-contact`, `scenario:conversation-not-now`, and
+`scenario:safety-blocks`. They prove exact venue reports, no report/message side
 effects for dismissal or block mutations, persistence, scope, filtering, and
 unblock.
 
-Primary navigation uses `qa-primary-tabs.mjs`. It proves that Room, Discover,
+Primary navigation uses `scenario:primary-tabs`. It proves that Room, Discover,
 Messages, and Me are peer destinations in one tab navigator, that Room-local
 state survives tab changes, and that a root-stack workflow covers the tab bar.
 The scenario provisions the real relay contract and independently verifies the
 signed room fixture and the app's relay-derived projections after UI exercise.
 
-Join privacy uses separate identities. `qa-11-join-quiet.mjs` proves zero
-presence writes; `qa-11-join-visible.mjs` proves exactly one signed visible
+Join privacy uses separate identities. `scenario:11-join-quiet` proves zero
+presence writes; `scenario:11-join-visible` proves exactly one signed visible
 NIP-53 kind-10312 presence with selected intent, context, the exact authorized
 kind-30312 room address, and expiry, plus the exact kind-0 profile used by
 People and feed projections.
@@ -227,7 +237,7 @@ entry redeems the direct public invite and quiet entry does not. Use
 itself remains running. `npm run test-room:publish` instead leaves the hosted
 90-day fixture in place and writes ignored `.env.test-room-build` for the
 TestFlight bundle. `npm run start:maestro` sources that file when present, and
-`qa-27-discover-handoff.mjs` refuses to run without it (the flow asserts the
+`scenario:27-discover-handoff` refuses to run without it (the flow asserts the
 Developer/Test room section, which the bundle only renders with the token).
 
 The local proxy is an explicit compatibility mode
@@ -240,13 +250,13 @@ The checkout scenario keeps the app's payment default pointed at
 `https://payments.nuts.cash`. Its deterministic QA variant is an explicit
 Metro-time override: start Metro with
 `EXPO_PUBLIC_PAYMENT_SERVICE_URL=http://10.0.2.2:8790 npm run start:maestro`,
-then run `node .qa/qa-14-review-pay.mjs`. The scenario starts
+then run `scenario:14-review-pay`. The scenario starts
 `.qa/checkout-adapter.mjs`, which validates the app's real kind-27235 checkout
 request and calls the live room `/redeem` endpoint with the shared
 `strfry-badge-node` payment-service key. It does not log that secret or use a
 JavaScript mock award. The adapter is stopped in the scenario teardown.
 
-The executable lifecycle is `.qa/qa-test-room.mjs` with
+The executable lifecycle is `scenario:test-room` with
 `maestro/flows/test-room.yaml`. It proves Discover card availability, direct
 invite input through the synthetic Nearby pointer, visible selection, exact
 membership-award read-back, fixture rendering,

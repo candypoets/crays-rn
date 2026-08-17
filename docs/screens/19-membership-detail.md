@@ -27,10 +27,10 @@ States: Active, Action needed, Paused, Expires soon, Expired, Revoked, Cancelled
 
 ## Complete QA strategy
 
-`.qa/qa-19-membership-detail.mjs` opens the exact issuer-signed membership
+`scenario:19-membership-detail` opens the exact issuer-signed membership
 award from an isolated relay. `verify-presentation.mjs` decodes the logged QR
 payload and independently verifies signature, kind/type, exact award,
-authoritative relay, nonce, single context, and lifetime. `qa-memberships.mjs`
+authoritative relay, nonce, single context, and lifetime. `scenario:memberships`
 adds a three-use pass with one fulfilled context and proves **2 of 3 uses
 remaining** plus its activity. Component tests cover active, revoked,
 offer-only, remaining-use, and activity states; pure tests cover

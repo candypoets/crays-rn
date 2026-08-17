@@ -22,4 +22,4 @@ The header is the only heading. The medallion is decorative. The active primary 
 
 ## Complete QA strategy
 
-`.qa/qa-09-returning-login.mjs` seeds a deterministic development identity, opens Login, proves exact local unlock, no-password/provider absence, and Discover destination. Invite-resume coverage retains its context. Component tests cover existing and new-device branches and exact callbacks. Remote reconnect is covered at the account layer and must be included in the release NIP-46 smoke run described by `account-recovery.md`.
+`scenario:09-returning-login` seeds a deterministic development identity, opens Login, proves exact local unlock, no-password/provider absence, and Discover destination. Invite-resume coverage retains its context. Component tests cover existing and new-device branches and exact callbacks. Remote reconnect is covered at the account layer and must be included in the release NIP-46 smoke run described by `account-recovery.md`.

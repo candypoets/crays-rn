@@ -90,7 +90,7 @@ never protocol proof and never changes presence.
 `maestro/flows/primary-tabs.yaml` enters a real isolated relay room, changes a
 Room-local view, visits all four destinations, returns to Room to prove the
 view survived, and switches to the in-place Menu while proving the primary tab
-bar remains mounted. `.qa/qa-primary-tabs.mjs` owns relay bootstrap, the Maestro
+bar remains mounted. `scenario:primary-tabs` owns relay bootstrap, the Maestro
 exercise, independent room-definition and room-projection verification, and
 teardown. Unit tests own destination order, stable automation IDs, selected
 icon state, unknown-route failure, and the absence of manual tabs in

@@ -30,7 +30,7 @@ durable data remain available; two room feed subscriptions may never overlap.
 
 ## Complete QA strategy
 
-`.qa/qa-28-switch-room.mjs` provisions two distinct signed room identities on
+`scenario:28-switch-room` provisions two distinct signed room identities on
 the real coordinator-reserved relay. The deployed Nuts coordinator currently
 limits this QA owner to that one reserved relay, so the second bootstrap
 preserves A's fixtures while adding B's definition and room-scoped fixtures; it

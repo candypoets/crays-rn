@@ -65,7 +65,7 @@ asserts:
 3. The approved **Your night starts here** promise and **Tonight moves.** cue render.
 4. No native-runtime failure state renders.
 
-The stronger native proof lives in `.qa/qa-cold-signup.mjs`: it creates a
+The stronger native proof lives in `scenario:cold-signup`: it creates a
 device identity, signs a kind-0 profile event, independently verifies that
 signature, and proves that onboarding opened no relay connection or
 subscription. This exercises the linked native stack through the actual entry

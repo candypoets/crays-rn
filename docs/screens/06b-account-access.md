@@ -52,7 +52,7 @@ This screen creates Nostr signing identity but deliberately publishes nothing. T
 
 - Component: `AccountAccessScreen.test.tsx` proves the checklist copy, single create affordance, signer handoff copy, absent provider buttons, busy-state locking, callback routing, and visible error state.
 - Device: `maestro/flows/06b-account-access.yaml` checks that the existing-account action reaches Nostr login (09), double-taps identity creation, then relaunches and proves routing resumes at Profile.
-- Scenario: `.qa/qa-06b-account-access.mjs` owns clean bootstrap, independently requires exactly one public identity marker with no profile/completion side effects, and tears down.
+- Scenario: `scenario:06b-account-access` owns clean bootstrap, independently requires exactly one public identity marker with no profile/completion side effects, and tears down.
 - Workflow: `cold-signup.yaml` presses the primary action and must reach Profile inside 30 seconds.
 
 ## Exit criteria

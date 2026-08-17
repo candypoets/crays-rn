@@ -8,7 +8,7 @@ Future states must include visible/hidden balance, setup, incoming/outgoing pend
 
 ## Complete QA strategy
 
-`.qa/qa-25-wallet.mjs` enters from Me with real room/account context and asserts unavailable/setup/sync language. Its independent negative verifier settles for relay lag before proving the app identity authored no NIP-60 wallet-configuration, proof, or spending-history events. Unit tests prohibit fabricated balance. Before enabling funding, add a disposable real mint harness with exact proof accounting, encrypted NIP-60 relay fixtures, conflict/duplicate/relaunch cases, backup recovery on a second isolated device, balance privacy checks, and one-spend-only verification.
+`scenario:25-wallet` enters from Me with real room/account context and asserts unavailable/setup/sync language. Its independent negative verifier settles for relay lag before proving the app identity authored no NIP-60 wallet-configuration, proof, or spending-history events. Unit tests prohibit fabricated balance. Before enabling funding, add a disposable real mint harness with exact proof accounting, encrypted NIP-60 relay fixtures, conflict/duplicate/relaunch cases, backup recovery on a second isolated device, balance privacy checks, and one-spend-only verification.
 
 ## Night Playlist implementation
 

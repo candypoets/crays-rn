@@ -33,7 +33,7 @@ Component QA covers valid/invalid/missing awards, the explicit non-scannable
 RSVP path, plain customer copy, presentation ownership, and the 48 dp Back
 target. `maestro/flows/20c-ticket-detail.yaml` opens the exact fixture award,
 requires **Ready to show**, rejects relay jargon, and waits for the live code.
-`.qa/qa-20c-ticket-detail.mjs` independently verifies the signed 27236 payload
+`scenario:20c-ticket-detail` independently verifies the signed 27236 payload
 rather than screenshot pixels, then owns fixture teardown. RSVP
 publication/archive remain separately covered by screens 20/20B. Staff
 replay/clock/offline acceptance is D-010.

@@ -59,7 +59,7 @@ For local custody, the durable `nsec` stays in SecureStore and only its decoded 
   visible signature failure, character count, chip toggle/locality, and the
   lock note.
 - Device: `maestro/flows/07-account-setup.yaml` creates a local identity, types and submits a realistic name, captures the screen, then relaunches and proves routing resumes at Recovery.
-- Scenario: `.qa/qa-07-account-setup.mjs` independently requires exactly one valid signed profile, zero relay/subscription activity, and no completion marker before teardown.
+- Scenario: `scenario:07-account-setup` independently requires exactly one valid signed profile, zero relay/subscription activity, and no completion marker before teardown.
 
 ## Exit criteria
 

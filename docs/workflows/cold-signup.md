@@ -22,8 +22,8 @@ At every interruption boundary, relaunch resumes at the first incomplete step. B
 - `.qa/qa-entry-bootstrap.mjs` clears logcat and records isolated scenario state.
 - `.qa/qa-entry-verify.mjs` parses the public-safe QA markers, requires exactly one identity, profile, and completion side effect, independently verifies the Nostr signature and profile content with `nostr-tools`, proves zero relay/subscription counts, and checks the recorded recovery mode.
 - `.qa/qa-entry-teardown.mjs` clears only `life.crays` and removes the scenario state file.
-- `.qa/qa-cold-signup.mjs` composes the complete bootstrap → exercise → verify → teardown lifecycle.
+- `scenario:cold-signup` composes the complete bootstrap → exercise → verify → teardown lifecycle.
 
 ## Required follow-up scenarios
 
-Returning login/import and invite-priority routing are now separate delivered workflows: see `docs/screens/09-returning-login.md` (`.qa/qa-09-returning-login.mjs`) and `docs/screens/08-invite-preview.md` (`.qa/qa-08-invite-preview.mjs`, `.qa/qa-08b-invite-accepted.mjs`). What genuinely remains for a later entry slice is process death during an active identity/profile write and corrupted SecureStore recovery. Neither is claimed by this cold-signup scenario.
+Returning login/import and invite-priority routing are now separate delivered workflows: see `docs/screens/09-returning-login.md` (`scenario:09-returning-login`) and `docs/screens/08-invite-preview.md` (`scenario:08-invite-preview`, `scenario:08b-invite-accepted`). What genuinely remains for a later entry slice is process death during an active identity/profile write and corrupted SecureStore recovery. Neither is claimed by this cold-signup scenario.

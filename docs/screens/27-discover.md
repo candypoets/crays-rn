@@ -80,12 +80,12 @@ room cards have a single descriptive action; verification is text plus icon;
 Unit coverage verifies the newcomer default, the disabled-Map contract, Nearby
 rationale, fresh verified result, and failure without fabricated content. The
 relay-backed `maestro/flows/27-discover.yaml` opens a real per-run relay result,
-switches both tabs, and captures the native screen; `.qa/qa-27-discover.mjs`
+switches both tabs, and captures the native screen; `scenario:27-discover`
 owns its fresh gated relay, issuer-authorized people, full fixture family,
 independent signature/query verification, app-consumption log proof, relay
 deletion, and Docker-volume deletion. The additional local-only newcomer path
 is `maestro/flows/27-discover-handoff.yaml`, owned by
-`.qa/qa-27-discover-handoff.mjs`; it proves onboarding creates one valid local
+`scenario:27-discover-handoff`; it proves onboarding creates one valid local
 identity and no relay connection or subscription before exercising Nearby's
 rationale and the honest disabled-Map state.
 

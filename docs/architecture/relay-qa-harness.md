@@ -15,7 +15,10 @@ Includes:
 
 Excludes production payment processors, public relays, fabricated in-app stores, and staff UI implementation.
 
-Entry points are named `.qa/qa-<screen-or-workflow>.mjs` scenarios. Exit points are a passing independent verifier or a failing process with retained Maestro/debug artifacts followed by scoped teardown.
+The declarative entry point is `.qa/scenario-registry.mjs`; execute one named
+journey with `node .qa/run-scenario.mjs <name>`. Exit points are a passing
+independent verifier or a failing process with retained Maestro/debug artifacts
+followed by scoped teardown.
 
 ## Source evidence
 
@@ -49,8 +52,15 @@ Important inherited behavior:
 
 - Role: Coordinator.
 - Responsibility: own bootstrap → exercise → verify → teardown in a `try/finally` lifecycle.
-- Owns: scenario name, required fixture family, environment handed to Maestro, and verifier selection.
+- Owns: generic lifecycle execution and dispatch by harness type.
 - Must not own: product truth or a second in-memory app backend.
+
+### Scenario registry
+
+- Role: Declarative source of truth.
+- Responsibility: map a journey name to its owning screen contracts, tier,
+  harness, Maestro flow, fixture options, and independent verifiers.
+- Must not contain executable product logic or duplicate verifier assertions.
 
 ### Relay provisioner
 
@@ -78,7 +88,7 @@ Important inherited behavior:
 ### Native UI exerciser
 
 - Role: Worker.
-- Responsibility: run one screen/workflow-specific Maestro flow against the development client.
+- Responsibility: run a focused user-journey Maestro flow against the development client.
 - Inputs: public deep link or route context and fixture values from the state repository.
 - Output: accessibility assertions, screenshots, and public-safe diagnostic markers.
 - Must not call internal repositories or seed hidden app state to bypass the user path.
@@ -150,7 +160,9 @@ The runner records infrastructure ownership immediately after each successful cr
 8. Presence, room feed, and proximity access stay venue-scoped and expire/lock; durable messages and entitlements remain.
 9. Browse quietly creates no presence event.
 10. Every live subscription has one stable result-set ID and is cleaned up when its owner exits.
-11. A screen scenario proves its own primary action, failure/empty variants, relaunch boundary, and forbidden side effects. Cross-screen workflows are tested separately.
+11. Jest/RNTL owns deterministic screen variants; device journeys own only
+    cross-screen, native, persistence, and independently verified protocol
+    boundaries.
 
 ## Fixture families
 
@@ -171,20 +183,19 @@ decision. Direct and proximity pointers resolve through NIP-11, kind 31727,
 and a root/admin-authored NIP-53 kind-30312 definition. Presence uses kind
 `10312` bound to that exact room address; room-feed expiration uses NIP-40.
 
-## Per-screen scenario contract
+## Layered coverage contract
 
-Every built screen owns:
+Every built screen owns a deterministic Jest/RNTL state matrix covering its
+ready, loading, empty, offline, invalid/expired/revoked, retry, disabled, and
+interaction states where applicable. Pure tests own trust, projection,
+ordering, and event-construction decisions.
 
-1. one default/ready scenario;
-2. every decision branch that changes navigation or durable state;
-3. loading, empty, offline, invalid/expired/revoked, retry, and permission-denied paths that apply;
-4. repeat-tap/idempotency coverage for mutations;
-5. background/relaunch recovery at each durable boundary;
-6. independent relay verification for every read/write claim;
-7. negative verification for privacy and single-room constraints;
-8. exact teardown even when Maestro or verification fails.
-
-Shared variants may be parameterized by one runner, but each screen/workflow keeps a named `.qa/qa-<name>.mjs` entry point and a screen-specific Maestro flow.
+A device journey is added only for behavior that crosses native navigation,
+deep-link, OS permission, protected persistence, native module, or live
+protocol boundaries. Journeys may cover multiple screens. Relay-backed
+journeys retain independent positive/negative verification, repeat-action and
+relaunch checks where relevant, and exact teardown even when Maestro or
+verification fails.
 
 ## Ordered implementation plan
 
@@ -195,8 +206,9 @@ Shared variants may be parameterized by one runner, but each screen/workflow kee
 5. Implement screen-owned nipworker subscriptions with stable IDs and cleanup.
 6. Implement mutations through the active signer and publish callbacks, considering success after any required relay accepts.
 7. Add parameterized independent verifiers that query exact relay state and enforce negative invariants.
-8. Wrap every Maestro flow in a named lifecycle runner with `try/finally` teardown.
-9. Add multi-screen workflows only after constituent screen scenarios pass.
+8. Register device journeys once in `.qa/scenario-registry.mjs`; execute them
+   through the shared lifecycle runner with `try/finally` teardown.
+9. Prefer one cohesive multi-screen journey over screen-by-screen E2E copies.
 10. Run crash-recovery sweeps only when no Crays scenario is live.
 
 ## Acceptance checks

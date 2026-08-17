@@ -71,7 +71,7 @@ browser-open state, request errors, and award reconciliation.
 opens the hosted checkout adapter, and waits for the signed award to appear.
 Run that scenario with Metro started using
 `EXPO_PUBLIC_PAYMENT_SERVICE_URL=http://10.0.2.2:8790 npm run start:maestro`.
-`.qa/qa-14-review-pay.mjs` provisions the real coordinator/relay contract,
+`scenario:14-review-pay` provisions the real coordinator/relay contract,
 uses the checkout contract's deterministic QA adapter to perform the real
 payment redemption, and independently queries the relay for the new award and
 its order reference before teardown. No UI success text or in-memory cart is

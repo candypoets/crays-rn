@@ -27,4 +27,4 @@ Quantity controls have explicit labels and 48dp targets. Price and recipient are
 
 ## QA strategy
 
-Unit coverage verifies quantity, boundaries, exact total, unavailable/pending locking, and error display. `maestro/flows/13-item.yaml` resolves a signed product from the isolated relay, changes quantity, and checks the updated commitment. `.qa/qa-13-item.mjs` independently validates the complete relay fixture family and projection. Add tests for min/max, rapid taps, unavailable transition, stale price, recipient departure, storage failure, background/restore, and room expiry.
+Unit coverage verifies quantity, boundaries, exact total, unavailable/pending locking, and error display. `maestro/flows/13-item.yaml` resolves a signed product from the isolated relay, changes quantity, and checks the updated commitment. `scenario:13-item` independently validates the complete relay fixture family and projection. Add tests for min/max, rapid taps, unavailable transition, stale price, recipient departure, storage failure, background/restore, and room expiry.

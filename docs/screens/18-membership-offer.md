@@ -27,7 +27,7 @@ States cover available, unavailable, stale/replaced definition, no offer, multip
 
 ## Complete QA strategy
 
-`.qa/qa-18-membership-offer.mjs` consumes a real anchor-admin-signed
+`scenario:18-membership-offer` consumes a real anchor-admin-signed
 definition, verifies it independently, and asserts price/cadence plus the
 no-side-effect payment state. Unit tests cover the exact published description,
 price/cadence, disabled CTA, payment-method callback, absent invented perks,

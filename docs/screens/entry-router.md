@@ -32,7 +32,7 @@ The entry router reads only platform SecureStore. It does not create a manager, 
 
 `src/account/__tests__/state.test.ts` exhaustively pins the current state table, including inconsistent protected state. `src/app/__tests__/index.test.tsx` covers the static branded resolver, active-room replacement, explicit storage failure, and user-triggered retry. Screen QA flows start with cleared package state through `maestro/flows/launch.yaml`, proving the root resolves to Screen 06 rather than relying on a direct test route.
 
-`.qa/qa-cold-signup.mjs` completes onboarding and then verifies the signed local profile and zero onboarding relay traffic. The screen-specific resume scenarios relaunch without clearing state and prove resolution to the first unfinished destination or Discover. Invite-priority and returning-login have their own relay-backed scenarios.
+`scenario:cold-signup` completes onboarding and then verifies the signed local profile and zero onboarding relay traffic. The screen-specific resume scenarios relaunch without clearing state and prove resolution to the first unfinished destination or Discover. Invite-priority and returning-login have their own relay-backed scenarios.
 
 ## Exit criteria
 

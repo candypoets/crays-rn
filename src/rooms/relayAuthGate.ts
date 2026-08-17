@@ -3,6 +3,20 @@ export type RoomRelayAuth = {
   status: 'pending' | 'ready' | 'failed';
 };
 
+export type RoomSignerAuth = {
+  hasSigner: boolean;
+  pubkey: string | null;
+  resolved: boolean;
+};
+
+/** The manager auth callback is authoritative for the live native signer. */
+export function roomSignerAvailable(
+  viewerPubkey: string,
+  signer: RoomSignerAuth,
+): boolean {
+  return signer.resolved && signer.hasSigner && signer.pubkey === viewerPubkey;
+}
+
 /**
  * Anonymous room sessions only read public venue families and can open them
  * immediately. Identified sessions must first establish the private NIP-04

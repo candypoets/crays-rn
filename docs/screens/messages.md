@@ -47,10 +47,10 @@ States: empty, outbound waiting, inbound requested, accepted, blocked, relay una
 
 ## Complete QA strategy
 
-`.qa/qa-messages-home.mjs` sends through native UI and independently queries
+`scenario:messages-home` sends through native UI and independently queries
 the real room relay, verifies the kind-4 signature and minimal tags, proves
 ciphertext excludes plaintext, decrypts with the fixture recipient key, and
-validates the exact envelope. `.qa/qa-conversation.mjs` seeds an independently
+validates the exact envelope. `scenario:conversation` seeds an independently
 encrypted/signed incoming kind-4 request, exercises native receive → accept →
 reply → report, decrypts the acceptance and reply, validates their encrypted
 reply chain, and verifies the kind-1984 report. Unit tests cover error+empty,

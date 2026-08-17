@@ -8,7 +8,7 @@ Entry is Me → Orders; Back returns to Me and has a minimum 48×48 dp target. S
 
 ## Complete QA strategy
 
-`.qa/qa-17-orders.mjs` asserts the real Nuts product award/status projection and opens the active group. Maestro requires the ready drink order while explicitly rejecting the QA order/check-in references and the multi-use pass from the list. Independent verification checks the exact signed product award, recipient, order context, ready status, and app projection; teardown sweeps the reserved relay fixtures. Unit tests cover listing classification, grouping, hidden references, 48 dp Back affordance, and callback identity. Relay fixtures must test all statuses, duplicate award IDs, wrong-recipient and wrong-address statuses, legacy reads, dates/venues, relaunch, accessibility order, and empty/error copy.
+`scenario:17-orders` asserts the real Nuts product award/status projection and opens the active group. Maestro requires the ready drink order while explicitly rejecting the QA order/check-in references and the multi-use pass from the list. Independent verification checks the exact signed product award, recipient, order context, ready status, and app projection; teardown sweeps the reserved relay fixtures. Unit tests cover listing classification, grouping, hidden references, 48 dp Back affordance, and callback identity. Relay fixtures must test all statuses, duplicate award IDs, wrong-recipient and wrong-address statuses, legacy reads, dates/venues, relaunch, accessibility order, and empty/error copy.
 
 ## Night Playlist implementation
 

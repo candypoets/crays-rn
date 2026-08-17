@@ -18,7 +18,7 @@ QR/link, Messages and Me and offer platform Settings only after denial.
 
 The component test verifies both privacy statements and both actions. Maestro
 deep-links directly, asserts every boundary before any platform prompt and
-captures the native layout. `.qa/qa-10b-bluetooth-rationale.mjs` clears app
+captures the native layout. `scenario:10b-bluetooth-rationale` clears app
 state/logcat and owns the screen flow; later platform-permission suites add
 grant, deny, deny-permanently, Bluetooth-off and no-beacon paths without
 changing this screen contract.

@@ -28,6 +28,6 @@ States: initial/loading (quiet indicator, no fake grant); issuer reachable and s
 
 ## Complete QA strategy
 
-`.qa/qa-08-invite-preview.mjs` creates an isolated Nuts coordinator relay, asks its real invite service to mint a token through an admin NIP-98 request, and publishes the signed room fixture. Maestro opens the public deep link and proves issuer, room, grant, expiry path, account-required CTA, and no premature success. Independent relay verification checks all fixture signatures. Teardown deletes the exact relay/volume and app data.
+`scenario:08-invite-preview` creates an isolated Nuts coordinator relay, asks its real invite service to mint a token through an admin NIP-98 request, and publishes the signed room fixture. Maestro opens the public deep link and proves issuer, room, grant, expiry path, account-required CTA, and no premature success. Independent relay verification checks all fixture signatures. Teardown deletes the exact relay/volume and app data.
 
 Unit coverage rejects missing signatures, malformed claims, unsupported versions, expired tokens, invalid badges, mismatched badges, mismatched issuers, non-HTTP services, failed community info, and unavailable issuer responses. UI coverage exercises loading, retry, create-account handoff, returning-login handoff, accept-ready, and the explicit no-presence copy. A release build must redirect `/qa-seed`; it is never a production identity import path.

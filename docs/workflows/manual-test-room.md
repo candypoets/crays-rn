@@ -69,7 +69,7 @@ does not expose or forward invite endpoints.
 
 ## QA strategy
 
-`.qa/qa-test-room.mjs` owns bootstrap, native exercise, independent
+`scenario:test-room` owns bootstrap, native exercise, independent
 verification, and teardown. Bootstrap asks the real invite service for exactly
 7,776,000 seconds, omits membership-award expiry, requests
 9,007,199,254,740,991 redemptions, and rejects a clamped response. The QA-only

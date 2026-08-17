@@ -49,4 +49,4 @@ real root-authorized room definition, selects Room feed, proves the room
 description is absent from event-like UI, and asserts both an operator announcement and
 guest post planted on the isolated relay.
 
-`.qa/qa-03-room-feed.mjs` independently provisions, seeds, queries, verifies, and destroys a Nuts relay. It uses an authorized QA signer, publishes an exact post through UI, and independently proves kind, signature, room/client/expiry tags and content. It also reports a selected Jonas post and proves the report's exact `e`, `p`, and venue tags. Component QA owns retained-draft/rejection and disabled-publish behavior. Credential-timeout enforcement remains D-002/D-003.
+`scenario:03-room-feed` independently provisions, seeds, queries, verifies, and destroys a Nuts relay. It uses an authorized QA signer, publishes an exact post through UI, and independently proves kind, signature, room/client/expiry tags and content. It also reports a selected Jonas post and proves the report's exact `e`, `p`, and venue tags. Component QA owns retained-draft/rejection and disabled-publish behavior. Credential-timeout enforcement remains D-002/D-003.

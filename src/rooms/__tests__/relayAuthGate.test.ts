@@ -1,4 +1,4 @@
-import { canOpenRoomSubscriptions } from '@/rooms/relayAuthGate';
+import { canOpenRoomSubscriptions, roomSignerAvailable } from '@/rooms/relayAuthGate';
 
 describe('room relay auth gate', () => {
   const relay = 'wss://venue.example';
@@ -13,5 +13,15 @@ describe('room relay auth gate', () => {
     expect(canOpenRoomSubscriptions(pubkey, relay, { key: `${pubkey}:${relay}`, status: 'pending' })).toBe(false);
     expect(canOpenRoomSubscriptions(pubkey, relay, { key: `${pubkey}:wss://other.example`, status: 'ready' })).toBe(false);
     expect(canOpenRoomSubscriptions(pubkey, relay, { key: `${pubkey}:${relay}`, status: 'ready' })).toBe(true);
+  });
+
+  it('accepts the matching signer only after the manager auth callback resolves', () => {
+    expect(roomSignerAvailable(pubkey, { hasSigner: true, pubkey, resolved: false })).toBe(false);
+    expect(roomSignerAvailable(pubkey, { hasSigner: true, pubkey, resolved: true })).toBe(true);
+  });
+
+  it('rejects read-only and mismatched manager auth callbacks', () => {
+    expect(roomSignerAvailable(pubkey, { hasSigner: false, pubkey, resolved: true })).toBe(false);
+    expect(roomSignerAvailable(pubkey, { hasSigner: true, pubkey: 'b'.repeat(64), resolved: true })).toBe(false);
   });
 });

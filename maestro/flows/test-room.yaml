@@ -91,3 +91,25 @@ appId: life.crays
     visible: "Request sent"
     timeout: 15000
 - takeScreenshot: test-build-room-message-request
+- stopApp
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "room-menu-screen"
+    timeout: 30000
+- extendedWaitUntil:
+    visible: "Mezcal Negroni"
+    timeout: 15000
+- tapOn:
+    id: "room-people-tab"
+- extendedWaitUntil:
+    visible: "Maya"
+    timeout: 15000
+- assertVisible: "Jonas"
+- tapOn:
+    id: "room-feed-tab"
+- extendedWaitUntil:
+    visible: "The mezcal negroni is excellent."
+    timeout: 15000
+- assertVisible: "Connected in the room"
+- takeScreenshot: test-build-room-cold-resume

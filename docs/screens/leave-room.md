@@ -57,6 +57,6 @@ banner, and large text may reflow in the scrollable shell.
 `LeaveAndSwitchScreens.test.tsx` covers exact consequences, confirm/cancel,
 error retention, and repeat-tap locking. `maestro/flows/leave-room.yaml`
 visibly joins a real isolated room, captures the confirmation state, confirms
-leave, and waits for Room Ended. `.qa/qa-leave-room.mjs` owns bootstrap,
+leave, and waits for Room Ended. `scenario:leave-room` owns bootstrap,
 Maestro, independent signed `left`-event verification with polling, and exact
 relay/volume teardown.

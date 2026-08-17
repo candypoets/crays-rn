@@ -82,16 +82,16 @@ Two mutation scenarios use a fourth badge-authorized identity that has no
 fixture presence, avoiding the false proof created when the app identity is
 also a seeded visible guest:
 
-- `.qa/qa-11-join-quiet.mjs` enters through public UI and independently proves
+- `scenario:11-join-quiet` enters through public UI and independently proves
   the app authored zero kind-10312 room events.
-- `.qa/qa-11-join-visible.mjs` selects Business, exact context, and one hour;
+- `scenario:11-join-visible` selects Business, exact context, and one hour;
   the independent verifier requires exactly one valid signature, exact
   room address/relay/root marker, the chosen fields, and an expiry matching
   that window. It also verifies the exact app-authored kind-0 profile that
   keeps People and feed projections resolvable.
 
 Explicit leave and relay switching remain independently verified by screens 21
-and 28. `.qa/qa-11c-join-relay-unavailable.mjs` covers the dead-relay path:
+and 28. `scenario:11c-join-relay-unavailable` covers the dead-relay path:
 joining against an unreachable relay renders the unverified-room error state
 and the enter action stays inert. The Test Room scenario additionally proves
 the direct broadcast pointer, 90-day effectively unlimited credential,

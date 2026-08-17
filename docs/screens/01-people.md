@@ -26,7 +26,7 @@ Entry requires a persisted `ActiveRoom`. With no active room, route to Discover.
 
 ## State and relay contract
 
-`RoomSessionProvider` owns only the durable active-room selection. `RoomDataProvider` owns the live projection and gives each concurrent event family a stable room-scoped subscription ID on the one device transport URL.
+`RoomSessionProvider` owns only the durable active-room selection. `RoomDataProvider` owns the live projection and gives each concurrent event family a stable room-scoped subscription ID on the one device transport URL. `ReactNativeBackend` restores its persisted signer asynchronously and emits the authoritative `auth` callback. The app binds that listener synchronously when it constructs the singleton manager, retains `{ pubkey, hasSigner }` for consumers that mount later, and compares the callback pubkey with the protected Crays account. For an identified account, the provider waits for that matching signer callback and completes the protected kind-4 relay lease before opening the public room families. This ordering applies after a cold release launch and after quiet entry as well as immediately after a visible join. An unresolved, read-only, or mismatched callback leaves the room in its connecting/failure state and must never settle as a truthful empty roster.
 
 Relevant events:
 
@@ -69,9 +69,11 @@ of the kind-30312 description from event-like UI.
 workflow `maestro/flows/01-people.yaml` enters quietly through the real join
 screen, first proves the relay menu is the default pane, selects People, waits
 for live relay projections, checks the exact visible-only count, and captures
-the canonical state.
+the canonical state. It then kills and relaunches the app, proving that the
+persisted room waits for nipworker's restored-signer callback before the menu,
+roster, and feed refill.
 
-`.qa/qa-01-people.mjs` owns an independent lifecycle:
+`scenario:01-people` owns an independent lifecycle:
 
 1. create an isolated Nuts coordinator relay and record its exact relay/volume IDs;
 2. issue fixture membership awards through the same gate as production;
@@ -82,5 +84,10 @@ the canonical state.
 6. independently query every fixture, including the real kind-31923 calendar
    event used by My Night, and verify all Nostr signatures;
 7. delete the exact relay and Docker volume in `finally`.
+
+The hosted Test Room workflow `maestro/flows/test-room.yaml`, owned by
+`scenario:test-room`, repeats the cold-relaunch check against the reserved
+relay and independently verifies its room definition, invite award, visible
+entry, and encrypted message write before teardown.
 
 Additional implementation QA must cover: zero profiles, profile without presence, left replacement, expired/fallback-stale presence, newer/older/equal-time replacement ordering, malformed profile, wrong room `a`, reconnect, background/foreground heartbeat, and switching to a second relay without mixed roster data.

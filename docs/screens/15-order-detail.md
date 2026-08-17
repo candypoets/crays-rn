@@ -8,7 +8,7 @@ States include implicit pending, every status transition, same-second determinis
 
 ## Complete QA strategy
 
-`.qa/qa-15-order-detail.mjs` opens a real issuer-signed product award with a venue-signed ready status and independently matches exact IDs. Maestro checks status language, progress, customer-facing deferred-receipt copy, hidden internal reference, and absence of “Delivered” or payment-rail jargon. Unit tests cover the mapping, copy, hidden reference, 48 dp Back target, and unavailable state. Contract fixtures must additionally exercise every ladder state, invalid signer/tag joins, stale replacement events, cancellation/refund copy, gifts, relaunch, support, large text, and offline recovery.
+`scenario:15-order-detail` opens a real issuer-signed product award with a venue-signed ready status and independently matches exact IDs. Maestro checks status language, progress, customer-facing deferred-receipt copy, hidden internal reference, and absence of “Delivered” or payment-rail jargon. Unit tests cover the mapping, copy, hidden reference, 48 dp Back target, and unavailable state. Contract fixtures must additionally exercise every ladder state, invalid signer/tag joins, stale replacement events, cancellation/refund copy, gifts, relaunch, support, large text, and offline recovery.
 
 ## Night Playlist implementation
 

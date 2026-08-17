@@ -47,7 +47,7 @@ None. The app-wide nipworker runtime may be ready, but Screen 06 creates no sign
 
 - Component: `ColdWelcomeScreen.test.tsx` checks the promise, the Tonight moves cue, the three product truths, explicit absence of the old sample events, CTA hierarchy, privacy copy, and both action callbacks.
 - Device: `maestro/flows/06-cold-welcome.yaml` starts from cleared app data, proves entry routing, checks the product-truth rail and absence of sample events, checks both CTAs, checks deferred login copy, captures the screen, and advances to 06B.
-- Scenario: `.qa/qa-06-cold-welcome.mjs` performs bootstrap → Maestro exercise → package-specific teardown.
+- Scenario: `scenario:06-cold-welcome` performs bootstrap → Maestro exercise → package-specific teardown.
 - Manual: Android/iOS large text, compact-height phone, dark/light OS setting, reduced motion, and screen-reader traversal.
 
 ## Exit criteria

@@ -37,7 +37,7 @@ wins; same-second lower event ID is the deterministic tie-break.
 
 Pure tests cover context deduplication, cancellation rollback, remaining-use
 math, unlimited passes, expiry, revocation precedence, and fresh reusable
-presentation contexts. `.qa/qa-memberships.mjs` owns the isolated lifecycle;
+presentation contexts. `scenario:memberships` owns the isolated lifecycle;
 `maestro/flows/memberships.yaml` joins its disposable real
 Nuts relay, sees an issuer-signed membership and three-use pass, asserts **2 uses
 left**, opens that exact pass, and sees the fulfilled activity. The independent
