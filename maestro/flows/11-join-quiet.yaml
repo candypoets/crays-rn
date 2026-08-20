@@ -14,7 +14,7 @@ appId: life.crays
       id: "join-privacy-screen"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "Joining · The Skyline Room"
+    visible: "The Skyline Room"
     timeout: 45000
 - assertVisible: "Browse quietly"
 - tapOn:
@@ -29,13 +29,8 @@ appId: life.crays
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-menu-screen"
-    timeout: 30000
-- tapOn:
-    id: "room-people-tab"
-- extendedWaitUntil:
-    visible:
       id: "room-people-screen"
-    timeout: 15000
+    timeout: 30000
 - assertVisible: "Connected in the room"
+- assertVisible: "You’re browsing quietly"
 - takeScreenshot: 11-join-quiet-no-presence

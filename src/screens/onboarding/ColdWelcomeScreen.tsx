@@ -78,14 +78,14 @@ export function ColdWelcomeScreen({ onCreateAccount, onLogIn }: ColdWelcomeScree
       </View>
 
       <View className="mt-auto pt-8">
-        <PrimaryButton label="Create account" onPress={onCreateAccount} testID="create-account-button" />
+        <PrimaryButton label="Create my Crays ID" onPress={onCreateAccount} testID="create-account-button" />
         <Pressable
           accessibilityRole="button"
           className="mt-1 min-h-12 items-center justify-center active:opacity-70"
           onPress={onLogIn}
           testID="log-in-button"
         >
-          <Text className="text-lg font-semibold text-base-content">Log in</Text>
+          <Text className="text-lg font-semibold text-base-content">Use an existing Nostr ID</Text>
         </Pressable>
         <Text className="mt-3 text-center text-sm leading-5 text-muted">
           No public location. You choose when you’re visible.

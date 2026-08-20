@@ -14,9 +14,9 @@ import { JoinPrivacyScreen } from '@/screens/discovery/JoinPrivacyScreen';
 import { useRoomSession } from '@/session/RoomSession';
 
 export default function JoinRoomRoute() {
-  const params = useLocalSearchParams<{ invite?: string; relay?: string; room?: string; service?: string; token?: string }>();
+  const params = useLocalSearchParams<{ invite?: string; mode?: string; relay?: string; room?: string; service?: string; token?: string }>();
   const definition = useRoomDefinition(params.relay, params.room);
-  const { enterRoom } = useRoomSession();
+  const { activeRoom, enterRoom, updatePresence } = useRoomSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const stopPublishRef = useRef<(() => void) | null>(null);
@@ -119,12 +119,14 @@ export default function JoinRoomRoute() {
           if (redemption && __DEV__) console.info(`[crays-room-access-granted]${JSON.stringify({ eventId: redemption.eventId, roomId: definition.room.id })}`);
         }
         const relayUrl = params.relay || definition.room.relayUrl;
+        const expiresAt = Math.floor(Date.now() / 1000) + preferences.leaveAfterMinutes * 60;
+        const leaveAt = expiresAt * 1000;
         const presence = presenceTemplate({
           roomAddress: definition.room.address,
           relayUrl: definition.room.relayUrl,
           intent: preferences.intent,
           context: preferences.context,
-          expiresAt: Math.floor(Date.now() / 1000) + preferences.leaveAfterMinutes * 60,
+          expiresAt,
         });
         startPublish({
           allowAccessRetry: confirmedInviteAccess,
@@ -137,7 +139,10 @@ export default function JoinRoomRoute() {
             relayUrl,
             template: presence,
             onSuccess: () => {
-              void enterRoom(definition.room!, preferences, params.relay)
+              const save = activeRoom?.id === definition.room!.id
+                ? updatePresence(preferences, leaveAt)
+                : enterRoom(definition.room!, preferences, params.relay, leaveAt);
+              void save
                 .then(() => router.replace('/room' as never))
                 .catch((cause) => {
                   setError(cause instanceof Error ? cause.message : 'The room could not be saved on this device.');
@@ -148,7 +153,8 @@ export default function JoinRoomRoute() {
         });
         return;
       }
-      await enterRoom(definition.room, preferences, params.relay);
+      if (activeRoom?.id === definition.room.id) await updatePresence(preferences);
+      else await enterRoom(definition.room, preferences, params.relay);
       router.replace('/room' as never);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The room could not be joined.');
@@ -161,7 +167,9 @@ export default function JoinRoomRoute() {
       loading={loading || definition.loading}
       onBack={() => router.back()}
       onEnter={enter}
+      roomAbout={definition.room?.about}
       roomName={definition.room?.name || 'this room'}
+      visibilityOnly={params.mode === 'visibility'}
     />
   );
 }

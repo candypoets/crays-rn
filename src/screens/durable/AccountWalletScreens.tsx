@@ -8,11 +8,10 @@ import { useState } from 'react';
 import { ActivityIndicator, Pressable, Text, View } from 'react-native';
 import { abbreviateNpub, type LocalAccountRead } from '@/account/account';
 import { AppShell, SectionTitle } from '@/components/app/AppShell';
-import { DrinkImage, NightBadge, NightCard, PortraitImage, VenueImage } from '@/components/night/NightPrimitives';
+import { NightBadge, NightCard, PortraitImage } from '@/components/night/NightPrimitives';
 import { ErrorBanner, PrimaryButton } from '@/components/onboarding/OnboardingPrimitives';
 import type { RoomEntitlement, RoomOrder } from '@/rooms/types';
 import { colors } from '@/theme/colors';
-import { orderSummaryLabel } from '@/screens/durable/NightAndOrderScreens';
 
 const activeOrderPriority: Record<RoomOrder['status'], number> = {
   ready: 0,
@@ -209,20 +208,14 @@ function MeRow({ action, detail, icon, id, title }: MeRowProps) {
 
 export function MeScreen({
   accountState = { status: 'missing' },
-  activeOrder,
   error,
   hasMembership,
   loading = false,
   onMemberships,
-  onMessages,
-  onNotifications,
   onOrders,
   onProfile,
   onRetryAccount,
-  onRoom,
   onTickets,
-  onWallet,
-  roomName,
   offline = false,
   refreshing = false,
   ticketCount,
@@ -234,28 +227,19 @@ export function MeScreen({
   loading?: boolean;
   onMemberships: () => void;
   onMessages?: () => void;
-  onNotifications: () => void;
+  onNotifications?: () => void;
   onOrders: () => void;
   onProfile: () => void;
   onRetryAccount?: () => void;
-  onRoom: () => void;
+  onRoom?: () => void;
   onTickets: () => void;
-  onWallet: () => void;
+  onWallet?: () => void;
   roomName?: string;
   offline?: boolean;
   refreshing?: boolean;
   ticketCount: number;
 }) {
   const [profileExpanded, setProfileExpanded] = useState(false);
-  const orderDetail = loading
-    ? 'Loading saved orders…'
-    : refreshing && !activeOrder
-      ? 'Checking the room…'
-      : activeOrder
-        ? 'Track active order and history'
-        : offline
-          ? 'Saved history · room unavailable'
-          : 'Order history and receipts';
   const membershipDetail = loading
     ? 'Loading saved access…'
     : refreshing && !hasMembership
@@ -275,14 +259,14 @@ export function MeScreen({
     <AppShell
       headerAction={(
         <Pressable
-          accessibilityLabel="Open notification settings"
+          accessibilityLabel="Open settings"
           accessibilityRole="button"
           className="h-12 w-12 items-center justify-center rounded-full bg-surface-soft active:bg-edge"
           hitSlop={4}
-          onPress={onNotifications}
-          testID="me-notifications"
+          onPress={onProfile}
+          testID="me-settings"
         >
-          <Ionicons color={colors.ink} name="notifications-outline" size={22} />
+          <Ionicons color={colors.ink} name="settings-outline" size={22} />
         </Pressable>
       )}
       testID="me-screen"
@@ -291,7 +275,7 @@ export function MeScreen({
       <Text accessibilityRole="header" className="mt-2 text-[40px] font-black uppercase tracking-[-1px] text-ink">
         Me
       </Text>
-      <Text className="text-xs font-black uppercase tracking-[1.4px] text-ink">Keeping the night</Text>
+      <Text className="text-xs font-black uppercase tracking-[1.4px] text-ink">Your identity and what lasts</Text>
 
       <MeIdentityCard
         expanded={profileExpanded}
@@ -318,80 +302,21 @@ export function MeScreen({
         </View>
       ) : null}
 
-      <Text className="mb-2 mt-5 text-[11px] font-black uppercase tracking-[0.8px] text-ink">Current room</Text>
-      {roomName ? (
-        <NightCard
-          accessibilityLabel={`${roomName}. You’re inside. Return to room`}
-          className="p-0 active:bg-surface-soft"
-          onPress={onRoom}
-          testID="me-current-room"
-        >
-          <View className="flex-row overflow-hidden rounded-2xl">
-            <VenueImage className="h-24 w-32" index={0} label={`${roomName} interior`} testID="me-room-image" />
-            <View className="min-w-0 flex-1 justify-center px-4 py-3">
-              <Text className="text-lg font-black text-ink">{roomName}</Text>
-              <View className="mt-2 flex-row items-center gap-2">
-                <View className="h-2 w-2 rounded-full bg-success" />
-                <Text className="flex-1 text-sm font-semibold text-muted">You’re inside</Text>
-                <Ionicons color={colors.primary} name="chevron-forward" size={20} />
-              </View>
-            </View>
-          </View>
-        </NightCard>
-      ) : (
-        <NightCard>
-          <Text className="font-extrabold text-ink">No room selected</Text>
-          <Text className="mt-1 text-sm leading-5 text-muted">Join a nearby room to see live context here.</Text>
-        </NightCard>
-      )}
-
-      {activeOrder ? (
-        <View>
-          <Text className="mb-2 mt-5 text-[11px] font-black uppercase tracking-[0.8px] text-ink">Active order</Text>
-          <Pressable
-            accessibilityLabel={`${activeOrder.product.name}. ${orderSummaryLabel(activeOrder)}. Open orders`}
-            accessibilityRole="button"
-            className="rounded-2xl border border-edge bg-surface"
-            onPress={onOrders}
-            testID="me-active-order"
-          >
-            <View className="flex-row items-center p-3">
-              <DrinkImage className="h-16 w-16 rounded-xl" index={activeOrder.product.position % 4} label={activeOrder.product.name} />
-              <View className="ml-3 min-w-0 flex-1">
-                <Text className="text-base font-black text-ink">{activeOrder.product.name}</Text>
-                <Text className="mt-1 text-sm font-semibold text-primary">{orderSummaryLabel(activeOrder)}</Text>
-                <View accessibilityElementsHidden className="mt-3 flex-row items-center" importantForAccessibility="no-hide-descendants">
-                  <View className="h-1 flex-1 rounded-full bg-primary" />
-                  <View className="h-2.5 w-2.5 rounded-full border-2 border-primary bg-surface" />
-                  <View className="h-1 flex-1 rounded-full bg-edge" />
-                </View>
-              </View>
-              <Ionicons color={colors.primary} name="chevron-forward" size={20} />
-            </View>
-          </Pressable>
-        </View>
-      ) : null}
-
-      <View className="mt-5 overflow-hidden rounded-2xl border border-edge bg-surface">
-        <MeRow action={onOrders} detail={orderDetail} icon="receipt-outline" id="me-orders" title="Orders" />
-        <MeRow action={onMemberships} detail={membershipDetail} icon="ribbon-outline" id="me-memberships" title="Memberships & passes" />
-        <MeRow action={onTickets} detail={ticketDetail} icon="ticket-outline" id="me-tickets" title="Tickets" />
-        <MeRow action={onWallet} detail="Setup required · balance unavailable" icon="wallet-outline" id="me-wallet" title="Wallet" />
-        {onMessages ? <MeRow action={onMessages} detail="Conversations stay after you leave" icon="chatbox-ellipses-outline" id="me-messages" title="Messages" /> : null}
+      <Text className="mb-2 mt-6 text-[11px] font-black uppercase tracking-[0.8px] text-ink">Recovery & backup</Text>
+      <View className="overflow-hidden rounded-2xl border border-edge bg-surface">
+        <MeRow action={onProfile} detail="Review how this identity is protected" icon="shield-checkmark-outline" id="me-recovery" title="Recovery options" />
       </View>
 
-      <View className="mt-5">
-        <Pressable
-          accessibilityLabel="Open profile, privacy, and settings"
-          accessibilityRole="button"
-          className="min-h-14 flex-row items-center rounded-2xl border border-edge bg-surface px-4"
-          onPress={onProfile}
-          testID="me-profile"
-        >
-          <Ionicons color={colors.ink} name="settings-outline" size={22} />
-          <Text className="ml-3 min-w-0 flex-1 font-extrabold text-ink">Settings & privacy</Text>
-          <Ionicons color={colors.primary} name="chevron-forward" size={20} />
-        </Pressable>
+      <Text className="mb-2 mt-6 text-[11px] font-black uppercase tracking-[0.8px] text-ink">My access</Text>
+      <View className="overflow-hidden rounded-2xl border border-edge bg-surface">
+        <MeRow action={onTickets} detail={ticketDetail} icon="ticket-outline" id="me-tickets" title="Tickets" />
+        <MeRow action={onMemberships} detail={membershipDetail} icon="key-outline" id="me-passes" title="Passes" />
+        <MeRow action={onMemberships} detail={membershipDetail} icon="ribbon-outline" id="me-memberships" title="Memberships" />
+      </View>
+
+      <Text className="mb-2 mt-6 text-[11px] font-black uppercase tracking-[0.8px] text-ink">My history</Text>
+      <View className="overflow-hidden rounded-2xl border border-edge bg-surface">
+        <MeRow action={onOrders} detail={offline ? 'Saved history · room unavailable' : 'Orders and receipts from past nights'} icon="receipt-outline" id="me-orders" title="Order history" />
       </View>
     </AppShell>
   );

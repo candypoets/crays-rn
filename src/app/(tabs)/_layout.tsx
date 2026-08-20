@@ -46,9 +46,9 @@ export default function PrimaryTabsLayout() {
       }}
     >
       <Tabs.Screen name="room" options={optionsFor(PRIMARY_TABS[0])} />
-      <Tabs.Screen name="discover" options={optionsFor(PRIMARY_TABS[1])} />
-      <Tabs.Screen name="messages" options={optionsFor(PRIMARY_TABS[2])} />
-      <Tabs.Screen name="me" options={optionsFor(PRIMARY_TABS[3])} />
+      <Tabs.Screen name="discover" options={{ href: null }} />
+      <Tabs.Screen name="messages" options={optionsFor(PRIMARY_TABS[1])} />
+      <Tabs.Screen name="me" options={optionsFor(PRIMARY_TABS[2])} />
     </Tabs>
   );
 }

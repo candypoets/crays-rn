@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { readLocalAccountSummary } from '@/account/account';
 import { listTickets } from '@/access/tickets';
 import { useRoomData } from '@/rooms/RoomData';
-import { countUsableEventAccess, hasUsableDurableAccess, MeScreen, selectActiveOrder, type MeAccountState } from '@/screens/durable/AccountWalletScreens';
+import { countUsableEventAccess, hasUsableDurableAccess, MeScreen, type MeAccountState } from '@/screens/durable/AccountWalletScreens';
 import { useRoomSession } from '@/session/RoomSession';
 
 export default function MeRoute() {
@@ -68,7 +68,6 @@ export default function MeRoute() {
     };
   }, [focused]);
 
-  const activeOrder = selectActiveOrder(data.orders);
   const hasMembership = hasUsableDurableAccess(data.entitlements);
   const durableError = error || data.archiveError;
   const offline = Boolean(activeRoom && data.archiveHydrated && !data.loading && !data.connected);
@@ -76,23 +75,17 @@ export default function MeRoute() {
   return (
     <MeScreen
       accountState={accountState}
-      activeOrder={activeOrder}
       error={durableError}
       hasMembership={hasMembership}
       loading={!data.archiveHydrated || !ticketsLoaded}
       offline={offline}
       refreshing={Boolean(activeRoom && data.loading)}
       ticketCount={ticketCount + countUsableEventAccess(data.entitlements)}
-      roomName={activeRoom?.name}
       onMemberships={() => router.push('/memberships' as never)}
-      onMessages={() => router.push('/(tabs)/messages' as never)}
-      onNotifications={() => router.push('/settings' as never)}
       onOrders={() => router.push('/orders' as never)}
       onProfile={() => router.push('/settings' as never)}
       onRetryAccount={retryAccount}
-      onRoom={() => router.navigate('/(tabs)/room' as never)}
       onTickets={() => router.push('/tickets' as never)}
-      onWallet={() => router.push('/wallet' as never)}
     />
   );
 }

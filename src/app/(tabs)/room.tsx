@@ -1,19 +1,67 @@
 import type { WorkerMessage } from '@candypoets/nipworker';
 import { usePublish as publishToNostr } from '@candypoets/nipworker/hooks';
 import { isConnectionStatus } from '@candypoets/nipworker/utils';
-import { Redirect, router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
+import { Linking } from 'react-native';
 
 import { useCart } from '@/commerce/Cart';
+import { createTestRoomPointer, TEST_ROOM_BUILD } from '@/config/testRoom';
+import { nearbyRoomEntryParams } from '@/discovery/blePointer';
+import { roomMapSearchUrl } from '@/discovery/roomEntry';
+import { useNearbyRoom } from '@/discovery/useNearbyRoom';
 import { roomReactionTemplate, venueReportTemplate } from '@/nostr/protocol';
 import { relayUrlFor } from '@/rooms/relayUrl';
 import { useRoomData } from '@/rooms/RoomData';
+import { useRoomDefinition } from '@/rooms/useRoomDefinition';
+import type { ActiveRoom, RoomDescriptor } from '@/rooms/types';
+import { DiscoverHandoffScreen } from '@/screens/DiscoverHandoffScreen';
+import { selectActiveOrder } from '@/screens/durable/AccountWalletScreens';
 import { RoomScreen, type RoomView } from '@/screens/room/RoomScreen';
 import { useRoomSession } from '@/session/RoomSession';
 
 export default function RoomRoute() {
-  const params = useLocalSearchParams<{ liked?: string; view?: string }>();
   const { activeRoom, endedRoom, hydrated } = useRoomSession();
+  if (!hydrated) return null;
+  if (!activeRoom) return endedRoom?.reason === 'automatic'
+    ? <Redirect href={{ pathname: '/room-ended', params: { name: endedRoom.name, reason: 'automatic' } } as never} />
+    : <TonightFindRoute />;
+  return <ActiveRoomRoute activeRoom={activeRoom} />;
+}
+
+function TonightFindRoute() {
+  const params = useLocalSearchParams<{ relay?: string; room?: string; nearby?: string }>();
+  const focused = useIsFocused();
+  const nearby = useNearbyRoom(focused && params.nearby === '1' && !params.relay);
+  const transportRelay = params.relay || nearby.pointer?.relayUrl;
+  const roomId = params.room || nearby.pointer?.roomId;
+  const result = useRoomDefinition(transportRelay, roomId);
+  const testPointer = createTestRoomPointer();
+  const duplicatesPrimaryRoom = transportRelay === testPointer?.relayUrl && roomId === testPointer?.roomId;
+  const testRoom = useRoomDefinition(testPointer && !duplicatesPrimaryRoom ? testPointer.relayUrl : undefined, testPointer?.roomId);
+  const [entryError, setEntryError] = useState<string | null>(null);
+  const featuredRoom = result.room || (TEST_ROOM_BUILD ? testRoom.room : null);
+  const open = (room: RoomDescriptor, entryParams: ReturnType<typeof nearbyRoomEntryParams>) => router.push({ pathname: '/join-room', params: entryParams } as never);
+  return (
+    <DiscoverHandoffScreen
+      error={entryError || result.error || nearby.error}
+      loading={result.loading || nearby.scanning}
+      onMap={() => {
+        setEntryError(null);
+        void Linking.openURL(roomMapSearchUrl(featuredRoom?.name)).catch(() => setEntryError('Maps could not be opened on this device. Use a venue QR, Nearby, or a room link.'));
+      }}
+      onNearby={() => router.push({ pathname: '/bluetooth-rationale', params: { relay: params.relay, room: params.room } } as never)}
+      onOpenRoom={(room) => open(room, { relay: transportRelay || room.relayUrl, room: room.id })}
+      onOpenTestRoom={(room) => testPointer && open(room, nearbyRoomEntryParams(testPointer))}
+      onScan={() => router.push('/scan-room' as never)}
+      room={result.room}
+      testRoom={TEST_ROOM_BUILD && testPointer && !duplicatesPrimaryRoom ? { ...testRoom, testBuild: !__DEV__ } : undefined}
+    />
+  );
+}
+
+function ActiveRoomRoute({ activeRoom }: { activeRoom: ActiveRoom }) {
+  const params = useLocalSearchParams<{ liked?: string; view?: string }>();
   const data = useRoomData();
   const { count: cartCount } = useCart();
   const [likingPostId, setLikingPostId] = useState<string | null>(null);
@@ -22,17 +70,12 @@ export default function RoomRoute() {
   const [reportNotice, setReportNotice] = useState<string | null>(null);
   const stopLikePublishRef = useRef<(() => void) | null>(null);
   const stopReportPublishRef = useRef<(() => void) | null>(null);
-  const view: RoomView = params.view === 'people' || params.view === 'feed' ? params.view : 'menu';
+  const view: RoomView = params.view === 'menu' || params.view === 'feed' ? params.view : 'people';
   const effectiveLikedPostIds = new Set([...likedPostIds, ...(params.liked || '').split(',').filter(Boolean)]);
   useEffect(() => () => {
     stopLikePublishRef.current?.();
     stopReportPublishRef.current?.();
   }, []);
-  if (!hydrated) return null;
-  if (!activeRoom) return endedRoom?.reason === 'automatic'
-    ? <Redirect href={{ pathname: '/room-ended', params: { name: endedRoom.name, reason: 'automatic' } } as never} />
-    : <Redirect href="/discover" />;
-
   const likePost = (post: (typeof data.posts)[number]) => {
     const relayAlreadyHasLike = data.reactions.some((reaction) => reaction.targetId === post.id && reaction.pubkey === data.viewerPubkey);
     if (likingPostId || effectiveLikedPostIds.has(post.id) || relayAlreadyHasLike) return;
@@ -129,16 +172,20 @@ export default function RoomRoute() {
   return (
     <RoomScreen
       activeRoom={activeRoom}
+      activeOrder={selectActiveOrder(data.orders)}
       cartCount={cartCount}
       connected={data.connected}
       loading={data.loading}
       onCart={() => router.push('/review-pay' as never)}
-      onChangeView={(next) => router.setParams({ view: next === 'menu' ? undefined : next })}
+      onBecomeVisible={() => router.push({ pathname: '/join-room', params: { mode: 'visibility', relay: relayUrlFor(activeRoom), room: activeRoom.id } } as never)}
+      onChangeView={(next) => router.setParams({ view: next === 'people' ? undefined : next })}
       onComposePost={() => router.push('/room-post' as never)}
       onLikePost={likePost}
       onLeave={() => router.push('/leave-room' as never)}
       onMyNight={() => router.push('/my-night' as never)}
-      onOpenPerson={(pubkey) => router.push({ pathname: '/person' as never, params: { pubkey } })}
+      onOpenOrder={() => router.push('/orders' as never)}
+      onOpenPerson={(pubkey) => router.push({ pathname: '/message-request' as never, params: { pubkey } })}
+      onOpenPersonProfile={(pubkey) => router.push({ pathname: '/person' as never, params: { pubkey } })}
       onOpenProduct={(product) => router.push({ pathname: '/item' as never, params: { id: product.id } })}
       onOpenThread={(post) => router.push({
         pathname: '/room-thread' as never,

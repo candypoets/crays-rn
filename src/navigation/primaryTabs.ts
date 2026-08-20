@@ -1,17 +1,10 @@
 export const PRIMARY_TABS = [
   {
     name: 'room',
-    title: 'Room',
-    testID: 'tab-room',
-    icon: 'radio-outline',
-    selectedIcon: 'radio',
-  },
-  {
-    name: 'discover',
-    title: 'Discover',
-    testID: 'tab-discover',
-    icon: 'compass-outline',
-    selectedIcon: 'compass',
+    title: 'Tonight',
+    testID: 'tab-tonight',
+    icon: 'moon-outline',
+    selectedIcon: 'moon',
   },
   {
     name: 'messages',

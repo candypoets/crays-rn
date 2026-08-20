@@ -4,14 +4,14 @@ appId: life.crays
 - openLink: "crays:///discover?relay=${RELAY_URL}&room=${ROOM_ID}"
 - extendedWaitUntil:
     visible:
-      id: "discover-screen"
+      id: "tonight-find-screen"
     timeout: 30000
 - extendedWaitUntil:
     visible: "The Skyline Room"
     timeout: 15000
-- assertVisible: "Verified"
+- assertVisible: "Verified room"
 - tapOn:
-    id: "discover-nearby-tab"
+    id: "tonight-nearby"
 - assertVisible:
     id: "bluetooth-rationale-screen"
 - assertVisible: ".*do not publish your presence or exact location.*"
@@ -19,7 +19,7 @@ appId: life.crays
     id: "use-map-button"
 - extendedWaitUntil:
     visible:
-      id: "discover-screen"
+      id: "tonight-find-screen"
     timeout: 15000
-- assertVisible: "Rooms around you"
+- assertVisible: "Find your room"
 - takeScreenshot: 27-discover-relay

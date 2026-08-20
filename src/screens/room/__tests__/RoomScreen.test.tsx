@@ -58,8 +58,8 @@ describe('RoomScreen', () => {
   });
 
   it('renders visible people in predictable accessibility order', () => {
-    const onOpenPerson = jest.fn();
-    render(<RoomScreen {...props({ onOpenPerson, view: 'people' })} />);
+    const onOpenPerson = jest.fn(); const onOpenPersonProfile = jest.fn();
+    render(<RoomScreen {...props({ onOpenPerson, onOpenPersonProfile, view: 'people' })} />);
     const joined = new Date(activeRoom.joinedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
     const expiryDate = new Date(activeRoom.leaveAt);
     const expiry = `${expiryDate.toLocaleDateString([], { day: 'numeric', month: 'short' })} · ${expiryDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
@@ -76,6 +76,8 @@ describe('RoomScreen', () => {
     expect(screen.getByTestId(`person-image-${maya.pubkey}-profile-image`)).toHaveProp('source', { uri: profile.picture });
     fireEvent.press(screen.getByTestId(`person-${maya.pubkey}`));
     expect(onOpenPerson).toHaveBeenCalledWith(maya.pubkey);
+    fireEvent.press(screen.getByLabelText('Open Maya profile and safety actions'));
+    expect(onOpenPersonProfile).toHaveBeenCalledWith(maya.pubkey);
   });
 
   it('adapts roster columns to compact, expanded, and large-text windows', () => {
@@ -88,6 +90,18 @@ describe('RoomScreen', () => {
   it('explains an empty quiet roster without implying nobody is present', () => {
     render(<RoomScreen {...props({ people: [], view: 'people' })} />);
     expect(screen.getByText(/Only people who chose to be visible/)).toBeOnTheScreen();
+  });
+
+  it('keeps quiet privacy and a ready order in Tonight with explicit actions', () => {
+    const onBecomeVisible = jest.fn(); const onOpenOrder = jest.fn();
+    const activeOrder = { id: 'order', awardId: 'award', orderRef: 'CR-42', product, status: 'ready' as const, createdAt: 1, updatedAt: 2, recipientPubkey: 'c'.repeat(64) };
+    render(<RoomScreen {...props({ activeOrder, onBecomeVisible, onOpenOrder, view: 'people' })} />);
+    expect(screen.getByText('You’re browsing quietly')).toBeOnTheScreen();
+    expect(screen.getByText('Your order is ready')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Leave' })).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('become-visible'));
+    fireEvent.press(screen.getByTestId('tonight-active-order'));
+    expect(onBecomeVisible).toHaveBeenCalledTimes(1); expect(onOpenOrder).toHaveBeenCalledTimes(1);
   });
 
   it('renders the room-only feed, announcement, and dedicated composer action', () => {

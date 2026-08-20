@@ -44,8 +44,8 @@ const intents: Intent[] = [
 
 function StepDots({ active }: { active: number }) {
   return (
-    <View accessibilityLabel={`Account step ${active} of 3`} accessible className="flex-row items-center gap-2">
-      {[1, 2, 3].map((step) => (
+    <View accessibilityLabel={`Identity step ${active} of 2`} accessible className="flex-row items-center gap-2">
+      {[1, 2].map((step) => (
         <View className={`h-2.5 w-2.5 rounded-full ${step === active ? 'bg-primary' : 'bg-base-300'}`} key={step} />
       ))}
     </View>
@@ -75,7 +75,7 @@ export function ProfileSetupScreen({
       <View className="flex-row items-start justify-between">
         <BackButton onPress={onBack} />
         <View className="mt-4">
-          <StepDots active={1} />
+          <StepDots active={2} />
         </View>
         <BrandMark size={40} />
       </View>
@@ -84,7 +84,7 @@ export function ProfileSetupScreen({
         accessibilityRole="header"
         className="mt-4 text-[36px] font-extrabold leading-[40px] tracking-[-1px] text-base-content"
       >
-        How should the room call you?
+        What should people here call you?
       </Text>
 
       <View className="mt-8">
@@ -137,14 +137,14 @@ export function ProfileSetupScreen({
       <View className="mt-7 flex-row items-start gap-3 rounded-2xl bg-surface-soft p-4">
         <Ionicons color={colors.ink} name="lock-closed-outline" size={20} />
         <Text className="flex-1 text-sm leading-5 text-ink-muted">
-          You decide what to share in each room. You can be quiet, browse, or be visible.
+          Your new Nostr identity is protected on this device. You decide what each room can see.
         </Text>
       </View>
 
       <View className="mt-auto pt-6">
         <PrimaryButton
           disabled={!valid}
-          label="Continue"
+          label="Create ID and continue"
           loading={loading}
           onPress={() => onContinue(normalizedName)}
           testID="profile-continue-button"

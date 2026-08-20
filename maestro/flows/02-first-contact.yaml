@@ -7,7 +7,7 @@ appId: life.crays
     visible:
       id: "room-people-screen"
     timeout: 15000
-- tapOn: "Jonas"
+- tapOn: "Open Jonas profile and safety actions"
 - extendedWaitUntil:
     visible:
       id: "first-contact-screen"

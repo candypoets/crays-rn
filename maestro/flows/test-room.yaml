@@ -10,25 +10,18 @@ appId: life.crays
     id: "qa-seed-continue"
 - extendedWaitUntil:
     visible:
-      id: "dev-test-room-card"
+      id: "tonight-find-screen"
     timeout: 30000
 - extendedWaitUntil:
-    visible: ".*Crays Test Room is online.*"
+    visible: "Crays Test Room"
     timeout: 30000
-- assertVisible: ".*Bluetooth is not required.*"
 - tapOn:
-    id: "open-test-room"
-- extendedWaitUntil:
-    visible:
-      id: "room-preview-screen"
-    timeout: 30000
-- assertVisible: "Direct links, Map and QR entry do not require Bluetooth."
-- tapOn:
-    id: "enter-room-button"
+    id: "room-result-card"
 - extendedWaitUntil:
     visible:
       id: "join-privacy-screen"
-    timeout: 15000
+    timeout: 30000
+- assertVisible: "Preview only · you are not inside yet"
 - assertNotVisible:
     id: "bluetooth-rationale-screen"
 - tapOn:
@@ -53,33 +46,18 @@ appId: life.crays
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-menu-screen"
-    timeout: 30000
-- assertVisible:
-    id: "menu-screen"
-- assertVisible: "Mezcal Negroni"
-- tapOn:
-    id: "room-people-tab"
-- extendedWaitUntil:
-    visible:
       id: "room-people-screen"
-    timeout: 15000
+    timeout: 30000
 - assertVisible: "Maya"
 - assertVisible: "Jonas"
 - assertVisible: "${QA_PROFILE_NAME}"
 - assertVisible: "${QA_JOIN_INTENT}"
 - assertVisible: ".*${QA_JOIN_CONTEXT}.*"
-- assertVisible: "^Discover$"
+- assertVisible: "^Tonight$"
 - assertVisible: "^Messages$"
 - assertVisible: "^Me$"
 - takeScreenshot: test-build-room-visible-invite
 - tapOn: "Jonas"
-- extendedWaitUntil:
-    visible:
-      id: "first-contact-screen"
-    timeout: 15000
-- tapOn:
-    id: "message-person"
 - extendedWaitUntil:
     visible:
       id: "message-request-screen"
@@ -88,20 +66,15 @@ appId: life.crays
 - tapOn:
     id: "send-message-request"
 - extendedWaitUntil:
-    visible: "Request sent"
+    visible: "Waiting for Jonas"
     timeout: 15000
 - takeScreenshot: test-build-room-message-request
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: "room-menu-screen"
+      id: "room-people-screen"
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Mezcal Negroni"
-    timeout: 15000
-- tapOn:
-    id: "room-people-tab"
 - extendedWaitUntil:
     visible: "Maya"
     timeout: 15000

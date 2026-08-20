@@ -19,7 +19,7 @@ appId: life.crays
 - tapOn:
     id: "me-account-profile"
 - tapOn:
-    id: "me-notifications"
+    id: "me-settings"
 - extendedWaitUntil:
     visible:
       id: "settings-screen"
@@ -31,31 +31,19 @@ appId: life.crays
     visible:
       id: "me-screen"
     timeout: 15000
-- assertVisible: "Active order"
-- assertVisible: "Current room"
-- assertVisible: "Ready for pickup"
+- assertNotVisible: "Active order"
+- assertNotVisible: "Current room"
+- assertNotVisible: "Ready for pickup"
 - assertVisible: "1 saved ticket"
 - assertNotVisible: "CR-QA-READY"
 - assertNotVisible: ".*relay-confirmed.*"
-- tapOn:
-    id: "me-current-room"
-- extendedWaitUntil:
-    visible:
-      id: "room-menu-screen"
-    timeout: 15000
-- tapOn:
-    id: "tab-me"
-- extendedWaitUntil:
-    visible:
-      id: "me-screen"
-    timeout: 15000
 - scrollUntilVisible:
     element:
-      id: "me-wallet"
+      id: "me-orders"
     direction: DOWN
     timeout: 8000
-- assertVisible: "Orders"
-- assertVisible: "Memberships & passes"
-- assertVisible: "Wallet"
-- assertVisible: "Messages"
+- assertVisible: "Order history"
+- assertVisible: "Memberships"
+- assertVisible: "Passes"
+- assertVisible: "Recovery options"
 - takeScreenshot: 16-me-relay

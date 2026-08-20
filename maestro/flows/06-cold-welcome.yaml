@@ -10,8 +10,8 @@ appId: life.crays
 - assertNotVisible: "Gallery Opening"
 - assertNotVisible: "Rooftop Jazz"
 - assertNotVisible: "After Hours"
-- assertVisible: "Create account"
-- assertVisible: "Log in"
+- assertVisible: "Create my Crays ID"
+- assertVisible: "Use an existing Nostr ID"
 - assertVisible: ".*No public location.*"
 - takeScreenshot: 06-cold-welcome
 # Log in is implemented (screen 09): it navigates to the returning-login
@@ -33,4 +33,4 @@ appId: life.crays
 - tapOn:
     id: "create-account-button"
 - assertVisible:
-    id: "account-access-screen"
+    id: "profile-setup-screen"

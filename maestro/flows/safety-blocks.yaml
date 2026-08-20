@@ -7,7 +7,7 @@ appId: life.crays
     visible:
       id: "room-people-screen"
     timeout: 15000
-- tapOn: "Jonas"
+- tapOn: "Open Jonas profile and safety actions"
 - extendedWaitUntil:
     visible:
       id: "first-contact-screen"
@@ -41,7 +41,7 @@ appId: life.crays
 - tapOn:
     id: "tab-me"
 - tapOn:
-    id: "me-profile"
+    id: "me-settings"
 - extendedWaitUntil:
     visible:
       id: "settings-screen"
@@ -61,7 +61,7 @@ appId: life.crays
 - tapOn:
     id: "settings-back"
 - tapOn:
-    id: "tab-room"
+    id: "tab-tonight"
 - extendedWaitUntil:
     visible: "Jonas"
     timeout: 15000
@@ -80,7 +80,7 @@ appId: life.crays
 - tapOn:
     id: "tab-me"
 - tapOn:
-    id: "me-profile"
+    id: "me-settings"
 - scrollUntilVisible:
     element:
       text: "Hidden in room.*"

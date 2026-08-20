@@ -34,15 +34,16 @@ describe('ProfileSetupScreen', () => {
     expect(screen.getByRole('button', { name: 'Music' })).not.toBeSelected();
 
     fireEvent.changeText(screen.getByLabelText('Display name'), 'QA Alex');
-    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create ID and continue' }));
     expect(onContinue).toHaveBeenCalledWith('QA Alex');
   });
 
   it('states that room sharing and visibility are chosen later', () => {
     render(<ProfileSetupScreen onBack={jest.fn()} onContinue={jest.fn()} />);
 
-    expect(screen.getByRole('header', { name: 'How should the room call you?' })).toBeOnTheScreen();
-    expect(screen.getByText(/You decide what to share in each room/)).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'What should people here call you?' })).toBeOnTheScreen();
+    expect(screen.getByText(/protected on this device/)).toBeOnTheScreen();
+    expect(screen.getByLabelText('Identity step 2 of 2')).toBeOnTheScreen();
   });
 
   it('submits the entered display name and renders signing errors', () => {
@@ -56,7 +57,7 @@ describe('ProfileSetupScreen', () => {
     );
 
     fireEvent.changeText(screen.getByLabelText('Display name'), 'QA Alex');
-    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create ID and continue' }));
 
     expect(onContinue).toHaveBeenCalledWith('QA Alex');
     expect(screen.getByText('The profile signature could not be verified.')).toBeOnTheScreen();
@@ -67,7 +68,7 @@ describe('ProfileSetupScreen', () => {
     render(<ProfileSetupScreen onBack={jest.fn()} onContinue={onContinue} />);
 
     fireEvent.changeText(screen.getByLabelText('Display name'), '  QA   Alex  ');
-    fireEvent.press(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create ID and continue' }));
 
     expect(onContinue).toHaveBeenCalledWith('QA Alex');
   });

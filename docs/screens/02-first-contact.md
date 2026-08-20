@@ -4,7 +4,7 @@
 
 Canonical visual reference: `docs/design-explorations/night-playlist/mockups/01-room-and-feed-v1.png`, panel 04. The Night Playlist Maya sheet supersedes the incumbent dark profile PNG for composition and signal colors; consent and relay rules below remain authoritative.
 
-This screen is the consent boundary between seeing a visible room profile and contacting that person. **Message** is primary. **Send a drink** is secondary and explicitly non-anonymous. The person remains identified by pubkey and active-room projection, not by display name.
+This profile-and-safety screen is reached from the labelled overflow on a visible person. The portrait itself now opens the shorter native message-request sheet directly. **Message** remains available here, while **Send a drink** is secondary and explicitly non-anonymous. The person remains identified by pubkey and active-room projection, not by display name.
 
 ## UI and interaction
 

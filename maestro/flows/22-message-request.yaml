@@ -1,13 +1,9 @@
 appId: life.crays
 ---
-- runFlow: 01-people.yaml
-- tapOn: "Maya"
-- extendedWaitUntil:
-    visible:
-      id: "first-contact-screen"
-    timeout: 15000
+- runFlow: seed-and-join.yaml
 - tapOn:
-    id: "message-person"
+    id: "room-people-tab"
+- tapOn: "Maya"
 - extendedWaitUntil:
     visible:
       id: "message-request-screen"

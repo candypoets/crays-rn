@@ -11,6 +11,15 @@ describe('JoinPrivacyScreen', () => {
     expect(screen.getByTestId('join-room-button')).toBeEnabled();
     fireEvent.press(screen.getByTestId('join-room-button'));
     expect(onEnter).toHaveBeenCalledWith({ visibility: 'quiet', intent: 'social', context: '', leaveAfterMinutes: 120 });
+    expect(screen.getByText('Preview only · you are not inside yet')).toBeOnTheScreen();
+  });
+
+  it('uses the same sheet to make a quiet session visible without offering quiet again', () => {
+    render(<JoinPrivacyScreen onBack={jest.fn()} onEnter={jest.fn()} roomAbout="Rooftop jazz" roomName="Skyline" visibilityOnly />);
+    expect(screen.getByRole('header', { name: 'Become visible here?' })).toBeOnTheScreen();
+    expect(screen.queryByTestId('visibility-quiet')).toBeNull();
+    expect(screen.getByTestId('visibility-visible')).toBeSelected();
+    expect(screen.getByText('Rooftop jazz')).toBeOnTheScreen();
   });
 
   it('requires an explicit visible selection', () => {

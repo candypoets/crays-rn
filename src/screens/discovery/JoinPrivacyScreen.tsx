@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { BackButton, OnboardingShell, PrimaryButton, TextAction } from '@/components/onboarding/OnboardingPrimitives';
+import { NightBadge, VenueImage } from '@/components/night/NightPrimitives';
 import type { RoomIntent, RoomJoinPreferences } from '@/rooms/types';
 import { colors } from '@/theme/colors';
 
@@ -25,11 +26,13 @@ type JoinPrivacyScreenProps = {
   loading?: boolean;
   onBack: () => void;
   onEnter: (preferences: RoomJoinPreferences) => void;
+  roomAbout?: string;
   roomName: string;
+  visibilityOnly?: boolean;
 };
 
-export function JoinPrivacyScreen({ error, loading, onBack, onEnter, roomName }: JoinPrivacyScreenProps) {
-  const [choice, setChoice] = useState<Visibility>('quiet');
+export function JoinPrivacyScreen({ error, loading, onBack, onEnter, roomAbout, roomName, visibilityOnly = false }: JoinPrivacyScreenProps) {
+  const [choice, setChoice] = useState<Visibility>(visibilityOnly ? 'visible' : 'quiet');
   const [intent, setIntent] = useState<RoomIntent>('social');
   const [context, setContext] = useState('');
   const [leaveAfterMinutes, setLeaveAfterMinutes] = useState<RoomJoinPreferences['leaveAfterMinutes']>(120);
@@ -39,16 +42,26 @@ export function JoinPrivacyScreen({ error, loading, onBack, onEnter, roomName }:
 
   return (
     <OnboardingShell keyboard showEdgeTabs={false} testID="join-privacy-screen">
-      <BackButton onPress={onBack} />
-      <Text className="text-center text-xs font-black uppercase tracking-[0.7px] text-primary">Joining · {roomName}</Text>
-      <Text accessibilityRole="header" className="mt-3 text-center text-[34px] font-black leading-[36px] tracking-[-0.8px] text-ink">How do you want to enter?</Text>
+      <View className="flex-row items-center justify-between">
+        <BackButton onPress={onBack} />
+        <NightBadge tone="verified">Verified room</NightBadge>
+      </View>
+      <View className="mt-3 flex-row overflow-hidden rounded-2xl bg-photo-night">
+        <VenueImage className="h-28 w-32" index={1} label={`${roomName} venue preview`} />
+        <View className="min-w-0 flex-1 justify-center px-4 py-3">
+          <Text className="text-xl font-black text-white">{roomName}</Text>
+          {roomAbout ? <Text className="mt-1 text-sm leading-5 text-white" numberOfLines={2}>{roomAbout}</Text> : null}
+          <Text className="mt-2 text-xs font-bold text-white">Preview only · you are not inside yet</Text>
+        </View>
+      </View>
+      <Text accessibilityRole="header" className="mt-5 text-center text-[32px] font-black leading-[35px] tracking-[-0.8px] text-ink">{visibilityOnly ? 'Become visible here?' : 'How do you want to enter?'}</Text>
       <Text className="mt-3 text-center text-base leading-6 text-muted">You can change this anytime. Joining and visibility are separate.</Text>
 
       <View className="mt-7 gap-4">
         {([
           { value: 'quiet' as const, icon: 'glasses-outline' as const, title: 'Browse quietly', copy: 'Explore and participate without showing you’re here.', note: 'No presence event is published. Great for checking out the vibe.' },
           { value: 'visible' as const, icon: 'person-outline' as const, title: 'Be visible', copy: 'Others in the room can see you’re here.', note: 'Great for connecting with people.' },
-        ]).map((option) => {
+        ].filter((option) => !visibilityOnly || option.value === 'visible')).map((option) => {
           const selected = choice === option.value;
           return (
             <Pressable
@@ -113,7 +126,7 @@ export function JoinPrivacyScreen({ error, loading, onBack, onEnter, roomName }:
 
       {error ? <View accessibilityRole="alert" className="mt-5 rounded-2xl border border-error/40 bg-error/10 p-4"><Text className="text-sm font-semibold leading-5 text-error">{error}</Text></View> : null}
       <View className="mt-8">
-        <PrimaryButton label={choice === 'quiet' ? 'Enter quietly' : 'Enter and be visible'} loading={loading} loadingLabel={choice === 'quiet' ? 'Entering quietly…' : 'Confirming access…'} onPress={submit} testID="join-room-button" />
+        <PrimaryButton label={visibilityOnly ? 'Become visible' : 'Enter room'} loading={loading} loadingLabel={choice === 'quiet' ? 'Entering quietly…' : 'Confirming access…'} onPress={submit} testID="join-room-button" tone="commitment" />
         <Text className="mt-3 text-center text-sm leading-5 text-muted">Automatic leave: {leaveAfterMinutes === 60 ? '1 hour' : `${leaveAfterMinutes / 60} hours`} after entry.</Text>
         <TextAction label="Back" onPress={onBack} />
       </View>

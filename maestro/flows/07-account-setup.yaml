@@ -3,13 +3,11 @@ appId: life.crays
 - runFlow: launch.yaml
 - tapOn:
     id: "create-account-button"
-- tapOn:
-    id: "create-on-device-button"
 - extendedWaitUntil:
     visible:
       id: "profile-setup-screen"
     timeout: 30000
-- assertVisible: "How should the room call you?"
+- assertVisible: "What should people here call you?"
 - assertVisible:
     id: "display-name-input"
 - tapOn:
@@ -22,11 +20,5 @@ appId: life.crays
     id: "profile-continue-button"
 - extendedWaitUntil:
     visible:
-      id: "recovery-screen"
-    timeout: 30000
-- stopApp
-- launchApp
-- extendedWaitUntil:
-    visible:
-      id: "recovery-screen"
+      id: "tonight-find-screen"
     timeout: 30000

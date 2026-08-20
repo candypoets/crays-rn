@@ -19,8 +19,10 @@ type MessageRequestScreenProps = {
   message: string;
   onBack: () => void;
   onChangeMessage: (value: string) => void;
+  onMessages?: () => void;
   onSend: () => void;
   person: RoomPerson;
+  roomName?: string;
   sending?: boolean;
   sent?: boolean;
 };
@@ -30,8 +32,10 @@ export function MessageRequestScreen({
   message,
   onBack,
   onChangeMessage,
+  onMessages = onBack,
   onSend,
   person,
+  roomName = 'this room',
   sending = false,
   sent = false,
 }: MessageRequestScreenProps) {
@@ -55,12 +59,12 @@ export function MessageRequestScreen({
           <View className="-mt-5 h-11 w-11 items-center justify-center self-center rounded-full border-4 border-surface bg-verified">
             <Ionicons color={colors.ink} name="checkmark" size={23} />
           </View>
-          <Text accessibilityRole="header" className="mt-4 text-center text-[32px] font-black leading-9 text-ink">Request sent</Text>
+          <Text accessibilityRole="header" className="mt-4 text-center text-[32px] font-black leading-9 text-ink">Waiting for {person.name}</Text>
           <Text className="mt-3 max-w-[390px] text-center text-base leading-6 text-muted">
             {person.name} can decrypt the note and choose what happens next. You cannot send another request until they respond.
           </Text>
           <View className="mt-7 w-full">
-            <PrimaryButton label="Back to the room" onPress={onBack} testID="message-request-done" />
+            <PrimaryButton label="View in Messages" onPress={onMessages} testID="message-request-done" />
           </View>
         </View>
       ) : (
@@ -73,7 +77,7 @@ export function MessageRequestScreen({
             <View className="min-w-0 flex-1">
               <Text accessibilityRole="header" className="text-[26px] font-black uppercase text-ink">{person.name}</Text>
               <Text className="mt-1 text-sm font-semibold text-primary">{person.intent}</Text>
-              <Text className="mt-1 text-sm text-muted">Met in this room</Text>
+              <Text className="mt-1 text-sm text-muted">Met in {roomName}</Text>
             </View>
           </View>
 

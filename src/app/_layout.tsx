@@ -79,6 +79,8 @@ export default function RootLayout() {
                   <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
                   <Stack.Screen name="room-thread" options={{ animation: 'slide_from_right' }} />
                   <Stack.Screen name="room-post" options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
+                  <Stack.Screen name="join-room" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.9], sheetGrabberVisible: true }} />
+                  <Stack.Screen name="message-request" options={{ presentation: 'formSheet', sheetAllowedDetents: [0.85], sheetGrabberVisible: true }} />
                 </Stack>
               </CartProvider>
             </RoomDataProvider>

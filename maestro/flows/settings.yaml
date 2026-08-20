@@ -3,11 +3,11 @@ appId: life.crays
 - runFlow: 16-me.yaml
 - scrollUntilVisible:
     element:
-      id: "me-profile"
+      id: "me-settings"
     direction: DOWN
     timeout: 8000
 - tapOn:
-    id: "me-profile"
+    id: "me-settings"
 - extendedWaitUntil:
     visible:
       id: "settings-screen"

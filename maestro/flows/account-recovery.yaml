@@ -42,7 +42,7 @@ appId: life.crays
     visible:
       id: "profile-setup-screen"
     timeout: 30000
-- assertVisible: "How should the room call you?"
+- assertVisible: "What should people here call you?"
 - stopApp
 - launchApp
 - extendedWaitUntil:

@@ -3,8 +3,6 @@ appId: life.crays
 - runFlow: launch.yaml
 - tapOn:
     id: "create-account-button"
-- tapOn:
-    id: "create-on-device-button"
 - extendedWaitUntil:
     visible:
       id: "profile-setup-screen"
@@ -17,8 +15,13 @@ appId: life.crays
     id: "profile-continue-button"
 - extendedWaitUntil:
     visible:
-      id: "recovery-screen"
+      id: "tonight-find-screen"
     timeout: 30000
+- openLink: "crays:///recovery"
+- extendedWaitUntil:
+    visible:
+      id: "recovery-screen"
+    timeout: 15000
 - assertVisible: "Keep your account with you"
 - assertVisible: "This device, for now"
 - assertVisible: ".*Cross-device recovery is not enabled yet.*"
@@ -38,11 +41,11 @@ appId: life.crays
     id: "finish-account-button"
 - extendedWaitUntil:
     visible:
-      id: "discover-screen"
+      id: "tonight-find-screen"
     timeout: 30000
 - stopApp
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: "discover-screen"
+      id: "tonight-find-screen"
     timeout: 30000

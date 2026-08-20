@@ -5,10 +5,6 @@ appId: life.crays
     id: "cold-welcome-screen"
 - tapOn:
     id: "create-account-button"
-- assertVisible:
-    id: "account-access-screen"
-- tapOn:
-    id: "create-on-device-button"
 - extendedWaitUntil:
     visible:
       id: "profile-setup-screen"
@@ -21,15 +17,8 @@ appId: life.crays
     id: "profile-continue-button"
 - extendedWaitUntil:
     visible:
-      id: "recovery-screen"
+      id: "tonight-find-screen"
     timeout: 30000
-- tapOn:
-    id: "finish-account-button"
-- extendedWaitUntil:
-    visible:
-      id: "discover-screen"
-    timeout: 30000
-- assertVisible: "Rooms around you"
-- assertVisible: "Account ready.*"
-- assertVisible: ".*No Bluetooth or location permission asked.*"
+- assertVisible: "Find your room"
+- assertVisible: ".*Crays ID is ready.*"
 - takeScreenshot: cold-signup-complete

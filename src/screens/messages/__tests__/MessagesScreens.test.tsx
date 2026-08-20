@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react-native';
 
 import type { LocalMessage } from '@/messages/store';
-import { ConversationScreen, MessagesScreen } from '@/screens/messages/MessagesScreens';
+import { ConversationScreen, MessagesScreen, messageTimestamp } from '@/screens/messages/MessagesScreens';
 
 const message: LocalMessage = {
   id: 'm',
@@ -47,7 +47,8 @@ describe('durable messages', () => {
     render(<MessagesScreen messages={[outgoing]} onOpen={open} />);
 
     expect(screen.getByText('waiting')).toBeOnTheScreen();
-    expect(screen.getByText('From Skyline')).toBeOnTheScreen();
+    expect(screen.getByText('Skyline')).toBeOnTheScreen();
+    expect(screen.getByText(messageTimestamp(outgoing.createdAt))).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId(`message-row-${message.recipientPubkey}`));
     expect(open).toHaveBeenCalledWith(outgoing);
   });

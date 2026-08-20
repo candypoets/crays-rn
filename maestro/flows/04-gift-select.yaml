@@ -25,10 +25,10 @@ appId: life.crays
 - tapOn:
     id: "conversation-back"
 - tapOn:
-    id: "tab-room"
+    id: "tab-tonight"
 - tapOn:
     id: "room-people-tab"
-- tapOn: "Jonas"
+- tapOn: "Open Jonas profile and safety actions"
 - extendedWaitUntil:
     visible:
       id: "first-contact-screen"

@@ -21,6 +21,6 @@ appId: life.crays
     id: "login-device-unlock"
 - extendedWaitUntil:
     visible:
-      id: "discover-screen"
+      id: "tonight-find-screen"
     timeout: 30000
 - takeScreenshot: 09-returning-login

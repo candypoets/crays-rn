@@ -33,6 +33,13 @@
       "expo-secure-store",
       "expo-font",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Crays uses the camera only while you scan a venue QR. No photo is saved or uploaded.",
+          "recordAudioAndroid": false
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Crays lets you choose photos to share in the active room feed. Selected photos are uploaded only when you post."

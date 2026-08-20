@@ -4,7 +4,7 @@ appId: life.crays
 - openLink: "crays:///room-preview?relay=${RELAY_URL}&room=${ROOM_ID}"
 - extendedWaitUntil:
     visible:
-      id: "room-preview-screen"
+      id: "join-privacy-screen"
     timeout: 30000
 - extendedWaitUntil:
     visible: "Verified room"
@@ -12,18 +12,8 @@ appId: life.crays
 # ${QA_ROOM_ABOUT} comes from .qa/flow-fixtures.mjs (ROOM_ABOUT, seeded into the
 # kind-30312 definition by relay-bootstrap.mjs); standalone runs need -e QA_ROOM_ABOUT=...
 - assertVisible: ${QA_ROOM_ABOUT}
-- assertVisible: "Preview room"
-- tapOn:
-    id: "room-preview-details"
-- assertVisible: "Inside this room"
-- assertVisible:
-    id: "enter-room-button"
-- tapOn:
-    id: "enter-room-button"
-- extendedWaitUntil:
-    visible:
-      id: "join-privacy-screen"
-    timeout: 15000
+- assertVisible: "Preview only · you are not inside yet"
+- assertVisible: "How do you want to enter?"
 - assertNotVisible:
     id: "bluetooth-rationale-screen"
 - takeScreenshot: 10-room-preview-relay

@@ -24,6 +24,19 @@ export default function MessageRequestRoute() {
   const [error, setError] = useState<string | null>(null);
   const stopPublishRef = useRef<(() => void) | null>(null);
   useEffect(() => () => stopPublishRef.current?.(), []);
+  useEffect(() => {
+    if (!hydrated || !pubkey) return;
+    let live = true;
+    loadLocalMessages().then((messages) => {
+      if (!live) return;
+      const existing = messages.find((item) => item.recipientPubkey === pubkey);
+      if (existing?.state === 'accepted') router.replace({ pathname: '/conversation', params: { pubkey } } as never);
+      else if (existing?.state === 'requested' && existing.direction !== 'incoming') setSent(true);
+    }).catch((cause) => {
+      if (live) setError(cause instanceof Error ? cause.message : 'Saved request state could not be read on this device.');
+    });
+    return () => { live = false; };
+  }, [hydrated, pubkey]);
   if (!hydrated) return null;
   if (!activeRoom) return <Redirect href="/discover" />;
   const person = people.find((value) => value.pubkey === pubkey);
@@ -105,5 +118,5 @@ export default function MessageRequestRoute() {
     }
   };
 
-  return <MessageRequestScreen error={error} message={message} onBack={() => router.back()} onChangeMessage={setMessage} onSend={send} person={person} sending={sending} sent={sent} />;
+  return <MessageRequestScreen error={error} message={message} onBack={() => router.back()} onChangeMessage={setMessage} onMessages={() => router.replace('/messages' as never)} onSend={send} person={person} roomName={activeRoom.name} sending={sending} sent={sent} />;
 }

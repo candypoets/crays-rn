@@ -17,6 +17,13 @@ function stateLabel(message: LocalMessage) {
   return message.state;
 }
 
+export function messageTimestamp(createdAt: number, now = Date.now()) {
+  const date = new Date(createdAt);
+  const today = new Date(now);
+  if (date.toDateString() === today.toDateString()) return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
+}
+
 export function MessagesScreen({
   error,
   messages,
@@ -63,10 +70,13 @@ export function MessagesScreen({
               <View className="ml-4 min-w-0 flex-1">
                 <View className="flex-row items-start justify-between gap-3">
                   <Text className="min-w-0 flex-1 text-lg font-black uppercase text-ink">{message.recipientName}</Text>
-                  <Text className="text-xs font-black uppercase text-primary">{stateLabel(message)}</Text>
+                  <Text className="text-xs font-bold text-muted">{messageTimestamp(message.createdAt)}</Text>
                 </View>
                 <Text className="mt-1 text-sm leading-5 text-ink">{message.content}</Text>
-                <Text className="mt-2 text-xs font-semibold text-muted">From {message.roomName}</Text>
+                <View className="mt-2 flex-row items-center justify-between gap-2">
+                  <Text className="min-w-0 flex-1 text-xs font-semibold text-muted">{message.roomName}</Text>
+                  <Text className="text-xs font-black uppercase text-primary">{stateLabel(message)}</Text>
+                </View>
               </View>
               <Ionicons color={colors.inkMuted} name="chevron-forward" size={20} />
             </Pressable>

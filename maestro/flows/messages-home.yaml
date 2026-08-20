@@ -13,12 +13,6 @@ appId: life.crays
 - tapOn: "Jonas"
 - extendedWaitUntil:
     visible:
-      id: "first-contact-screen"
-    timeout: 15000
-- tapOn:
-    id: "message-person"
-- extendedWaitUntil:
-    visible:
       id: "message-request-screen"
     timeout: 15000
 - tapOn:
@@ -29,7 +23,7 @@ appId: life.crays
 - tapOn:
     id: "send-message-request"
 - extendedWaitUntil:
-    visible: "Request sent"
+    visible: "Waiting for Jonas"
     timeout: 15000
 # The person screen is pushed over the tab shell, so the tab bar is not
 # reachable here; deep-link to the messages tab instead of navigating back.
@@ -42,15 +36,11 @@ appId: life.crays
 - assertVisible: "waiting"
 - assertVisible: "${QA_MESSAGE_REQUEST_TEXT}"
 - tapOn:
-    id: "tab-room"
+    id: "tab-tonight"
 - tapOn:
     id: "room-people-tab"
 - tapOn: "Jonas"
 - extendedWaitUntil:
-    visible: "Waiting for a response"
+    visible: "Waiting for Jonas"
     timeout: 15000
-- tapOn:
-    id: "message-person"
-- assertVisible:
-    id: "first-contact-screen"
 - takeScreenshot: messages-home-relay

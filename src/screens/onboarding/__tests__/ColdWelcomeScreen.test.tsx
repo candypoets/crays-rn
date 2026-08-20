@@ -15,8 +15,8 @@ describe('ColdWelcomeScreen', () => {
     expect(screen.queryByText('Gallery Opening')).toBeNull();
     expect(screen.queryByText('Rooftop Jazz')).toBeNull();
     expect(screen.queryByText('After Hours')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Create account' })).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Create my Crays ID' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Use an existing Nostr ID' })).toBeOnTheScreen();
     expect(screen.getByText(/No public location/)).toBeOnTheScreen();
   });
 
@@ -25,8 +25,8 @@ describe('ColdWelcomeScreen', () => {
     const onLogIn = jest.fn();
     render(<ColdWelcomeScreen onCreateAccount={onCreateAccount} onLogIn={onLogIn} />);
 
-    fireEvent.press(screen.getByRole('button', { name: 'Create account' }));
-    fireEvent.press(screen.getByRole('button', { name: 'Log in' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Create my Crays ID' }));
+    fireEvent.press(screen.getByRole('button', { name: 'Use an existing Nostr ID' }));
 
     expect(onCreateAccount).toHaveBeenCalledTimes(1);
     expect(onLogIn).toHaveBeenCalledTimes(1);

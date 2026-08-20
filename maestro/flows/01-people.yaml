@@ -7,7 +7,7 @@ appId: life.crays
       id: "join-privacy-screen"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "Joining · The Skyline Room"
+    visible: "The Skyline Room"
     timeout: 45000
 - extendedWaitUntil:
     visible: "Browse quietly"
@@ -18,17 +18,8 @@ appId: life.crays
     id: "join-room-button"
 - extendedWaitUntil:
     visible:
-      id: "room-menu-screen"
-    timeout: 30000
-- assertVisible:
-    id: "menu-screen"
-- assertVisible: "Mezcal Negroni"
-- tapOn:
-    id: "room-people-tab"
-- extendedWaitUntil:
-    visible:
       id: "room-people-screen"
-    timeout: 15000
+    timeout: 30000
 - extendedWaitUntil:
     visible: "Maya"
     timeout: 15000
@@ -37,7 +28,7 @@ appId: life.crays
 - assertVisible: "Connected in the room"
 - assertNotVisible: "Room moment"
 - assertNotVisible: "${QA_ROOM_ABOUT}"
-- assertVisible: "^Discover$"
+- assertVisible: "^Tonight$"
 - assertVisible: "^Messages$"
 - assertVisible: "^Me$"
 - takeScreenshot: 01-people-edge-to-edge
@@ -45,13 +36,8 @@ appId: life.crays
 - launchApp
 - extendedWaitUntil:
     visible:
-      id: "room-menu-screen"
+      id: "room-people-screen"
     timeout: 30000
-- extendedWaitUntil:
-    visible: "Mezcal Negroni"
-    timeout: 15000
-- tapOn:
-    id: "room-people-tab"
 - extendedWaitUntil:
     visible: "People here · 3 visible"
     timeout: 15000

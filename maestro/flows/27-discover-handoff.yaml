@@ -3,8 +3,6 @@ appId: life.crays
 - runFlow: launch.yaml
 - tapOn:
     id: "create-account-button"
-- tapOn:
-    id: "create-on-device-button"
 - extendedWaitUntil:
     visible:
       id: "profile-setup-screen"
@@ -17,37 +15,44 @@ appId: life.crays
     id: "profile-continue-button"
 - extendedWaitUntil:
     visible:
-      id: "recovery-screen"
-    timeout: 30000
-- tapOn:
-    id: "finish-account-button"
-- extendedWaitUntil:
-    visible:
-      id: "discover-screen"
+      id: "tonight-find-screen"
     timeout: 30000
 # Newcomer surface: warm consent truth, one honest action.
-- assertVisible: "Rooms around you"
-- assertVisible: ".*never enters one for you.*"
-- assertVisible: "Account ready.*"
-- assertVisible: ".*No Bluetooth or location permission asked.*"
-- assertVisible: "Nearby is off"
+- assertVisible: "Find your room"
+- assertVisible: ".*Preview it before Crays joins.*"
+- assertVisible: ".*Crays ID is ready.*"
 - assertVisible:
-    id: "nearby-rationale-button"
-- assertVisible: "Map search isn’t available yet"
+    id: "tonight-nearby"
 # Internal QA/protocol language never reaches the newcomer surface.
 - assertNotVisible: "Development test mode"
 - assertNotVisible: ".*test relay.*"
 - assertNotVisible: "Map and search are not configured"
-# Map is neither selected nor selectable while search is unavailable.
+# QR, map, and Nearby are independent choices.
 - assertVisible:
-    id: "discover-map-tab"
-    enabled: false
-# The developer fixture stays subordinate and labelled as such.
-- assertVisible: "Developer"
-- assertVisible: "Test room"
+    id: "tonight-map"
+    enabled: true
+- assertVisible:
+    id: "tonight-scan"
+    enabled: true
+# Camera permission is still untouched until the scanner's explicit action.
+- tapOn:
+    id: "tonight-scan"
+- extendedWaitUntil:
+    visible:
+      id: "room-qr-scanner-screen"
+    timeout: 15000
+- assertVisible: "Camera only when you choose"
+- assertVisible:
+    id: "request-camera"
+- tapOn:
+    id: "qr-back"
+- extendedWaitUntil:
+    visible:
+      id: "tonight-find-screen"
+    timeout: 15000
 # The newcomer's one action explains Nearby before any permission prompt.
 - tapOn:
-    id: "nearby-rationale-button"
+    id: "tonight-nearby"
 - extendedWaitUntil:
     visible:
       id: "bluetooth-rationale-screen"
@@ -57,7 +62,7 @@ appId: life.crays
     id: "use-map-button"
 - extendedWaitUntil:
     visible:
-      id: "discover-screen"
+      id: "tonight-find-screen"
     timeout: 15000
-- assertVisible: "Nearby is off"
+- assertVisible: "Find your room"
 - takeScreenshot: 27-discover-handoff

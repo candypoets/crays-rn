@@ -7,7 +7,7 @@ appId: life.crays
       id: "join-privacy-screen"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "Joining · The Skyline Room"
+    visible: "The Skyline Room"
     timeout: 45000
 - assertVisible: "Browse quietly"
 - assertVisible: ".*No presence event is published.*"
@@ -16,10 +16,10 @@ appId: life.crays
 # The enter button moves below the fold once the visible-only fields expand.
 - scrollUntilVisible:
     element:
-      text: "Enter and be visible"
+      text: "Enter room"
     direction: DOWN
-- assertVisible: "Enter and be visible"
+- assertVisible: "Enter room"
 - tapOn:
     id: "visibility-quiet"
-- assertVisible: "Enter quietly"
+- assertVisible: "Enter room"
 - takeScreenshot: 11-join-privacy

@@ -1,13 +1,13 @@
 import { PRIMARY_TABS, primaryTabBarStyle, primaryTabIcon } from '@/navigation/primaryTabs';
 
 describe('primary tab navigation', () => {
-  it('defines exactly the four ordered top-level destinations', () => {
+  it('defines exactly the three ordered top-level destinations', () => {
     expect(PRIMARY_TABS.map(({ name }) => name)).toEqual([
       'room',
-      'discover',
       'messages',
       'me',
     ]);
+    expect(PRIMARY_TABS[0]).toMatchObject({ title: 'Tonight', testID: 'tab-tonight' });
     expect(new Set(PRIMARY_TABS.map(({ testID }) => testID)).size).toBe(PRIMARY_TABS.length);
   });
 

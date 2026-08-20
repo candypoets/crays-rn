@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
 import { createElement, type PropsWithChildren } from 'react';
 import * as SecureStore from 'expo-secure-store';
-import { parseStoredRoom, RoomSessionProvider, useRoomSession } from '@/session/RoomSession';
+import { parseStoredRoom, projectUpdatedPresence, RoomSessionProvider, useRoomSession } from '@/session/RoomSession';
 import type { RoomDescriptor } from '@/rooms/types';
 
 jest.mock('expo-secure-store', () => ({ getItemAsync: jest.fn(), setItemAsync: jest.fn(), deleteItemAsync: jest.fn() }));
@@ -25,6 +25,13 @@ const descriptor: RoomDescriptor & { joinedAt: number; visibility: 'visible' } =
 };
 
 describe('active room persistence boundary', () => {
+  it('updates quiet presence from one explicit boundary shared with the relay event', () => {
+    const room = parseStoredRoom(JSON.stringify({ ...descriptor, leaveAt: 8_000_000 }), 2_000).room!;
+    const leaveAt = 9_000_000;
+    const next = projectUpdatedPresence(room, { visibility: 'visible', intent: 'business', context: '  Founders meetup  ', leaveAfterMinutes: 60 }, leaveAt);
+    expect(next).toMatchObject({ joinedAt: room.joinedAt, visibility: 'visible', intent: 'business', context: 'Founders meetup', leaveAt });
+  });
+
   it('fills safe presence defaults for a valid NIP-53 room session', () => {
     const result = parseStoredRoom(JSON.stringify(descriptor), 2_000);
     expect(result.room).toEqual(expect.objectContaining({

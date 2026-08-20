@@ -25,9 +25,17 @@ describe('MessageRequestScreen', () => {
   });
 
   it('prevents a second prompt after success', () => {
-    render(<MessageRequestScreen message="Hello" onBack={jest.fn()} onChangeMessage={jest.fn()} onSend={jest.fn()} person={person} sent />);
-    expect(screen.getByText('Request sent')).toBeOnTheScreen();
+    const onMessages = jest.fn();
+    render(<MessageRequestScreen message="Hello" onBack={jest.fn()} onChangeMessage={jest.fn()} onMessages={onMessages} onSend={jest.fn()} person={person} roomName="Skyline" sent />);
+    expect(screen.getByText('Waiting for Maya')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('message-request-done'));
+    expect(onMessages).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('send-message-request')).not.toBeOnTheScreen();
+  });
+
+  it('keeps the originating room context visible in the sheet', () => {
+    render(<MessageRequestScreen message="" onBack={jest.fn()} onChangeMessage={jest.fn()} onSend={jest.fn()} person={person} roomName="Skyline" />);
+    expect(screen.getByText('Met in Skyline')).toBeOnTheScreen();
   });
 
   it('retains the draft, count, and busy lock while the relay result is pending', () => {

@@ -11,7 +11,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { PortraitImage } from '@/components/night/NightPrimitives';
 import { MenuCatalog, MenuCartButton } from '@/screens/commerce/MenuScreen';
 import { roomFeedRoots, roomPostEngagement } from '@/rooms/feed';
-import type { ActiveRoom, RoomPerson, RoomPost, RoomProduct, RoomProfile, RoomReaction } from '@/rooms/types';
+import type { ActiveRoom, RoomOrder, RoomPerson, RoomPost, RoomProduct, RoomProfile, RoomReaction } from '@/rooms/types';
+import { orderSummaryLabel } from '@/screens/durable/NightAndOrderScreens';
 import { RoomNoteCard } from '@/screens/room/RoomNoteCard';
 import { colors } from '@/theme/colors';
 
@@ -19,6 +20,7 @@ export type RoomView = 'menu' | 'people' | 'feed';
 
 type RoomScreenProps = {
   activeRoom: ActiveRoom;
+  activeOrder?: RoomOrder;
   connected: boolean;
   loading: boolean;
   cartCount: number;
@@ -31,10 +33,13 @@ type RoomScreenProps = {
   view: RoomView;
   onChangeView: (view: RoomView) => void;
   onCart: () => void;
+  onBecomeVisible?: () => void;
   onLeave: () => void;
   onMyNight: () => void;
+  onOpenOrder?: () => void;
   onOpenProduct: (product: RoomProduct) => void;
   onOpenPerson: (pubkey: string) => void;
+  onOpenPersonProfile?: (pubkey: string) => void;
   onComposePost: () => void;
   onLikePost: (post: RoomPost) => void;
   onOpenThread: (post: RoomPost) => void;
@@ -85,6 +90,15 @@ function HeaderButton({
   );
 }
 
+function LeaveButton({ onPress }: { onPress: () => void }) {
+  return (
+    <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center gap-1 px-2" onPress={onPress} testID="room-leave">
+      <Ionicons color={colors.commitment} name="exit-outline" size={20} />
+      <Text className="font-black text-commitment">Leave</Text>
+    </Pressable>
+  );
+}
+
 function RoomHeader(props: Pick<RoomScreenProps, 'activeRoom' | 'connected' | 'loading' | 'onChangeView' | 'onLeave' | 'onMyNight' | 'people' | 'view'>) {
   const peopleCount = props.loading ? '…' : String(props.people.length);
   const tabs: { label: string; accessibilityLabel: string; value: RoomView }[] = [
@@ -95,7 +109,7 @@ function RoomHeader(props: Pick<RoomScreenProps, 'activeRoom' | 'connected' | 'l
   return (
     <View className="border-b border-edge bg-surface-soft pb-3 pt-2">
       <View className="mx-auto w-full max-w-[620px] flex-row items-start justify-between gap-3 px-5">
-        <HeaderButton icon="chevron-down" label="Leave room" onPress={props.onLeave} testID="room-leave" />
+        <LeaveButton onPress={props.onLeave} />
         <View className="min-w-0 flex-1 pt-1">
           <Text accessibilityRole="header" className="text-[24px] font-black uppercase leading-7 tracking-[-0.7px] text-primary">
             {props.activeRoom.name}
@@ -159,6 +173,41 @@ function RoomSessionRail({ room }: { room: ActiveRoom }) {
   );
 }
 
+function LiveNightRail({ activeOrder, onBecomeVisible, onOpenOrder, room }: Pick<RoomScreenProps, 'activeOrder' | 'onBecomeVisible' | 'onOpenOrder'> & { room: ActiveRoom }) {
+  return (
+    <View className="mx-auto w-full max-w-[620px] px-5 pt-4">
+      {activeOrder ? (
+        <Pressable
+          accessibilityLabel={`${activeOrder.product.name}. ${orderSummaryLabel(activeOrder)}. Open order`}
+          accessibilityRole="button"
+          className="min-h-16 flex-row items-center rounded-2xl bg-attention px-4 py-3 active:opacity-80"
+          onPress={onOpenOrder}
+          testID="tonight-active-order"
+        >
+          <Ionicons color={colors.ink} name={activeOrder.status === 'ready' ? 'notifications' : 'receipt-outline'} size={23} />
+          <View className="ml-3 min-w-0 flex-1">
+            <Text className="font-black text-ink">{activeOrder.status === 'ready' ? 'Your order is ready' : orderSummaryLabel(activeOrder)}</Text>
+            <Text className="mt-0.5 text-sm text-ink">{activeOrder.product.name}</Text>
+          </View>
+          <Ionicons color={colors.ink} name="chevron-forward" size={20} />
+        </Pressable>
+      ) : null}
+      {room.visibility === 'quiet' ? (
+        <View className="mt-3 flex-row items-start rounded-2xl border border-edge bg-surface px-4 py-3" testID="quiet-presence-banner">
+          <Ionicons color={colors.ink} name="eye-off-outline" size={22} />
+          <View className="ml-3 min-w-0 flex-1">
+            <Text className="font-black text-ink">You’re browsing quietly</Text>
+            <Text className="mt-0.5 text-sm leading-5 text-muted">No presence was published. Visible people can’t see you here.</Text>
+            <Pressable accessibilityRole="button" className="-ml-2 mt-2 min-h-12 self-start justify-center px-2" onPress={onBecomeVisible} testID="become-visible">
+              <Text className="font-black text-primary">Become visible</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function EmptyRoom({ children, icon }: { children: ReactNode; icon: keyof typeof Ionicons.glyphMap }) {
   return (
     <View className="mt-6 items-center border-y border-dashed border-edge bg-surface px-6 py-10">
@@ -183,32 +232,45 @@ export function getPeopleRosterLayout(viewportWidth: number, fontScale: number) 
   };
 }
 
-function PersonCard({ cardWidth, onPress, person }: { cardWidth: number; onPress: () => void; person: RoomPerson }) {
+function PersonCard({ cardWidth, onPress, onProfile, person }: { cardWidth: number; onPress: () => void; onProfile?: () => void; person: RoomPerson }) {
   return (
-    <Pressable
-      accessibilityHint="Opens their room profile"
-      accessibilityLabel={`${person.name}, ${person.intent}${person.context ? `, ${person.context}` : ''}`}
-      accessibilityRole="button"
-      className="min-h-[156px] active:opacity-75"
-      onPress={onPress}
-      style={{ width: cardWidth }}
-      testID={`person-${person.pubkey}`}
-    >
-      <PortraitImage
-        className="w-full rounded-[26px]"
-        identity={person.pubkey}
-        label={`Profile image for ${person.name}`}
-        picture={person.picture}
-        style={{ aspectRatio: 92 / 104 }}
-        testID={`person-image-${person.pubkey}`}
-      />
-      <Text className="mt-2 text-[15px] font-black uppercase leading-5 text-ink">{person.name}</Text>
-      <Text className="mt-0.5 text-[10px] font-black uppercase leading-4 tracking-[0.4px] text-primary">{person.intent}</Text>
-    </Pressable>
+    <View className="min-h-[156px]" style={{ width: cardWidth }}>
+      <Pressable
+        accessibilityHint="Opens a message request"
+        accessibilityLabel={`${person.name}, ${person.intent}${person.context ? `, ${person.context}` : ''}`}
+        accessibilityRole="button"
+        className="active:opacity-75"
+        onPress={onPress}
+        testID={`person-${person.pubkey}`}
+      >
+        <PortraitImage
+          className="w-full rounded-[26px]"
+          identity={person.pubkey}
+          label={`Profile image for ${person.name}`}
+          picture={person.picture}
+          style={{ aspectRatio: 92 / 104 }}
+          testID={`person-image-${person.pubkey}`}
+        />
+        <Text className="mt-2 text-[15px] font-black uppercase leading-5 text-ink">{person.name}</Text>
+        <Text className="mt-0.5 text-[10px] font-black uppercase leading-4 tracking-[0.4px] text-primary">{person.intent}</Text>
+      </Pressable>
+      {onProfile ? (
+        <Pressable
+          accessibilityLabel={`Open ${person.name} profile and safety actions`}
+          accessibilityRole="button"
+          className="absolute right-2 top-2 h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-photo-night/70"
+          hitSlop={4}
+          onPress={onProfile}
+          testID={`person-profile-${person.pubkey}`}
+        >
+          <Ionicons color={colors.surface} name="ellipsis-horizontal" size={21} />
+        </Pressable>
+      ) : null}
+    </View>
   );
 }
 
-function PeopleView({ activeRoom, loading, onOpenPerson, people }: Pick<RoomScreenProps, 'activeRoom' | 'loading' | 'onOpenPerson' | 'people'>) {
+function PeopleView({ activeRoom, loading, onOpenPerson, onOpenPersonProfile, people }: Pick<RoomScreenProps, 'activeRoom' | 'loading' | 'onOpenPerson' | 'onOpenPersonProfile' | 'people'>) {
   const { fontScale, width } = useWindowDimensions();
   const roster = getPeopleRosterLayout(width, fontScale);
 
@@ -238,6 +300,7 @@ function PeopleView({ activeRoom, loading, onOpenPerson, people }: Pick<RoomScre
             cardWidth={roster.cardWidth}
             key={person.pubkey}
             onPress={() => onOpenPerson(person.pubkey)}
+            onProfile={onOpenPersonProfile ? () => onOpenPersonProfile(person.pubkey) : undefined}
             person={person}
           />
         ))}
@@ -326,6 +389,7 @@ export function RoomScreen(props: RoomScreenProps) {
       >
         <RoomHeader {...props} />
         <RoomSessionRail room={props.activeRoom} />
+        <LiveNightRail activeOrder={props.activeOrder} onBecomeVisible={props.onBecomeVisible} onOpenOrder={props.onOpenOrder} room={props.activeRoom} />
         {props.view === 'menu' ? (
           <View className="mx-auto w-full max-w-[620px] px-5">
             <MenuCatalog
