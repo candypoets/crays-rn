@@ -152,6 +152,10 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
   const [archiveHydrated, setArchiveHydrated] = useState(false);
   const [archiveError, setArchiveError] = useState<string | null>(null);
   const [relayAuth, setRelayAuth] = useState<RoomRelayAuth | null>(null);
+  const activeRelayUrl = activeRoom?.connectionRelayUrl || activeRoom?.relayUrl || '';
+  const roomSubscriptionsOpen = viewerPubkey !== undefined
+    ? canOpenRoomSubscriptions(viewerPubkey, activeRelayUrl, relayAuth)
+    : false;
   // Refs mirror the archive state so persistence effects can compute the next
   // snapshot without a read inside a state updater (updaters must stay pure).
   const archivedOrdersRef = useRef<RoomOrder[]>([]);
@@ -242,17 +246,24 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
     // request is the first frame on the fresh venue connection.
     const startTimer = setTimeout(() => {
       if (stopped) return;
-      unsubscribe = subscribeNip04Messages({
-        onEvent: () => undefined,
-        onReady: () => {
-          if (!stopped) {
-            clearTimeout(timeout);
-            setRelayAuth({ key, status: 'ready' });
-          }
-        },
-        pubkey: viewerPubkey,
-        relays: [relayUrl],
-      });
+      // Register the protected request first, but do not make public room reads
+      // depend on its network EOSE. nipworker owns the NIP-42 exchange.
+      setRelayAuth({ key, status: 'started' });
+      try {
+        unsubscribe = subscribeNip04Messages({
+          onEvent: () => undefined,
+          onReady: () => {
+            if (!stopped) {
+              clearTimeout(timeout);
+              setRelayAuth({ key, status: 'ready' });
+            }
+          },
+          pubkey: viewerPubkey,
+          relays: [relayUrl],
+        });
+      } catch {
+        if (!stopped) setRelayAuth({ key, status: 'failed' });
+      }
     }, 350);
     const timeout = setTimeout(() => {
       if (!stopped) setRelayAuth({ key, status: 'failed' });
@@ -304,9 +315,8 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       return;
     }
     const relayUrl = activeRoom.connectionRelayUrl || activeRoom.relayUrl;
-    const relayAuthKey = viewerPubkey ? `${viewerPubkey}:${relayUrl}` : '';
-    if (!canOpenRoomSubscriptions(viewerPubkey, relayUrl, relayAuth)) {
-      setLoading(relayAuth?.key !== relayAuthKey || relayAuth?.status !== 'failed');
+    if (!roomSubscriptionsOpen) {
+      setLoading(true);
       return;
     }
     setLoading(true);
@@ -538,7 +548,7 @@ export function RoomDataProvider({ children }: PropsWithChildren) {
       unsubscribes.forEach((unsubscribe) => unsubscribe());
       phaseTwoUnsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-  }, [activeRoom, activeSessionKey, relayAuth, viewerPubkey]);
+  }, [activeRoom, activeSessionKey, roomSubscriptionsOpen, viewerPubkey]);
 
   useEffect(() => {
     if (

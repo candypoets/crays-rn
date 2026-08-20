@@ -8,9 +8,11 @@ describe('room relay auth gate', () => {
     expect(canOpenRoomSubscriptions(null, relay, null)).toBe(true);
   });
 
-  it('keeps identified sessions closed until the matching private lease is ready', () => {
+  it('keeps identified sessions closed only until the matching private request starts', () => {
     expect(canOpenRoomSubscriptions(pubkey, relay, null)).toBe(false);
     expect(canOpenRoomSubscriptions(pubkey, relay, { key: `${pubkey}:${relay}`, status: 'pending' })).toBe(false);
+    expect(canOpenRoomSubscriptions(pubkey, relay, { key: `${pubkey}:${relay}`, status: 'started' })).toBe(true);
+    expect(canOpenRoomSubscriptions(pubkey, relay, { key: `${pubkey}:${relay}`, status: 'failed' })).toBe(true);
     expect(canOpenRoomSubscriptions(pubkey, relay, { key: `${pubkey}:wss://other.example`, status: 'ready' })).toBe(false);
     expect(canOpenRoomSubscriptions(pubkey, relay, { key: `${pubkey}:${relay}`, status: 'ready' })).toBe(true);
   });

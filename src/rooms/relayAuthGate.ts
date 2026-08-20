@@ -1,6 +1,6 @@
 export type RoomRelayAuth = {
   key: string;
-  status: 'pending' | 'ready' | 'failed';
+  status: 'pending' | 'started' | 'ready' | 'failed';
 };
 
 export type RoomSignerAuth = {
@@ -18,10 +18,10 @@ export function roomSignerAvailable(
 }
 
 /**
- * Anonymous room sessions only read public venue families and can open them
- * immediately. Identified sessions must first establish the private NIP-04
- * lease so nipworker cannot classify a public EVENT as the connection's auth
- * decision before the relay has challenged the private request.
+ * Anonymous room sessions can open public venue families immediately. For an
+ * identified session, wait only until the private NIP-04 request has been
+ * registered first. nipworker owns connection recovery and NIP-42; public room
+ * reads must not remain blocked while a private request waits for EOSE or fails.
  */
 export function canOpenRoomSubscriptions(
   viewerPubkey: string | null,
@@ -29,5 +29,5 @@ export function canOpenRoomSubscriptions(
   relayAuth: RoomRelayAuth | null,
 ): boolean {
   if (!viewerPubkey) return true;
-  return relayAuth?.key === `${viewerPubkey}:${relayUrl}` && relayAuth.status === 'ready';
+  return relayAuth?.key === `${viewerPubkey}:${relayUrl}` && relayAuth.status !== 'pending';
 }
