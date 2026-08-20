@@ -23,9 +23,10 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "Maya"
     timeout: 15000
-- assertVisible: "People here · 3 visible"
-- assertVisible: "People (3)"
-- assertVisible: "Connected in the room"
+- assertVisible: "People here (3)"
+- assertVisible: "^People$"
+- assertVisible: "Connected"
+- assertVisible: "Invite a friend"
 - assertNotVisible: "Room moment"
 - assertNotVisible: "${QA_ROOM_ABOUT}"
 - assertVisible: "^Tonight$"
@@ -39,7 +40,7 @@ appId: life.crays
       id: "room-people-screen"
     timeout: 30000
 - extendedWaitUntil:
-    visible: "People here · 3 visible"
+    visible: "People here (3)"
     timeout: 15000
 - assertVisible: "Maya"
 - assertVisible: "Jonas"
@@ -48,5 +49,5 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "The mezcal negroni is excellent."
     timeout: 15000
-- assertVisible: "Connected in the room"
+- assertVisible: "Connected"
 - takeScreenshot: 01-people-cold-resume

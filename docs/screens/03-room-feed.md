@@ -8,12 +8,12 @@ This is Crays Mobile's only public feed. It reads and writes against exactly the
 
 ## UI and interaction
 
-- Fixed venue context, the same room-session rail (**Joined / Leave at**) as People, and the explicit **Chronological · locks when you leave** consequence. The kind-30312 room description never occupies an event-like slot.
+- Fixed venue context, the same compact **Connected / Leaving by** status rail as People, and the explicit **Chronological · locks when you leave** consequence. The kind-30312 room description never occupies an event-like slot.
 - A prominent **Post to this room** row opens the dedicated screen-03a modal. The timeline never grows an inline editor or lets a keyboard obscure another note.
 - Each kind-1 note uses a compact social card informed by `nuts-rn`'s note anatomy: a 44dp portrait (or room megaphone), author and time on one wrapping header line, readable text and up to four images, then Reply, Like, Message, and Report actions. Counts are factual projections of room-relay events, never ranking inputs.
 - Venue announcements use the same card anatomy with an explicit **Announcement** label and icon, never color alone. Guest notes use white cards and a deterministic portrait fallback. There is no decorative timeline rail competing with the note content.
 - Tapping the note body opens screen 03b, a focused thread rooted at that note. Reply opens screen 03a with the selected note visible. Like publishes once and becomes disabled after this identity's confirmed or observed reaction; Crays does not invent unlike semantics for a non-replaceable kind-7 event.
-- Menu, People with the visible count, and Feed use the same room navbar as screen 01 inside the edge-to-edge Room scroll surface; Feed retains its selected state when revisiting the Room primary tab. My night and Leave remain in shared room chrome.
+- People, Menu, and Feed use the same underlined text navbar as screen 01 inside the edge-to-edge Room scroll surface; Feed retains its selected state when revisiting the Tonight primary tab. Leave remains in shared room chrome; active order urgency is the only shortcut above the room sections.
 
 ## Relay contract
 

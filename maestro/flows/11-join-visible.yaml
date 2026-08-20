@@ -48,11 +48,11 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "Maya QA"
     timeout: 15000
-- assertVisible: "${QA_JOIN_INTENT}"
-- tapOn: "Open Maya QA profile and safety actions"
+- tapOn: "Maya QA"
 - extendedWaitUntil:
     visible:
-      id: "first-contact-screen"
+      id: "message-request-screen"
     timeout: 15000
-- assertVisible: "${QA_JOIN_CONTEXT}"
+- assertVisible: "Met in The Skyline Room"
+- assertVisible: "Send a message request"
 - takeScreenshot: 11-join-visible-presence

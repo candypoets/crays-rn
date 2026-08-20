@@ -28,7 +28,8 @@ appId: life.crays
     id: "tab-tonight"
 - tapOn:
     id: "room-people-tab"
-- tapOn: "Open Jonas profile and safety actions"
+- assertVisible: "Jonas"
+- openLink: "crays:///person?pubkey=${JONAS_PUBKEY}"
 - extendedWaitUntil:
     visible:
       id: "first-contact-screen"

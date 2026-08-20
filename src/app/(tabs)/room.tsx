@@ -3,7 +3,7 @@ import { usePublish as publishToNostr } from '@candypoets/nipworker/hooks';
 import { isConnectionStatus } from '@candypoets/nipworker/utils';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Share } from 'react-native';
 
 import { useCart } from '@/commerce/Cart';
 import { createTestRoomPointer, TEST_ROOM_BUILD } from '@/config/testRoom';
@@ -11,6 +11,7 @@ import { nearbyRoomEntryParams } from '@/discovery/blePointer';
 import { roomMapSearchUrl } from '@/discovery/roomEntry';
 import { useNearbyRoom } from '@/discovery/useNearbyRoom';
 import { roomReactionTemplate, venueReportTemplate } from '@/nostr/protocol';
+import { roomInviteContent } from '@/rooms/invite';
 import { relayUrlFor } from '@/rooms/relayUrl';
 import { useRoomData } from '@/rooms/RoomData';
 import { useRoomDefinition } from '@/rooms/useRoomDefinition';
@@ -190,12 +191,13 @@ function ActiveRoomRoute({ activeRoom }: { activeRoom: ActiveRoom }) {
       onBecomeVisible={() => router.push({ pathname: '/join-room', params: { mode: 'visibility', relay: relayUrlFor(activeRoom), room: activeRoom.id } } as never)}
       onChangeView={(next) => router.setParams({ view: next === 'people' ? undefined : next })}
       onComposePost={() => router.push('/room-post' as never)}
+      onInviteFriend={() => {
+        void Share.share(roomInviteContent(activeRoom.name, relayUrlFor(activeRoom), activeRoom.id)).catch(() => undefined);
+      }}
       onLikePost={likePost}
       onLeave={() => router.push('/leave-room' as never)}
-      onMyNight={() => router.push('/my-night' as never)}
       onOpenOrder={() => router.push('/orders' as never)}
       onOpenPerson={(pubkey) => router.push({ pathname: '/message-request' as never, params: { pubkey } })}
-      onOpenPersonProfile={(pubkey) => router.push({ pathname: '/person' as never, params: { pubkey } })}
       onOpenProduct={(product) => router.push({ pathname: '/item' as never, params: { id: product.id } })}
       onOpenThread={(post) => router.push({
         pathname: '/room-thread' as never,

@@ -34,12 +34,11 @@ type RoomScreenProps = {
   onChangeView: (view: RoomView) => void;
   onCart: () => void;
   onBecomeVisible?: () => void;
+  onInviteFriend: () => void;
   onLeave: () => void;
-  onMyNight: () => void;
   onOpenOrder?: () => void;
   onOpenProduct: (product: RoomProduct) => void;
   onOpenPerson: (pubkey: string) => void;
-  onOpenPersonProfile?: (pubkey: string) => void;
   onComposePost: () => void;
   onLikePost: (post: RoomPost) => void;
   onOpenThread: (post: RoomPost) => void;
@@ -51,159 +50,125 @@ type RoomScreenProps = {
   reportNotice?: string | null;
 };
 
-function formatMoment(epoch: number, unit: 'milliseconds' | 'seconds' = 'seconds') {
-  if (!epoch || !Number.isFinite(epoch)) return '—';
-  return new Date(unit === 'seconds' ? epoch * 1000 : epoch).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-function formatCredentialExpiry(epochSeconds: number) {
-  if (!epochSeconds || !Number.isFinite(epochSeconds)) return '—';
-  const expiry = new Date(epochSeconds * 1000);
+function formatCredentialExpiry(epochMilliseconds: number) {
+  if (!epochMilliseconds || !Number.isFinite(epochMilliseconds)) return '—';
+  const expiry = new Date(epochMilliseconds);
   const time = expiry.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   if (expiry.toDateString() === new Date().toDateString()) return time;
   const date = expiry.toLocaleDateString([], { day: 'numeric', month: 'short' });
   return `${date} · ${time}`;
 }
 
-function HeaderButton({
-  icon,
-  label,
-  onPress,
-  testID,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress: () => void;
-  testID: string;
-}) {
-  return (
-    <Pressable
-      accessibilityLabel={label}
-      accessibilityRole="button"
-      className="h-12 w-12 items-center justify-center rounded-full border border-edge bg-surface active:bg-surface-soft"
-      hitSlop={4}
-      onPress={onPress}
-      testID={testID}
-    >
-      <Ionicons color={colors.ink} name={icon} size={23} />
-    </Pressable>
-  );
-}
-
 function LeaveButton({ onPress }: { onPress: () => void }) {
   return (
-    <Pressable accessibilityRole="button" className="min-h-12 flex-row items-center gap-1 px-2" onPress={onPress} testID="room-leave">
-      <Ionicons color={colors.commitment} name="exit-outline" size={20} />
-      <Text className="font-black text-commitment">Leave</Text>
+    <Pressable accessibilityRole="button" className="min-h-12 items-center justify-center px-2" onPress={onPress} testID="room-leave">
+      <Text className="font-bold text-primary">Leave</Text>
     </Pressable>
   );
 }
 
-function RoomHeader(props: Pick<RoomScreenProps, 'activeRoom' | 'connected' | 'loading' | 'onChangeView' | 'onLeave' | 'onMyNight' | 'people' | 'view'>) {
-  const peopleCount = props.loading ? '…' : String(props.people.length);
+function RoomTabs(props: Pick<RoomScreenProps, 'loading' | 'onChangeView' | 'people' | 'view'>) {
+  const peopleCount = props.loading ? 'loading' : `${props.people.length} visible`;
   const tabs: { label: string; accessibilityLabel: string; value: RoomView }[] = [
+    { label: 'People', accessibilityLabel: `People, ${peopleCount}`, value: 'people' },
     { label: 'Menu', accessibilityLabel: 'Menu', value: 'menu' },
-    { label: `People (${peopleCount})`, accessibilityLabel: props.loading ? 'People, loading visible count' : `People, ${peopleCount} visible`, value: 'people' },
     { label: 'Feed', accessibilityLabel: 'Room feed', value: 'feed' },
   ];
   return (
-    <View className="border-b border-edge bg-surface-soft pb-3 pt-2">
-      <View className="mx-auto w-full max-w-[620px] flex-row items-start justify-between gap-3 px-5">
-        <LeaveButton onPress={props.onLeave} />
-        <View className="min-w-0 flex-1 pt-1">
-          <Text accessibilityRole="header" className="text-[24px] font-black uppercase leading-7 tracking-[-0.7px] text-primary">
+    <View accessibilityRole="tablist" className="mx-auto w-full max-w-[620px] flex-row border-b border-edge px-5" testID="room-tabs">
+      {tabs.map((tab) => {
+        const selected = props.view === tab.value;
+        return (
+          <Pressable
+            accessibilityLabel={tab.accessibilityLabel}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            className={`min-h-12 flex-1 items-center justify-center border-b-2 px-2 ${selected ? 'border-primary' : 'border-transparent'}`}
+            key={tab.value}
+            onPress={() => props.onChangeView(tab.value)}
+            testID={`room-${tab.value === 'menu' ? 'menu' : `${tab.value}-tab`}`}
+          >
+            <Text className={`text-center text-sm font-bold ${selected ? 'text-primary' : 'text-muted'}`}>
+              {tab.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function RoomHeader(props: Pick<RoomScreenProps, 'activeRoom' | 'connected' | 'onLeave'>) {
+  return (
+    <View className="bg-surface">
+      <View className="mx-auto w-full max-w-[620px] flex-row items-center justify-between gap-3 px-5">
+        <View className="min-w-0 flex-1">
+          <Text accessibilityRole="header" className="text-[20px] font-black leading-6 tracking-[-0.4px] text-ink">
             {props.activeRoom.name}
           </Text>
-          <View className="mt-1.5 flex-row items-center gap-1.5">
-            <View className={`h-2 w-2 rounded-full ${props.connected ? 'bg-success' : 'bg-attention'}`} />
-            <Text className="text-xs font-semibold text-muted">
-              {props.connected ? 'Connected in the room' : 'Connecting to this room…'}
-            </Text>
-          </View>
         </View>
-        <HeaderButton icon="ticket-outline" label="Open My night" onPress={props.onMyNight} testID="room-my-night" />
+        <LeaveButton onPress={props.onLeave} />
       </View>
-      <View accessibilityRole="tablist" className="mx-auto mt-3 w-full max-w-[620px] flex-row gap-1 px-5">
-        {tabs.map((tab) => {
-          const selected = props.view === tab.value;
-          return (
-            <Pressable
-              accessibilityLabel={tab.accessibilityLabel}
-              accessibilityRole="tab"
-              accessibilityState={{ selected }}
-              className={`min-h-12 flex-1 items-center justify-center rounded-xl px-2 ${selected ? 'bg-primary' : 'bg-surface'}`}
-              key={tab.value}
-              onPress={() => props.onChangeView(tab.value)}
-              testID={`room-${tab.value === 'menu' ? 'menu' : `${tab.value}-tab`}`}
-            >
-              <Text className={`text-center text-xs font-black uppercase ${selected ? 'text-white' : 'text-muted'}`}>
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <RoomStatusRail connected={props.connected} room={props.activeRoom} />
     </View>
   );
 }
 
-function RoomSessionRail({ room }: { room: ActiveRoom }) {
-  const timing = [
-    { label: 'Joined', value: formatMoment(room.joinedAt, 'milliseconds') },
-    { label: 'Leave at', value: formatCredentialExpiry(Math.floor(room.leaveAt / 1000)) },
-  ];
+function RoomStatusRail({ connected, room }: { connected: boolean; room: ActiveRoom }) {
+  const status = connected ? 'Connected' : 'Connecting…';
+  const leaving = formatCredentialExpiry(room.leaveAt);
   return (
     <View
-      accessibilityLabel={`Room session. Joined ${timing[0].value}. Leave at ${timing[1].value}.`}
+      accessibilityLabel={`Room status. ${status}. Leaving by ${leaving}.`}
       accessible
-      className="border-b border-edge bg-surface"
+      className="mx-auto w-full max-w-[620px] px-5"
+      testID="room-status"
     >
-      <View className="mx-auto w-full max-w-[620px] flex-row px-5">
-        {timing.map((item, index) => (
-          <View
-            className={`min-h-[66px] flex-1 justify-center ${index === 0 ? 'items-start border-r border-edge pr-5' : 'items-end pl-5'}`}
-            key={item.label}
-          >
-            <Text className="text-[10px] font-black uppercase tracking-[0.6px] text-muted">{item.label}</Text>
-            <Text className="mt-1 text-sm font-bold text-ink">{item.value}</Text>
-          </View>
-        ))}
+      <View className="min-h-10 flex-row items-center justify-between rounded-lg border border-edge bg-surface px-3">
+        <View className="flex-row items-center gap-2">
+          <View className={`h-2 w-2 rounded-full ${connected ? 'bg-success' : 'bg-attention'}`} />
+          <Text className="text-xs font-semibold text-muted">{status}</Text>
+        </View>
+        <View className="flex-row items-center gap-1.5">
+          <Text className="text-xs text-muted">Leaving by {leaving}</Text>
+          <Ionicons accessibilityElementsHidden color={colors.inkMuted} importantForAccessibility="no-hide-descendants" name="information-circle-outline" size={16} />
+        </View>
       </View>
     </View>
   );
 }
 
-function LiveNightRail({ activeOrder, onBecomeVisible, onOpenOrder, room }: Pick<RoomScreenProps, 'activeOrder' | 'onBecomeVisible' | 'onOpenOrder'> & { room: ActiveRoom }) {
+function ActiveOrderRail({ activeOrder, onOpenOrder }: Pick<RoomScreenProps, 'activeOrder' | 'onOpenOrder'>) {
+  if (!activeOrder) return null;
   return (
-    <View className="mx-auto w-full max-w-[620px] px-5 pt-4">
-      {activeOrder ? (
-        <Pressable
-          accessibilityLabel={`${activeOrder.product.name}. ${orderSummaryLabel(activeOrder)}. Open order`}
-          accessibilityRole="button"
-          className="min-h-16 flex-row items-center rounded-2xl bg-attention px-4 py-3 active:opacity-80"
-          onPress={onOpenOrder}
-          testID="tonight-active-order"
-        >
-          <Ionicons color={colors.ink} name={activeOrder.status === 'ready' ? 'notifications' : 'receipt-outline'} size={23} />
-          <View className="ml-3 min-w-0 flex-1">
-            <Text className="font-black text-ink">{activeOrder.status === 'ready' ? 'Your order is ready' : orderSummaryLabel(activeOrder)}</Text>
-            <Text className="mt-0.5 text-sm text-ink">{activeOrder.product.name}</Text>
-          </View>
-          <Ionicons color={colors.ink} name="chevron-forward" size={20} />
-        </Pressable>
-      ) : null}
-      {room.visibility === 'quiet' ? (
-        <View className="mt-3 flex-row items-start rounded-2xl border border-edge bg-surface px-4 py-3" testID="quiet-presence-banner">
-          <Ionicons color={colors.ink} name="eye-off-outline" size={22} />
-          <View className="ml-3 min-w-0 flex-1">
-            <Text className="font-black text-ink">You’re browsing quietly</Text>
-            <Text className="mt-0.5 text-sm leading-5 text-muted">No presence was published. Visible people can’t see you here.</Text>
-            <Pressable accessibilityRole="button" className="-ml-2 mt-2 min-h-12 self-start justify-center px-2" onPress={onBecomeVisible} testID="become-visible">
-              <Text className="font-black text-primary">Become visible</Text>
-            </Pressable>
-          </View>
+    <View className="mx-auto w-full max-w-[620px] px-5 pt-3">
+      <Pressable
+        accessibilityLabel={`${activeOrder.product.name}. ${orderSummaryLabel(activeOrder)}. Open order`}
+        accessibilityRole="button"
+        className="min-h-14 flex-row items-center rounded-xl bg-attention px-4 py-2 active:opacity-80"
+        onPress={onOpenOrder}
+        testID="tonight-active-order"
+      >
+        <Ionicons color={colors.ink} name={activeOrder.status === 'ready' ? 'notifications' : 'receipt-outline'} size={23} />
+        <View className="ml-3 min-w-0 flex-1">
+          <Text className="font-black text-ink">{activeOrder.status === 'ready' ? 'Your order is ready' : orderSummaryLabel(activeOrder)}</Text>
+          <Text className="mt-0.5 text-sm text-ink">{activeOrder.product.name}</Text>
         </View>
-      ) : null}
+        <Ionicons color={colors.ink} name="chevron-forward" size={20} />
+      </Pressable>
+    </View>
+  );
+}
+
+function QuietPresenceRail({ onBecomeVisible, room }: Pick<RoomScreenProps, 'onBecomeVisible'> & { room: ActiveRoom }) {
+  if (room.visibility !== 'quiet') return null;
+  return (
+    <View className="mx-auto min-h-12 w-full max-w-[620px] flex-row flex-wrap items-center gap-1.5 px-5" testID="quiet-presence-banner">
+      <View className="h-2 w-2 rounded-full bg-success" />
+      <Text className="text-xs text-muted">Browsing quietly ·</Text>
+      <Pressable accessibilityRole="button" className="min-h-12 justify-center px-0.5" onPress={onBecomeVisible} testID="become-visible">
+        <Text className="text-xs font-bold text-primary">Become visible</Text>
+      </Pressable>
     </View>
   );
 }
@@ -221,9 +186,9 @@ export function getPeopleRosterLayout(viewportWidth: number, fontScale: number) 
   const contentWidth = Math.max(0, Math.min(viewportWidth, 620) - 40);
   const largeText = fontScale >= 1.3;
   const columns = largeText
-    ? contentWidth >= 520 ? 4 : 2
-    : contentWidth >= 520 ? 5 : contentWidth >= 400 ? 4 : contentWidth >= 270 ? 3 : 2;
-  const gap = 12;
+    ? contentWidth >= 520 ? 4 : contentWidth >= 340 ? 3 : 2
+    : contentWidth >= 520 ? 5 : contentWidth >= 260 ? 4 : 3;
+  const gap = 8;
 
   return {
     cardWidth: Math.max(0, (contentWidth - gap * (columns - 1)) / columns),
@@ -232,45 +197,31 @@ export function getPeopleRosterLayout(viewportWidth: number, fontScale: number) 
   };
 }
 
-function PersonCard({ cardWidth, onPress, onProfile, person }: { cardWidth: number; onPress: () => void; onProfile?: () => void; person: RoomPerson }) {
+function PersonCard({ cardWidth, onPress, person }: { cardWidth: number; onPress: () => void; person: RoomPerson }) {
   return (
-    <View className="min-h-[156px]" style={{ width: cardWidth }}>
-      <Pressable
-        accessibilityHint="Opens a message request"
-        accessibilityLabel={`${person.name}, ${person.intent}${person.context ? `, ${person.context}` : ''}`}
-        accessibilityRole="button"
-        className="active:opacity-75"
-        onPress={onPress}
-        testID={`person-${person.pubkey}`}
-      >
-        <PortraitImage
-          className="w-full rounded-[26px]"
-          identity={person.pubkey}
-          label={`Profile image for ${person.name}`}
-          picture={person.picture}
-          style={{ aspectRatio: 92 / 104 }}
-          testID={`person-image-${person.pubkey}`}
-        />
-        <Text className="mt-2 text-[15px] font-black uppercase leading-5 text-ink">{person.name}</Text>
-        <Text className="mt-0.5 text-[10px] font-black uppercase leading-4 tracking-[0.4px] text-primary">{person.intent}</Text>
-      </Pressable>
-      {onProfile ? (
-        <Pressable
-          accessibilityLabel={`Open ${person.name} profile and safety actions`}
-          accessibilityRole="button"
-          className="absolute right-2 top-2 h-12 w-12 items-center justify-center rounded-full border border-white/70 bg-photo-night/70"
-          hitSlop={4}
-          onPress={onProfile}
-          testID={`person-profile-${person.pubkey}`}
-        >
-          <Ionicons color={colors.surface} name="ellipsis-horizontal" size={21} />
-        </Pressable>
-      ) : null}
-    </View>
+    <Pressable
+      accessibilityHint="Opens a message request sheet"
+      accessibilityLabel={`${person.name}, ${person.intent}${person.context ? `, ${person.context}` : ''}`}
+      accessibilityRole="button"
+      className="min-h-[112px] active:opacity-75"
+      onPress={onPress}
+      style={{ width: cardWidth }}
+      testID={`person-${person.pubkey}`}
+    >
+      <PortraitImage
+        className="w-full rounded-xl"
+        identity={person.pubkey}
+        label={`Profile image for ${person.name}`}
+        picture={person.picture}
+        style={{ aspectRatio: 92 / 104 }}
+        testID={`person-image-${person.pubkey}`}
+      />
+      <Text className="mt-1.5 text-sm font-bold leading-5 text-ink">{person.name}</Text>
+    </Pressable>
   );
 }
 
-function PeopleView({ activeRoom, loading, onOpenPerson, onOpenPersonProfile, people }: Pick<RoomScreenProps, 'activeRoom' | 'loading' | 'onOpenPerson' | 'onOpenPersonProfile' | 'people'>) {
+function PeopleView({ activeRoom, loading, onInviteFriend, onOpenPerson, people }: Pick<RoomScreenProps, 'activeRoom' | 'loading' | 'onInviteFriend' | 'onOpenPerson' | 'people'>) {
   const { fontScale, width } = useWindowDimensions();
   const roster = getPeopleRosterLayout(width, fontScale);
 
@@ -287,12 +238,12 @@ function PeopleView({ activeRoom, loading, onOpenPerson, onOpenPersonProfile, pe
 
   return (
     <>
-      <View className="mx-auto mt-6 w-full max-w-[620px] flex-row flex-wrap items-end justify-between gap-2 px-5">
-        <Text accessibilityRole="header" className="text-xs font-black uppercase tracking-[0.7px] text-ink">People here · {people.length} visible</Text>
-        <Text className="text-[11px] text-muted">No distance or ranking</Text>
+      <View className="mx-auto mt-1 w-full max-w-[620px] px-5">
+        <Text accessibilityRole="header" className="text-sm font-bold text-ink">People here ({people.length})</Text>
       </View>
       <View
-        className="mx-auto mt-4 w-full max-w-[620px] flex-row flex-wrap gap-3 px-5 pb-8"
+        className="mx-auto mt-3 w-full max-w-[620px] flex-row flex-wrap px-5"
+        style={{ gap: roster.gap }}
         testID="people-roster"
       >
         {people.map((person) => (
@@ -300,10 +251,28 @@ function PeopleView({ activeRoom, loading, onOpenPerson, onOpenPersonProfile, pe
             cardWidth={roster.cardWidth}
             key={person.pubkey}
             onPress={() => onOpenPerson(person.pubkey)}
-            onProfile={onOpenPersonProfile ? () => onOpenPersonProfile(person.pubkey) : undefined}
             person={person}
           />
         ))}
+      </View>
+      <View className="mx-auto mt-2 w-full max-w-[620px] px-5 pb-8">
+        <Text className="mb-3 text-sm font-bold text-ink">Say hello to someone new</Text>
+        <Pressable
+          accessibilityLabel="Invite a friend, share a room link"
+          accessibilityRole="button"
+          className="min-h-16 flex-row items-center rounded-xl border border-edge bg-surface px-3 active:bg-surface-soft"
+          onPress={onInviteFriend}
+          testID="invite-friend"
+        >
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-surface-soft">
+            <Ionicons color={colors.ink} name="person-add-outline" size={21} />
+          </View>
+          <View className="ml-3 min-w-0 flex-1">
+            <Text className="font-bold text-ink">Invite a friend</Text>
+            <Text className="mt-0.5 text-xs text-muted">Share a link</Text>
+          </View>
+          <Ionicons color={colors.ink} name="chevron-forward" size={20} />
+        </Pressable>
       </View>
     </>
   );
@@ -388,8 +357,9 @@ export function RoomScreen(props: RoomScreenProps) {
         showsVerticalScrollIndicator={false}
       >
         <RoomHeader {...props} />
-        <RoomSessionRail room={props.activeRoom} />
-        <LiveNightRail activeOrder={props.activeOrder} onBecomeVisible={props.onBecomeVisible} onOpenOrder={props.onOpenOrder} room={props.activeRoom} />
+        <ActiveOrderRail activeOrder={props.activeOrder} onOpenOrder={props.onOpenOrder} />
+        <RoomTabs {...props} />
+        <QuietPresenceRail onBecomeVisible={props.onBecomeVisible} room={props.activeRoom} />
         {props.view === 'menu' ? (
           <View className="mx-auto w-full max-w-[620px] px-5">
             <MenuCatalog

@@ -7,7 +7,8 @@ appId: life.crays
     visible:
       id: "room-people-screen"
     timeout: 15000
-- tapOn: "Open Jonas profile and safety actions"
+- assertVisible: "Jonas"
+- openLink: "crays:///person?pubkey=${JONAS_PUBKEY}"
 - extendedWaitUntil:
     visible:
       id: "first-contact-screen"
@@ -65,7 +66,7 @@ appId: life.crays
 - extendedWaitUntil:
     visible: "Jonas"
     timeout: 15000
-- tapOn: "Jonas"
+- openLink: "crays:///person?pubkey=${JONAS_PUBKEY}"
 - scrollUntilVisible:
     element:
       id: "person-hide-room"

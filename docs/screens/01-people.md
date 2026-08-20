@@ -2,17 +2,18 @@
 
 ## Product contract
 
-Canonical visual reference: `docs/design-explorations/night-playlist/mockups/01-room-and-feed-v1.png`, panel 02. This Night Playlist board supersedes the incumbent dark room PNGs for composition and color while the relay contract below remains authoritative.
+Canonical visual reference: `artifacts/crays-redesign/crays-one-night-one-home-canvas-final.png`, panel **5. Tonight / Inside**. This approved One Night, One Home canvas supersedes the incumbent dark room PNGs and earlier Night Playlist room boards for composition and color while the relay contract below remains authoritative.
 
-People is the social destination inside an active room and is selected by default after entry; the shared room navbar exposes **People (visible count) / Menu / Feed**. People proves that exactly one venue relay is active, shows only opted-in visible presence, and never exposes distance, popularity, or hidden attendance. Quiet visitors retain full read, ordering, ticket, and membership access without appearing in this roster.
+People is the social destination inside an active room and is selected by default after entry; the shared room navbar exposes **People / Menu / Feed** while the visible count lives in the roster heading. People proves that exactly one venue relay is active, shows only opted-in visible presence, and never exposes distance, popularity, or hidden attendance. Quiet visitors retain full read, ordering, ticket, and membership access without appearing in this roster.
 
 Entry requires a persisted `ActiveRoom`. With no active room, route to Discover. The header uses the root-authorized NIP-53 room-definition name and the fixed state **Connected in the room**; it must not infer venue identity from profiles or local copy.
 
 ## UI and interaction
 
-- Header: signed room name, compact connection state, explicit Leave control, and My night. A separate full-width room navbar exposes **People (x)**, **Menu**, and **Feed** with 48 dp targets and a text-selected state; People is the default. Room chrome and the selected section share one edge-to-edge vertical scroll container. Its content begins after the top inset and may scroll through that inset; its indicator uses the same top inset. The primary tab navigator, not Room, owns the bottom system inset.
-- Room-session rail: joined time and credential expiry only. A kind-30312 room description is identity metadata, not a calendar event, so it is never placed in a **Right now**, event, or schedule slot. Venue events remain absent from this surface unless a future design consumes a trusted kind-31922/31923 projection explicitly.
-- Roster: a vertically scrolling, wrapping portrait grid with display name and intent in deterministic row-major accessibility order. At normal text size it uses three columns on compact phones, four at intermediate widths, and five inside the 620 dp expanded content width. Large text reduces that to two columns on compact/intermediate widths and four on expanded widths so names and intents reflow instead of clipping. Optional context is included in each card's accessible label. No per-person "online" dot is rendered; roster membership is the only presence signal and it is already textual.
+- Header: signed room name in normal case and an explicit blue **Leave** text control. The oversized colored masthead, ticket shortcut, and duplicated room actions are absent. Directly below it, one compact status rail pairs a connection dot and **Connected/Connecting…** with **Leaving by &lt;time&gt;**. A kind-30312 room description is identity metadata, not a calendar event, so it is never placed in a **Right now**, event, or schedule slot. Venue events remain absent unless a future design consumes a trusted kind-31922/31923 projection explicitly.
+- Room navigation: **People / Menu / Feed** appear in that order as text nav items with 48 dp targets. The selected item is communicated by selected accessibility state, blue text, and a two-pixel underline; tabs are never filled buttons or pills. People is the default. Room chrome and the selected section share one edge-to-edge vertical scroll container. Its content begins after the top inset and may scroll through that inset; its indicator uses the same top inset. The primary tab navigator, not Room, owns the bottom system inset.
+- Live rails: a trusted active order, when present, is the yellow compact urgency strip. Quiet mode is one compact inline status, **Browsing quietly · Become visible**. Its green dot is decorative; the full state and action remain textual. The privacy explanation and visibility selection stay in the native join/privacy sheet instead of becoming a large card in the room.
+- Roster: **People here (x)** precedes a vertically scrolling, wrapping portrait grid with four compact portrait cells on a normal phone and five inside the 620 dp expanded content width. Very narrow screens use three. Large text reduces that to two columns on compact/intermediate widths and four on expanded widths so names reflow instead of clipping. Only the display name is visual; intent and optional context remain in each card's accessible label. No per-person online dot or ellipsis action is rendered; roster membership is the only presence signal.
 - A valid HTTP(S) `picture` from the latest kind-0 profile is the primary image.
   Missing, invalid, or failed pictures use one bundled Night Playlist portrait
   selected deterministically from the full pubkey. The same pubkey fallback is
@@ -22,7 +23,8 @@ Entry requires a persisted `ActiveRoom`. With no active room, route to Discover.
   photograph appears as current room or event evidence; this screen has no
   trusted event-image input.
 - The visible count counts current, non-expired, explicitly visible presence projections only.
-- Tapping a person opens the native message-request sheet directly with their relay-derived public key. A separate labelled profile/safety action opens screen 02 for gifting, blocking, and venue reporting; no name is used as identity.
+- Tapping anywhere on a portrait opens the native message-request sheet directly with the relay-derived public key. There is no separate three-dot route that pushes the room away; message requests and their dismissal remain in-screen. Blocking and reporting remain available from conversation controls, and feed posts retain their direct report action. No display name is used as identity.
+- Beneath a populated roster, **Say hello to someone new** introduces an **Invite a friend / Share a link** row. It invokes the platform share sheet with a `crays:///join-room` link containing the pinned transport relay and room identifier. Dismissal or platform failure leaves the room unchanged and the row retryable.
 
 ## State and relay contract
 
@@ -58,16 +60,16 @@ Presence is refreshed every 60 seconds and on foreground without extending the f
 
 Name, intent, and context are text and may reflow under large type instead of
 being clipped. Reading order is predictable despite the organic visual layout.
-The room-session summary announces joined and expiry values as one coherent
-unit. No exact distance, table number, follower count,
+The compact room-status summary announces connection and expiry values as one coherent
+unit. The visual information icon is decorative. No exact distance, table number, follower count,
 profile-open count, or non-room activity is rendered. Quiet mode is never
 visually treated as degraded access.
 
 ## QA strategy
 
 Unit coverage in `RoomScreen.test.tsx` verifies edge-to-edge inset ownership, People-default route navigation, the
-live People count, populated and quiet-empty paths, person identity routing,
-the responsive non-horizontal roster, the kind-0 picture handoff, the accessible room-session summary, and the absence
+underlined text-tab treatment and order, live People count, populated and quiet-empty paths, direct message-sheet identity routing,
+absence of per-avatar ellipsis actions, the share-link action, responsive non-horizontal roster, kind-0 picture handoff, compact accessible room-status summary, and the absence
 of the kind-30312 description from event-like UI.
 `NightPrimitives.test.tsx` verifies portrait and venue crop geometry. Native
 workflow `maestro/flows/01-people.yaml` enters quietly through the real join

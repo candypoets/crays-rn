@@ -4,16 +4,16 @@
 
 Canonical visual reference: `docs/design-explorations/night-playlist/mockups/01-room-and-feed-v1.png`, panel 04. The Night Playlist Maya sheet supersedes the incumbent dark profile PNG for composition and signal colors; consent and relay rules below remain authoritative.
 
-This profile-and-safety screen is reached from the labelled overflow on a visible person. The portrait itself now opens the shorter native message-request sheet directly. **Message** remains available here, while **Send a drink** is secondary and explicitly non-anonymous. The person remains identified by pubkey and active-room projection, not by display name.
+This legacy profile-and-safety route is no longer exposed as a per-avatar overflow in People. A portrait now opens the shorter native message-request sheet directly, preserving the approved in-screen interaction and the room beneath it. The compatibility route remains addressable by exact pubkey for its existing gifting and safety contracts; it must never reintroduce three-dot controls over every portrait. **Message** remains available here, while **Send a drink** is secondary and explicitly non-anonymous. The person remains identified by pubkey and active-room projection, not by display name.
 
 ## UI and interaction
 
-- Open as a portrait-led native sheet: the exact valid kind-0 picture already shown in People, or the same pubkey-derived bundled fallback, fills the hero. It never reselects an illustration from list position or display name. Follow with the text-labelled lime **In the room now** sticker, display name, intent, one-line room context, and room name.
+- When entered through a compatibility/development deep link, open as a portrait-led screen: the exact valid kind-0 picture already shown in People, or the same pubkey-derived bundled fallback, fills the hero. It never reselects an illustration from list position or display name. Follow with the text-labelled lime **In the room now** sticker, display name, intent, one-line room context, and room name.
 - Do not show distance, table, followers, popularity, or activity outside this room.
 - Message opens screen 22 unless an accepted conversation already exists; accepted contacts open the thread directly.
 - Send a drink opens screen 04 only after the recipient has accepted the NIP-04 conversation. A future signed recipient/venue gift-first policy may relax this conservative default (D-004).
 - **Browse quietly** is a visible outlined privacy action. Block and venue report live in the labelled overflow menu and remain one tap beyond opening it.
-- Back returns to the exact People state and filter position.
+- Back returns to the exact People state and filter position. This route is not presented by an avatar ellipsis.
 
 ## State and data ownership
 
@@ -31,6 +31,6 @@ and unmount stop the handle and restore the action.
 
 ## QA strategy
 
-Unit coverage checks stable kind-0 image handoff, action hierarchy, the no-contact/pending gift lock, accepted-contact unlock, safety actions, and the non-anonymous contract. `maestro/flows/02-first-contact.yaml` enters an isolated relay-backed room, selects People in the room navbar, opens Jonas from actual presence/profile events, publishes a venue report, and verifies acknowledgement.
+Unit coverage checks stable kind-0 image handoff, action hierarchy, the no-contact/pending gift lock, accepted-contact unlock, safety actions, and the non-anonymous contract. `maestro/flows/02-first-contact.yaml` enters an isolated relay-backed room, proves Jonas arrived from actual presence/profile events, then opens the compatibility route by exact fixture pubkey, publishes a venue report, and verifies acknowledgement. Screen 01/22 coverage separately proves that the production portrait path opens the native message-request sheet with no overflow control.
 
 `scenario:02-first-contact` creates and tears down its own test relay, validates fixture signatures, proves the person came from relay events, and independently checks the kind-1984 signer, venue, and target. `scenario:safety-blocks` separately proves global/venue persistence, filtering, relaunch, unblock, and absence of DM or report side effects. Remote recipient policy/rate limits remain D-004.

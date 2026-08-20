@@ -25,8 +25,8 @@ const product: RoomProduct = { id: 'drink-1', address: `30402:${'a'.repeat(64)}:
 function props(overrides: Partial<Parameters<typeof RoomScreen>[0]> = {}): Parameters<typeof RoomScreen>[0] {
   return {
     activeRoom, cartCount: 0, connected: true, loading: false, people: [{ ...maya, picture: profile.picture }], posts: [post], products: [product], profiles: new Map([[maya.pubkey, profile]]), reactions: [],
-    view: 'menu', onCart: jest.fn(), onChangeView: jest.fn(), onComposePost: jest.fn(), onLeave: jest.fn(), onLikePost: jest.fn(),
-    onMyNight: jest.fn(), onOpenPerson: jest.fn(), onOpenProduct: jest.fn(), onOpenThread: jest.fn(), onReplyPost: jest.fn(), onReportPost: jest.fn(), ...overrides,
+    view: 'menu', onCart: jest.fn(), onChangeView: jest.fn(), onComposePost: jest.fn(), onInviteFriend: jest.fn(), onLeave: jest.fn(), onLikePost: jest.fn(),
+    onOpenPerson: jest.fn(), onOpenProduct: jest.fn(), onOpenThread: jest.fn(), onReplyPost: jest.fn(), onReportPost: jest.fn(), ...overrides,
   };
 }
 
@@ -44,7 +44,7 @@ describe('RoomScreen', () => {
     expect(scrollView.props.scrollIndicatorInsets).toEqual({ top: 24, bottom: 0 });
   });
 
-  it('selects the relay menu by default and exposes the live people count in room navigation', () => {
+  it('renders People, Menu, and Feed as text navigation with an underlined selected state', () => {
     const onChangeView = jest.fn();
     const onOpenProduct = jest.fn();
     render(<RoomScreen {...props({ onChangeView, onOpenProduct })} />);
@@ -52,20 +52,22 @@ describe('RoomScreen', () => {
     expect(screen.getByTestId('room-menu-screen')).toBeOnTheScreen();
     expect(screen.getByRole('tab', { name: 'Menu' })).toBeSelected();
     expect(screen.getByRole('tab', { name: 'People, 1 visible' })).not.toBeSelected();
+    expect(screen.getByTestId('room-menu')).toHaveProp('className', expect.stringContaining('border-primary'));
+    expect(screen.getByTestId('room-menu')).not.toHaveProp('className', expect.stringContaining('bg-primary'));
+    expect(screen.getAllByRole('tab').map((tab) => tab.props.accessibilityLabel)).toEqual(['People, 1 visible', 'Menu', 'Room feed']);
     expect(screen.getByText('Mezcal Negroni')).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('tab', { name: 'People, 1 visible' }));
     expect(onChangeView).toHaveBeenCalledWith('people');
   });
 
   it('renders visible people in predictable accessibility order', () => {
-    const onOpenPerson = jest.fn(); const onOpenPersonProfile = jest.fn();
-    render(<RoomScreen {...props({ onOpenPerson, onOpenPersonProfile, view: 'people' })} />);
-    const joined = new Date(activeRoom.joinedAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    const onOpenPerson = jest.fn();
+    render(<RoomScreen {...props({ onOpenPerson, view: 'people' })} />);
     const expiryDate = new Date(activeRoom.leaveAt);
     const expiry = `${expiryDate.toLocaleDateString([], { day: 'numeric', month: 'short' })} · ${expiryDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
-    expect(screen.getByText('Connected in the room')).toBeOnTheScreen();
-    expect(screen.getByText('People here · 1 visible')).toBeOnTheScreen();
-    expect(screen.getByLabelText(`Room session. Joined ${joined}. Leave at ${expiry}.`)).toBeOnTheScreen();
+    expect(screen.getByText('Connected')).toBeOnTheScreen();
+    expect(screen.getByText('People here (1)')).toBeOnTheScreen();
+    expect(screen.getByLabelText(`Room status. Connected. Leaving by ${expiry}.`)).toBeOnTheScreen();
     expect(screen.queryByText(activeRoom.about)).toBeNull();
     expect(screen.queryByText('Room moment')).toBeNull();
     expect(screen.queryByLabelText(`${activeRoom.name} venue atmosphere`)).toBeNull();
@@ -76,12 +78,12 @@ describe('RoomScreen', () => {
     expect(screen.getByTestId(`person-image-${maya.pubkey}-profile-image`)).toHaveProp('source', { uri: profile.picture });
     fireEvent.press(screen.getByTestId(`person-${maya.pubkey}`));
     expect(onOpenPerson).toHaveBeenCalledWith(maya.pubkey);
-    fireEvent.press(screen.getByLabelText('Open Maya profile and safety actions'));
-    expect(onOpenPersonProfile).toHaveBeenCalledWith(maya.pubkey);
+    expect(screen.queryByTestId(`person-profile-${maya.pubkey}`)).toBeNull();
+    expect(screen.queryByText(maya.intent)).toBeNull();
   });
 
   it('adapts roster columns to compact, expanded, and large-text windows', () => {
-    expect(getPeopleRosterLayout(320, 1).columns).toBe(3);
+    expect(getPeopleRosterLayout(320, 1).columns).toBe(4);
     expect(getPeopleRosterLayout(667, 1).columns).toBe(5);
     expect(getPeopleRosterLayout(360, 1.5).columns).toBe(2);
     expect(getPeopleRosterLayout(667, 1.5).columns).toBe(4);
@@ -92,16 +94,33 @@ describe('RoomScreen', () => {
     expect(screen.getByText(/Only people who chose to be visible/)).toBeOnTheScreen();
   });
 
+  it('keeps compact room chrome truthful while the relay is connecting', () => {
+    render(<RoomScreen {...props({ connected: false, loading: true, people: [], view: 'people' })} />);
+
+    expect(screen.getByText('Connecting…')).toBeOnTheScreen();
+    expect(screen.getByRole('tab', { name: 'People, loading' })).toBeSelected();
+    expect(screen.getByTestId('room-status')).toHaveProp('accessibilityLabel', expect.stringContaining('Leaving by'));
+  });
+
   it('keeps quiet privacy and a ready order in Tonight with explicit actions', () => {
     const onBecomeVisible = jest.fn(); const onOpenOrder = jest.fn();
     const activeOrder = { id: 'order', awardId: 'award', orderRef: 'CR-42', product, status: 'ready' as const, createdAt: 1, updatedAt: 2, recipientPubkey: 'c'.repeat(64) };
     render(<RoomScreen {...props({ activeOrder, onBecomeVisible, onOpenOrder, view: 'people' })} />);
-    expect(screen.getByText('You’re browsing quietly')).toBeOnTheScreen();
+    expect(screen.getByText('Browsing quietly ·')).toBeOnTheScreen();
     expect(screen.getByText('Your order is ready')).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Leave' })).toBeOnTheScreen();
     fireEvent.press(screen.getByTestId('become-visible'));
     fireEvent.press(screen.getByTestId('tonight-active-order'));
     expect(onBecomeVisible).toHaveBeenCalledTimes(1); expect(onOpenOrder).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers a room-link invite below the people roster', () => {
+    const onInviteFriend = jest.fn();
+    render(<RoomScreen {...props({ onInviteFriend, view: 'people' })} />);
+
+    expect(screen.getByText('Say hello to someone new')).toBeOnTheScreen();
+    fireEvent.press(screen.getByTestId('invite-friend'));
+    expect(onInviteFriend).toHaveBeenCalledTimes(1);
   });
 
   it('renders the room-only feed, announcement, and dedicated composer action', () => {
