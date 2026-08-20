@@ -101,14 +101,16 @@ export function RoomEndedScreen({
   onDiscover,
   onMessages,
   previousRoomName,
+  underTabBar = false,
 }: {
   automatic?: boolean;
   onDiscover: () => void;
   onMessages: () => void;
   previousRoomName: string;
+  underTabBar?: boolean;
 }) {
   return (
-    <AppShell testID="room-ended-screen" title="Room ended">
+    <AppShell testID="room-ended-screen" title="Room ended" underTabBar={underTabBar}>
       <View className="relative -mx-5 mt-2 min-h-[278px] overflow-hidden bg-photo-night px-6 py-8">
         <VenueImage className="absolute inset-0" index={3} label={`${previousRoomName} after the room ended`} />
         <View className="absolute inset-0 bg-photo-night/75" />

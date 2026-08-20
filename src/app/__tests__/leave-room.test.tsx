@@ -95,7 +95,7 @@ describe('LeaveRoomRoute relay ownership', () => {
     });
 
     expect(mockLeaveRoom).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith({ pathname: '/room-ended', params: { name: 'Test Room' } }));
+    await waitFor(() => expect(mockReplace).toHaveBeenCalledWith('/room'));
   });
 
   it('leaves a quiet room locally without publishing synthetic presence', async () => {

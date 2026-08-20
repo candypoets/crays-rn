@@ -11,6 +11,7 @@ type RoomSessionValue = {
   activeRoom: ActiveRoom | null;
   endedRoom: { name: string; reason: 'automatic' | 'explicit' | 'switch' } | null;
   hydrated: boolean;
+  acknowledgeEndedRoom: () => void;
   enterRoom: (room: RoomDescriptor, preferences: RoomJoinPreferences, connectionRelayUrl?: string, leaveAt?: number) => Promise<void>;
   updatePresence: (preferences: RoomJoinPreferences, leaveAt?: number) => Promise<void>;
   leaveRoom: (reason?: 'explicit' | 'switch') => Promise<void>;
@@ -102,6 +103,8 @@ export function RoomSessionProvider({ children }: PropsWithChildren) {
     setActiveRoom(null);
   }, [activeRoom]);
 
+  const acknowledgeEndedRoom = useCallback(() => setEndedRoom(null), []);
+
   const updatePresence = useCallback(async (preferences: RoomJoinPreferences, leaveAt?: number) => {
     if (!activeRoom) throw new Error('No active room is available to update.');
     const next = projectUpdatedPresence(activeRoom, preferences, leaveAt);
@@ -120,7 +123,10 @@ export function RoomSessionProvider({ children }: PropsWithChildren) {
     return () => clearTimeout(timer);
   }, [activeRoom]);
 
-  const value = useMemo(() => ({ activeRoom, endedRoom, hydrated, enterRoom, leaveRoom, updatePresence }), [activeRoom, endedRoom, enterRoom, hydrated, leaveRoom, updatePresence]);
+  const value = useMemo(
+    () => ({ acknowledgeEndedRoom, activeRoom, endedRoom, hydrated, enterRoom, leaveRoom, updatePresence }),
+    [acknowledgeEndedRoom, activeRoom, endedRoom, enterRoom, hydrated, leaveRoom, updatePresence],
+  );
   return <RoomSessionContext.Provider value={value}>{children}</RoomSessionContext.Provider>;
 }
 

@@ -19,10 +19,9 @@ export default function LeaveRoomRoute() {
   if (!activeRoom) return <Redirect href="/discover" />;
 
   const finishLeave = async () => {
-    const name = activeRoom.name;
     try {
       await leaveRoom();
-      router.replace({ pathname: '/room-ended', params: { name } } as never);
+      router.replace('/room' as never);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'This room could not be removed from this device.');
       setLeaving(false);

@@ -44,3 +44,5 @@ appId: life.crays
     visible:
       id: "room-ended-screen"
     timeout: 30000
+- assertVisible:
+    id: "tab-tonight"

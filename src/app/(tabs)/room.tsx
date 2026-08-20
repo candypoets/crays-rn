@@ -1,7 +1,7 @@
 import type { WorkerMessage } from '@candypoets/nipworker';
 import { usePublish as publishToNostr } from '@candypoets/nipworker/hooks';
 import { isConnectionStatus } from '@candypoets/nipworker/utils';
-import { Redirect, router, useIsFocused, useLocalSearchParams } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Linking } from 'react-native';
 
@@ -18,14 +18,24 @@ import type { ActiveRoom, RoomDescriptor } from '@/rooms/types';
 import { DiscoverHandoffScreen } from '@/screens/DiscoverHandoffScreen';
 import { selectActiveOrder } from '@/screens/durable/AccountWalletScreens';
 import { RoomScreen, type RoomView } from '@/screens/room/RoomScreen';
+import { RoomEndedScreen } from '@/screens/room/LeaveAndSwitchScreens';
 import { useRoomSession } from '@/session/RoomSession';
 
 export default function RoomRoute() {
-  const { activeRoom, endedRoom, hydrated } = useRoomSession();
+  const { acknowledgeEndedRoom, activeRoom, endedRoom, hydrated } = useRoomSession();
   if (!hydrated) return null;
-  if (!activeRoom) return endedRoom?.reason === 'automatic'
-    ? <Redirect href={{ pathname: '/room-ended', params: { name: endedRoom.name, reason: 'automatic' } } as never} />
-    : <TonightFindRoute />;
+  if (!activeRoom && endedRoom) {
+    return (
+      <RoomEndedScreen
+        automatic={endedRoom.reason === 'automatic'}
+        onDiscover={acknowledgeEndedRoom}
+        onMessages={() => router.navigate('/messages' as never)}
+        previousRoomName={endedRoom.name}
+        underTabBar
+      />
+    );
+  }
+  if (!activeRoom) return <TonightFindRoute />;
   return <ActiveRoomRoute activeRoom={activeRoom} />;
 }
 

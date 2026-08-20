@@ -103,4 +103,17 @@ describe('automatic room expiry', () => {
     await waitFor(() => expect(result.current.activeRoom).toBeNull());
     expect(result.current.endedRoom).toEqual({ name: 'The Skyline Room', reason: 'automatic' });
   });
+
+  it('acknowledges the settled state so Tonight can become Find without restoring the room', async () => {
+    const expired = { ...descriptor, leaveAt: Date.now() - 1 };
+    jest.mocked(SecureStore.getItemAsync).mockResolvedValueOnce(JSON.stringify(expired));
+    const wrapper = ({ children }: PropsWithChildren) => createElement(RoomSessionProvider, null, children);
+    const { result } = renderHook(() => useRoomSession(), { wrapper });
+
+    await waitFor(() => expect(result.current.endedRoom).toEqual({ name: 'The Skyline Room', reason: 'automatic' }));
+    act(() => result.current.acknowledgeEndedRoom());
+
+    expect(result.current.activeRoom).toBeNull();
+    expect(result.current.endedRoom).toBeNull();
+  });
 });

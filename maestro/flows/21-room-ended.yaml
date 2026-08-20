@@ -49,4 +49,18 @@ appId: life.crays
     direction: DOWN
 - assertVisible: ".*Nothing announces that you left.*"
 - assertVisible: "Private messages and durable items remain available."
+- assertVisible:
+    id: "tab-tonight"
+- assertVisible:
+    id: "tab-messages"
+- tapOn:
+    id: "room-ended-discover"
+- extendedWaitUntil:
+    visible:
+      id: "tonight-find-screen"
+    timeout: 15000
+- assertNotVisible:
+    id: "room-ended-screen"
+- assertVisible:
+    id: "tab-tonight"
 - takeScreenshot: 21-room-ended-relay
